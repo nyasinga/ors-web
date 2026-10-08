@@ -1,0 +1,174 @@
+/*
+  Shared fluid layout helpers for public + auth pages.
+  Complements page-scoped CSS; does not replace design-specific rules.
+*/
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+}
+
+img,
+svg,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Fluid gutters — keep all screens inside the design container */
+.home-container,
+.participant-dash .pd-container {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+/* Mid-tablet: stack common two-column public layouts earlier */
+@media (max-width: 900px) {
+  .faq-page .faq-layout,
+  .venue-page .venue-about-grid,
+  .about-page .ab-content-grid,
+  .register-page .rg-layout,
+  .register-page .rg-pay-layout,
+  .register-page .rg-confirm-layout,
+  .home-page .home-about-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .faq-page .faq-category-panel {
+    width: 100%;
+  }
+
+  .faq-page .faq-hero-inner,
+  .venue-page .venue-hero-inner,
+  .speakers-page .sk-hero-inner,
+  .sponsorship-page .sp-hero-inner,
+  .programme-page .pg-hero-inner {
+    grid-template-columns: 1fr !important;
+  }
+
+  .speakers-page .sk-speaker-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .sponsorship-page .sp-package-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .login-page .lg-feature-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .about-page .ab-subnav-inner {
+    flex-wrap: wrap;
+    gap: 10px 18px;
+  }
+
+  .programme-page .pg-control-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .register-page .rg-sidebar {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .speakers-page .sk-speaker-grid,
+  .sponsorship-page .sp-package-cards,
+  .login-page .lg-feature-grid,
+  .participant-dash .pd-quick {
+    grid-template-columns: 1fr !important;
+  }
+
+  .home-page .home-hero-title,
+  .faq-page .faq-hero-title,
+  .venue-page .venue-hero-title,
+  .speakers-page .sk-hero-title,
+  .sponsorship-page .sp-hero-title,
+  .programme-page .pg-hero-title,
+  .about-page .ab-hero-title,
+  .register-page .rg-hero-title {
+    font-size: clamp(1.85rem, 8vw, 2.75rem);
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+  }
+
+  .login-page .lg-hero-title,
+  .participant-login-page .pl-hero-title {
+    font-size: clamp(1.75rem, 8vw, 2.4rem);
+  }
+
+  .participant-dash .pd-hero-title {
+    font-size: clamp(1.6rem, 7vw, 2rem);
+  }
+
+  .public-chrome .home-brand {
+    max-width: calc(100% - 48px);
+  }
+
+  .public-chrome .home-brand-aca,
+  .public-chrome .home-brand-isippe {
+    height: auto;
+  }
+
+  .home-page .home-actions,
+  .login-page .lg-hero-buttons,
+  .register-page .rg-actions {
+    flex-wrap: wrap;
+  }
+
+  .register-page .rg-form-grid,
+  .register-page .rg-option-grid,
+  .register-page .rg-include-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .register-page .rg-confirm-actions {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 380px) {
+  .home-container {
+    width: calc(100% - 24px) !important;
+  }
+
+  .public-chrome .home-brand-aca {
+    width: min(90px, 28vw);
+  }
+
+  .public-chrome .home-brand-isippe {
+    width: min(130px, 40vw);
+  }
+}
+
+/* Large desktops: keep compositions in the design container */
+@media (min-width: 1600px) {
+  .home-page .home-hero-inner,
+  .faq-page .faq-hero-inner,
+  .venue-page .venue-hero-inner,
+  .speakers-page .sk-hero-inner,
+  .sponsorship-page .sp-hero-inner,
+  .programme-page .pg-hero-inner,
+  .about-page .ab-hero-inner,
+  .register-page .rg-hero-inner {
+    background-size: auto, auto 110%;
+  }
+
+  .login-page .lg-hero-bg,
+  .participant-login-page .pl-hero-bg {
+    left: max(0px, calc(50% - 720px));
+    right: max(0px, calc(50% - 720px));
+  }
+}

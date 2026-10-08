@@ -1,0 +1,54 @@
+{
+  "brand": {
+    "aca": "Anti-Counterfeit Authority",
+    "acaIsippe": "Anti-Counterfeit Authority · ISIPPE 2026",
+    "logoAlt": "Anti-Counterfeit Authority and ISIPPE 2026",
+    "orsCopyright": "© {{year}} Anti-Counterfeit Authority. Online Registration Portal (ORS)."
+  },
+  "nav": {
+    "main": "Main",
+    "mobile": "Mobile",
+    "footer": "Footer",
+    "home": "Home",
+    "about": "About",
+    "programme": "Programme",
+    "speakers": "Speakers",
+    "sponsorship": "Sponsorship",
+    "venue": "Venue",
+    "faq": "FAQ",
+    "participantLogin": "Participant Login",
+    "adminLogin": "Admin Login"
+  },
+  "actions": {
+    "registerNow": "Register Now",
+    "viewProgramme": "View Programme",
+    "learnMore": "Learn More",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "event": {
+    "fullName": "International Symposium on Intellectual Property Protection and Enforcement",
+    "edition": "3rd International Symposium on Intellectual Property Protection and Enforcement",
+    "dates": "12 – 14 November 2026",
+    "datesShort": "12 – 14 November 2026",
+    "city": "Nairobi, Kenya",
+    "venue": "Kenyatta International Convention Centre (KICC)",
+    "venueShort": "KICC, Nairobi",
+    "tagline": "Strengthening Intellectual Property Protection across Africa and Beyond"
+  },
+  "fees": {
+    "earlyBird": {
+      "label": "Early Bird Registration",
+      "until": "Up to 31 October 2026"
+    },
+    "late": {
+      "label": "Late Registration",
+      "until": "1 to 18 November 2026"
+    }
+  },
+  "language": {
+    "label": "Language",
+    "en": "EN",
+    "sw": "SW"
+  }
+}

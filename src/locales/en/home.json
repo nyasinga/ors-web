@@ -1,0 +1,59 @@
+{
+  "hero": {
+    "intro": "A global platform for dialogue, collaboration and action against counterfeiting, bringing together government agencies, industry leaders, policy makers, experts and stakeholders from across Africa and beyond.",
+    "pillars": {
+      "enforcement": "Stronger Enforcement",
+      "collaboration": "Regional Collaboration",
+      "innovation": "Innovation for Inclusive Growth"
+    }
+  },
+  "features": {
+    "dialogue": {
+      "title": "Pan-African Dialogue",
+      "text": "Uniting government agencies and industry leaders"
+    },
+    "knowledge": {
+      "title": "Knowledge Exchange",
+      "text": "Insights, innovation and best practices"
+    },
+    "partnerships": {
+      "title": "Strategic Partnerships",
+      "text": "Collaborating for greater impact"
+    },
+    "markets": {
+      "title": "Safer Markets",
+      "text": "Protecting consumers and driving sustainable growth"
+    },
+    "solutions": {
+      "title": "Innovation & Solutions",
+      "text": "Advancing effective IP protection and enforcement"
+    }
+  },
+  "about": {
+    "title": "About ISIPPE-3",
+    "body": "The International Symposium on Intellectual Property Protection and Enforcement (ISIPPE-3) is a premier global forum bringing together government agencies, industry leaders, policy makers, experts and stakeholders to discuss and advance strategies for combating counterfeiting and strengthening intellectual property protection and enforcement."
+  },
+  "stats": {
+    "participants": {
+      "value": "500+",
+      "label": "Participants",
+      "note": "Global experts and stakeholders"
+    },
+    "countries": {
+      "value": "30+",
+      "label": "Countries",
+      "note": "From across Africa and beyond"
+    },
+    "speakers": {
+      "value": "50+",
+      "label": "Speakers",
+      "note": "Renowned thought leaders"
+    },
+    "dialogue": {
+      "value": "3 Days",
+      "label": "of Dialogue",
+      "note": "Knowledge sharing and collaboration"
+    }
+  },
+  "venueImageAlt": "Kenyatta International Convention Centre"
+}

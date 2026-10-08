@@ -1,0 +1,54 @@
+{
+  "brand": {
+    "aca": "Mamlaka ya Kupambana na Bidhaa Bandia",
+    "acaIsippe": "Mamlaka ya Kupambana na Bidhaa Bandia · ISIPPE 2026",
+    "logoAlt": "Mamlaka ya Kupambana na Bidhaa Bandia na ISIPPE 2026",
+    "orsCopyright": "© {{year}} Mamlaka ya Kupambana na Bidhaa Bandia. Languzi la Usajili Mtandaoni (ORS)."
+  },
+  "nav": {
+    "main": "Kuu",
+    "mobile": "Simu",
+    "footer": "Chini",
+    "home": "Nyumbani",
+    "about": "Kuhusu",
+    "programme": "Ratiba",
+    "speakers": "Wazungumzaji",
+    "sponsorship": "Ufadhili",
+    "venue": "Ukumbi",
+    "faq": "Maswali",
+    "participantLogin": "Ingia kama Mshiriki",
+    "adminLogin": "Ingia kama Msimamizi"
+  },
+  "actions": {
+    "registerNow": "Jisajili Sasa",
+    "viewProgramme": "Angalia Ratiba",
+    "learnMore": "Jifunze Zaidi",
+    "openMenu": "Fungua menyu",
+    "closeMenu": "Funga menyu"
+  },
+  "event": {
+    "fullName": "Kongamano la Kimataifa la Ulinzi na Utekelezaji wa Haki Miliki",
+    "edition": "Kongamano la 3 la Kimataifa la Ulinzi na Utekelezaji wa Haki Miliki",
+    "dates": "12 – 14 Novemba 2026",
+    "datesShort": "12 - 14 Novemba 2026",
+    "city": "Nairobi, Kenya",
+    "venue": "Kituo cha Mikutano cha Kimataifa cha Kenyatta (KICC)",
+    "venueShort": "KICC, Nairobi",
+    "tagline": "Kuimarisha Ulinzi wa Haki Miliki Afrika na Zaidi"
+  },
+  "fees": {
+    "earlyBird": {
+      "label": "Usajili wa Mapema",
+      "until": "Hadi 31 Oktoba 2026"
+    },
+    "late": {
+      "label": "Usajili wa Marehemu",
+      "until": "1 hadi 18 Novemba 2026"
+    }
+  },
+  "language": {
+    "label": "Lugha",
+    "en": "EN",
+    "sw": "SW"
+  }
+}

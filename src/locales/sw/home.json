@@ -1,0 +1,59 @@
+{
+  "hero": {
+    "intro": "Jukwaa la kimataifa la mazungumzo, ushirikiano na hatua dhidi ya bidhaa bandia, likiwaleta pamoja mashirika ya serikali, viongozi wa sekta, watunga sera, wataalamu na wadau kutoka Afrika na kwingineko.",
+    "pillars": {
+      "enforcement": "Utekelezaji Imara",
+      "collaboration": "Ushirikiano wa Kikanda",
+      "innovation": "Ubunifu kwa Ukuaji Jumuishi"
+    }
+  },
+  "features": {
+    "dialogue": {
+      "title": "Mazungumzo ya Pan-Afrika",
+      "text": "Kuunganisha mashirika ya serikali na viongozi wa sekta."
+    },
+    "knowledge": {
+      "title": "Ubadilishanaji wa Maarifa",
+      "text": "Maarifa, ubunifu na mbinu bora."
+    },
+    "partnerships": {
+      "title": "Ushirikiano wa Kimkakati",
+      "text": "Kushirikiana kwa athari kubwa."
+    },
+    "markets": {
+      "title": "Masoko Salama",
+      "text": "Kulinda watumiaji na kukuza ukuaji endelevu."
+    },
+    "solutions": {
+      "title": "Ubunifu na Suluhisho",
+      "text": "Kuendeleza ulinzi na utekelezaji bora wa haki miliki."
+    }
+  },
+  "about": {
+    "title": "Kuhusu ISIPPE-3",
+    "body": "Kongamano la Kimataifa la Ulinzi na Utekelezaji wa Haki Miliki (ISIPPE-3) ni jukwaa kuu la kimataifa linalowaleta pamoja mashirika ya serikali, viongozi wa sekta, watunga sera, wataalamu na wadau kujadili na kuendeleza mikakati ya kupambana na bidhaa bandia na kuimarisha ulinzi na utekelezaji wa haki miliki."
+  },
+  "stats": {
+    "participants": {
+      "value": "500+",
+      "label": "Washiriki",
+      "note": "Wataalamu na wadau wa kimataifa"
+    },
+    "countries": {
+      "value": "30+",
+      "label": "Nchi",
+      "note": "Kutoka Afrika na kwingineko"
+    },
+    "speakers": {
+      "value": "50+",
+      "label": "Wazungumzaji",
+      "note": "Viongozi maarufu wa mawazo"
+    },
+    "dialogue": {
+      "value": "Siku 3",
+      "label": "za Mazungumzo",
+      "note": "Ubadilishanaji wa maarifa na ushirikiano"
+    }
+  },
+  "venueImageAlt": "Kituo cha Mikutano cha Kimataifa cha Kenyatta"
+}

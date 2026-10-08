@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Screen A type scale (design/desktop/Screen A.png @ 998px).
+  Cap-heights measured from the PNG; sizes chosen so rendered text matches.
+*/
+@layer base {
+  :root {
+    /* Type scale locked to image-2 / Screen A pixels @ ~998px */
+    --sa-h1: 3.5rem; /* 56px — ISIPPE-3 Inter Black */
+    --sa-h1-lh: 0.92;
+    --sa-subtitle: 1.3125rem; /* 21px — symposium name, matches image-2 weight */
+    --sa-subtitle-lh: 1.22;
+    --sa-body: 0.875rem; /* 14px — hero intro */
+    --sa-body-lh: 1.55;
+    --sa-meta: 0.875rem; /* 14px — date / city */
+    --sa-venue: 0.6875rem; /* 11px — KICC line */
+    --sa-nav: 0.8125rem; /* 13px */
+    --sa-feature-title: 0.8125rem; /* 13px — feature strip */
+    --sa-feature-text: 0.6875rem; /* 11px — wraps to ~2 lines */
+    --sa-about-h2: 1.75rem; /* 28px */
+    --sa-pillar-title: 0.875rem; /* 14px — hero pillars tagline */
+    --sa-pillar-title-lh: 1.25;
+    --sa-pillar-label: 0.625rem; /* 10px — pillar icon labels */
+    --sa-stat: 1.25rem; /* 20px */
+    --sa-header-h: 5rem; /* 80px */
+    --sa-logo-h: 3.25rem; /* 52px — header lockup */
+    --sa-hero-h: 32.9375rem; /* 527px */
+    --sa-gutter: 3rem; /* 48px — content inset ~x52 on 998 */
+    --sa-icon-meta: 1.125rem; /* 18px */
+    --sa-icon-feature: 1.75rem; /* 28px */
+    --sa-icon-stat: 1.375rem; /* 22px */
+    --sa-stroke: 1.75;
+  }
+
+  html {
+    @apply scroll-smooth antialiased;
+  }
+
+  body {
+    @apply m-0 min-h-dvh bg-white font-sans text-ink;
+  }
+
+  #root {
+    @apply min-h-dvh;
+  }
+
+  a {
+    @apply text-inherit no-underline;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    @apply font-sans;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-blue;
+  }
+}
+
+@layer components {
+  .sa-h1 {
+    font-size: var(--sa-h1);
+    line-height: var(--sa-h1-lh);
+    letter-spacing: -0.035em;
+    @apply font-black text-[#0A1628];
+  }
+
+  .sa-subtitle {
+    font-size: var(--sa-subtitle);
+    line-height: var(--sa-subtitle-lh);
+    letter-spacing: -0.02em;
+    @apply font-extrabold text-[#0A1628];
+  }
+
+  .sa-body {
+    font-size: var(--sa-body);
+    line-height: var(--sa-body-lh);
+    @apply font-normal text-[#4A5568];
+  }
+
+  .sa-meta {
+    font-size: var(--sa-meta);
+    line-height: 1.25;
+    @apply font-bold text-[#0A1628];
+  }
+
+  .sa-venue {
+    font-size: var(--sa-venue);
+    @apply leading-snug font-normal text-[#6B7280];
+  }
+
+  .sa-nav {
+    font-size: var(--sa-nav);
+    letter-spacing: -0.01em;
+    @apply font-medium text-[#5B6578];
+  }
+
+  .sa-nav-active {
+    @apply font-semibold text-[#0A1628];
+  }
+
+  .sa-feature-title {
+    font-size: var(--sa-feature-title);
+    letter-spacing: -0.01em;
+    @apply leading-tight font-bold text-[#0A1628];
+  }
+
+  .sa-feature-text {
+    font-size: var(--sa-feature-text);
+    @apply leading-[1.35] text-[#6B7280];
+  }
+
+  .sa-about-h2 {
+    font-size: var(--sa-about-h2);
+    letter-spacing: -0.02em;
+    @apply leading-tight font-extrabold text-[#0A1628];
+  }
+
+  .sa-pillar-title {
+    font-size: var(--sa-pillar-title);
+    line-height: var(--sa-pillar-title-lh);
+    letter-spacing: -0.02em;
+    @apply font-bold text-[#0A1628];
+  }
+
+  .sa-pillar-label {
+    font-size: var(--sa-pillar-label);
+    @apply leading-tight font-semibold text-[#0A1628];
+  }
+}
+
+@layer utilities {
+  /*
+    Full-bleed public canvas (matches design/desktop Screen A).
+    Gutters track Screen A content inset (~48–52px at 998px).
+  */
+  .page-container {
+    @apply w-full px-5 md:px-8 min-[960px]:px-12 xl:px-14;
+  }
+}

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 420" preserveAspectRatio="xMidYMax meet">
+  <defs>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#edf7ff" stop-opacity="0"/>
+      <stop offset="28%" stop-color="#e3f0fb" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#d5e8f8" stop-opacity="0.95"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="420" fill="url(#fade)"/>
+  <path fill="#c9dff4" fill-opacity="0.55" d="M-20,210 C40,170 90,250 140,220 C180,195 205,165 260,185 L260,420 L-20,420 Z"/>
+  <path fill="#b7d4ef" fill-opacity="0.5" d="M-20,255 C50,220 100,295 155,265 C195,242 220,215 260,240 L260,420 L-20,420 Z"/>
+  <path fill="#a8c8ea" fill-opacity="0.42" d="M-20,300 C55,270 110,330 160,310 C200,294 225,275 260,295 L260,420 L-20,420 Z"/>
+  <path fill="#9bbfe4" fill-opacity="0.35" d="M-20,345 C60,325 115,365 165,350 C205,338 230,325 260,340 L260,420 L-20,420 Z"/>
+  <path fill="#8eb5de" fill-opacity="0.28" d="M-20,380 C70,365 120,395 170,385 C210,377 235,370 260,378 L260,420 L-20,420 Z"/>
+</svg>

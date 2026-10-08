@@ -1,0 +1,731 @@
+/*
+  Sponsorship page — adopted from isippe3-sponsorship-pure-html-responsive/index.html
+  Scoped under .sponsorship-page. Reuses .home-container for gutters.
+*/
+
+.sponsorship-page {
+  --sp-blue: #075fd8;
+  --sp-green: #08713f;
+  --sp-red: #ed1c24;
+  --sp-ink: #101620;
+  --sp-muted: #4d5967;
+  --sp-line: #d8e2ed;
+  color: var(--sp-ink);
+  background: #fff;
+}
+
+.sponsorship-page .sp-accent {
+  width: 132px;
+  height: 6px;
+  display: flex;
+  margin-bottom: 18px;
+}
+
+.sponsorship-page .sp-accent span {
+  display: block;
+  height: 100%;
+}
+
+.sponsorship-page .sp-accent span:first-child {
+  width: 50%;
+  background: var(--sp-red);
+}
+
+.sponsorship-page .sp-accent span:last-child {
+  width: 50%;
+  background: var(--sp-green);
+}
+
+.sponsorship-page .sp-arrow {
+  font-size: 23px;
+  line-height: 1;
+  font-weight: 400;
+}
+
+/* ── Hero ── */
+.sponsorship-page .sp-hero {
+  background: #fff;
+  min-height: 274px;
+  position: relative;
+  overflow: hidden;
+}
+
+.sponsorship-page .sp-hero-inner {
+  background:
+    linear-gradient( 90deg, #fff 0%, #fff 28%, rgba(255, 255, 255, 0.92) 40%, rgba(255, 255, 255, 0.28) 58%, rgba(255, 255, 255, 0) 72% ),
+    url("/assets/sponsor-hero.jpg") 96% center / auto 108% no-repeat;
+  min-height: 274px;
+  display: grid;
+  grid-template-columns: 44% 56%;
+}
+
+.sponsorship-page .sp-hero-copy {
+  padding-top: 25px;
+  position: relative;
+  z-index: 2;
+}
+
+.sponsorship-page .sp-hero-title {
+  margin: 0;
+  font-size: 51px;
+  line-height: 0.98;
+  letter-spacing: -2.6px;
+  font-weight: 900;
+  color: var(--sp-ink);
+}
+
+.sponsorship-page .sp-hero-subtitle {
+  margin: 7px 0 6px;
+  font-size: 25px;
+  line-height: 1.05;
+  font-weight: 800;
+  color: var(--sp-ink);
+}
+
+.sponsorship-page .sp-hero-description {
+  max-width: 570px;
+  margin: 0 0 12px;
+  color: #344256;
+  font-size: 16px;
+  line-height: 1.32;
+}
+
+.sponsorship-page .sp-event-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.sponsorship-page .sp-event-divider {
+  width: 1px;
+  height: 39px;
+  background: #b8c2cc;
+}
+
+.sponsorship-page .sp-event-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--sp-ink);
+}
+
+.sponsorship-page .sp-event-item strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.sponsorship-page .sp-event-item .sp-venue-line {
+  font-size: 11px;
+  display: block;
+}
+
+.sponsorship-page .sp-event-icon {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  color: var(--sp-blue);
+}
+
+.sponsorship-page .sp-event-icon svg {
+  width: 32px;
+  height: 32px;
+  display: block;
+}
+
+/* ── Packages ── */
+.sponsorship-page .sp-packages {
+  padding: 15px 0 0;
+}
+
+.sponsorship-page .sp-section-heading .sp-accent {
+  width: 102px;
+  height: 5px;
+  margin-bottom: 8px;
+}
+
+.sponsorship-page .sp-section-heading h2 {
+  margin: 0;
+  font-size: 25px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -1px;
+  color: var(--sp-ink);
+}
+
+.sponsorship-page .sp-section-heading p {
+  margin: 5px 0 11px;
+  color: #344256;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.sponsorship-page .sp-package-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2.85fr) minmax(285px, 1.05fr);
+  gap: 15px;
+  align-items: start;
+}
+
+.sponsorship-page .sp-package-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.sponsorship-page .sp-package-card {
+  min-height: 242px;
+  border: 1px solid #d6e0eb;
+  border-radius: 6px;
+  padding: 15px 10px 10px;
+  text-align: center;
+  position: relative;
+  background: linear-gradient(180deg, #fff, #fbfdff);
+  display: flex;
+  flex-direction: column;
+}
+
+.sponsorship-page .sp-package-card.selected {
+  border: 1.5px solid var(--sp-blue);
+  box-shadow: 0 0 0 1px rgba(7, 95, 216, 0.08);
+}
+
+.sponsorship-page .sp-check {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--sp-blue);
+  color: #fff;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.sponsorship-page .sp-package-card.selected .sp-check {
+  display: flex;
+}
+
+.sponsorship-page .sp-medal {
+  height: 67px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 3px;
+}
+
+.sponsorship-page .sp-medal img {
+  height: 62px;
+  width: auto;
+  display: block;
+}
+
+.sponsorship-page .sp-package-card h3 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.1;
+  font-weight: 800;
+  color: var(--sp-ink);
+}
+
+.sponsorship-page .sp-price {
+  margin-top: 4px;
+  font-size: 19px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.sponsorship-page .sp-package-card.platinum .sp-price {
+  color: #075fd8;
+}
+
+.sponsorship-page .sp-package-card.gold .sp-price {
+  color: #b77d00;
+}
+
+.sponsorship-page .sp-package-card.silver .sp-price {
+  color: #53617b;
+}
+
+.sponsorship-page .sp-package-card.bronze .sp-price {
+  color: #ad321e;
+}
+
+.sponsorship-page .sp-package-description {
+  min-height: 52px;
+  margin: 12px 5px 9px;
+  color: #344256;
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.25;
+  flex: 1;
+}
+
+.sponsorship-page .sp-package-button {
+  width: 100%;
+  height: 39px;
+  border: 1px solid var(--sp-blue);
+  border-radius: 5px;
+  color: var(--sp-blue);
+  background: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.sponsorship-page .sp-package-card.selected .sp-package-button {
+  color: #fff;
+  background: var(--sp-blue);
+}
+
+/* ── Selected panel ── */
+.sponsorship-page .sp-selected-panel {
+  min-height: 500px;
+  padding: 20px 19px 17px;
+  border-radius: 8px;
+  background: linear-gradient(150deg, #f0f8ff, #f6faff);
+}
+
+.sponsorship-page .sp-selected-panel > h2 {
+  margin: 0;
+  padding-bottom: 13px;
+  border-bottom: 1px solid #cbdced;
+  font-size: 21px;
+  line-height: 1;
+  font-weight: 900;
+  color: var(--sp-ink);
+}
+
+.sponsorship-page .sp-selected-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 17px;
+}
+
+.sponsorship-page .sp-selected-heading img {
+  width: 65px;
+  height: 52px;
+  object-fit: contain;
+  display: block;
+}
+
+.sponsorship-page .sp-selected-heading h3 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: var(--sp-ink);
+}
+
+.sponsorship-page .sp-selected-price {
+  margin-top: 5px;
+  color: var(--sp-blue);
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.sponsorship-page .sp-selected-panel > p {
+  margin: 14px 0 11px;
+  color: #344256;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.sponsorship-page .sp-benefit-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sponsorship-page .sp-benefit-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 9px 0;
+  color: #344256;
+  font-size: 12px;
+}
+
+.sponsorship-page .sp-benefit-list li::before {
+  content: "✓";
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--sp-blue);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.sponsorship-page .sp-select-main {
+  width: 100%;
+  min-height: 51px;
+  margin-top: 16px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--sp-blue);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+/* ── Comparison ── */
+.sponsorship-page .sp-comparison {
+  margin-top: 13px;
+  padding-bottom: 25px;
+}
+
+.sponsorship-page .sp-comparison h2 {
+  margin: 0 0 8px;
+  font-size: 21px;
+  line-height: 1;
+  font-weight: 900;
+  color: var(--sp-ink);
+}
+
+.sponsorship-page .sp-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #d5e0eb;
+  border-radius: 5px;
+}
+
+.sponsorship-page .sp-comparison table {
+  width: 100%;
+  min-width: 700px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 11px;
+}
+
+.sponsorship-page .sp-comparison th,
+.sponsorship-page .sp-comparison td {
+  border: 1px solid #d5e0eb;
+  padding: 5px 9px;
+  text-align: center;
+  height: 25px;
+  color: var(--sp-ink);
+}
+
+.sponsorship-page .sp-comparison th:first-child,
+.sponsorship-page .sp-comparison td:first-child {
+  width: 27%;
+  text-align: left;
+}
+
+.sponsorship-page .sp-comparison thead th {
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.05;
+  font-weight: 800;
+  height: 48px;
+}
+
+.sponsorship-page .sp-comparison thead th:first-child {
+  background: #08713f;
+}
+
+.sponsorship-page .sp-comparison thead th:nth-child(2) {
+  background: #075fd8;
+}
+
+.sponsorship-page .sp-comparison thead th:nth-child(3) {
+  background: #d19700;
+}
+
+.sponsorship-page .sp-comparison thead th:nth-child(4) {
+  background: #7d899e;
+}
+
+.sponsorship-page .sp-comparison thead th:nth-child(5) {
+  background: #b94c2d;
+}
+
+.sponsorship-page .sp-tick {
+  color: var(--sp-blue);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1200px) {
+  .sponsorship-page .sp-hero-title {
+    font-size: 45px;
+  }
+
+  .sponsorship-page .sp-hero-subtitle {
+    font-size: 22px;
+  }
+
+  .sponsorship-page .sp-hero-description {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 960px) {
+  .sponsorship-page .sp-hero {
+    background: #fff;
+    min-height: 0;
+  }
+
+  .sponsorship-page .sp-hero-inner {
+    background:
+      linear-gradient(180deg, #fff 0%, rgba(255, 255, 255, 0.94) 48%, rgba(255, 255, 255, 0.12) 100%),
+      url("/assets/sponsor-hero.jpg") center bottom / auto 65% no-repeat;
+    display: block;
+    min-height: 410px;
+  }
+
+  .sponsorship-page .sp-hero-copy {
+    padding-top: 26px;
+  }
+
+  .sponsorship-page .sp-hero-title {
+    font-size: 43px;
+  }
+
+  .sponsorship-page .sp-hero-subtitle {
+    font-size: 21px;
+  }
+
+  .sponsorship-page .sp-hero-description {
+    max-width: 650px;
+  }
+
+  .sponsorship-page .sp-package-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sponsorship-page .sp-selected-panel {
+    order: 2;
+    min-height: 0;
+  }
+
+  .sponsorship-page .sp-package-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .sponsorship-page .sp-hero {
+    background: #fff;
+  }
+
+  .sponsorship-page .sp-hero-inner {
+    background:
+      linear-gradient(180deg, #fff 0%, #fff 53%, rgba(255, 255, 255, 0.08) 100%),
+      url("/assets/sponsor-hero.jpg") center bottom / auto 42% no-repeat;
+    min-height: 435px;
+  }
+
+  .sponsorship-page .sp-hero-copy {
+    padding-top: 23px;
+  }
+
+  .sponsorship-page .sp-accent {
+    width: 68px;
+    height: 4px;
+    margin-bottom: 14px;
+  }
+
+  .sponsorship-page .sp-hero-title {
+    font-size: 37px;
+    line-height: 0.98;
+    letter-spacing: -1.8px;
+  }
+
+  .sponsorship-page .sp-hero-subtitle {
+    margin-top: 7px;
+    font-size: 19px;
+  }
+
+  .sponsorship-page .sp-hero-description {
+    margin: 8px 0 13px;
+    font-size: 12.5px;
+    line-height: 1.34;
+    max-width: 370px;
+  }
+
+  .sponsorship-page .sp-event-row {
+    display: block;
+  }
+
+  .sponsorship-page .sp-event-divider {
+    display: none;
+  }
+
+  .sponsorship-page .sp-event-item {
+    margin-bottom: 8px;
+    gap: 9px;
+    font-size: 11px;
+  }
+
+  .sponsorship-page .sp-event-item strong {
+    font-size: 12px;
+  }
+
+  .sponsorship-page .sp-event-icon,
+  .sponsorship-page .sp-event-icon svg {
+    width: 27px;
+    height: 27px;
+  }
+
+  .sponsorship-page .sp-packages {
+    padding-top: 15px;
+  }
+
+  .sponsorship-page .sp-section-heading .sp-accent {
+    width: 67px;
+    height: 4px;
+  }
+
+  .sponsorship-page .sp-section-heading h2 {
+    font-size: 22px;
+  }
+
+  .sponsorship-page .sp-section-heading p {
+    font-size: 11.5px;
+    line-height: 1.3;
+  }
+
+  .sponsorship-page .sp-package-layout {
+    gap: 12px;
+  }
+
+  .sponsorship-page .sp-package-cards {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .sponsorship-page .sp-package-card {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 66px 1fr auto;
+    grid-template-rows: auto auto auto;
+    text-align: left;
+    padding: 11px;
+    column-gap: 10px;
+  }
+
+  .sponsorship-page .sp-check {
+    top: 6px;
+    right: 6px;
+  }
+
+  .sponsorship-page .sp-medal {
+    grid-row: 1 / span 3;
+    height: 70px;
+    align-self: center;
+    margin-bottom: 0;
+  }
+
+  .sponsorship-page .sp-medal img {
+    width: 61px;
+    height: 61px;
+  }
+
+  .sponsorship-page .sp-package-card h3 {
+    align-self: end;
+    font-size: 13px;
+  }
+
+  .sponsorship-page .sp-price {
+    align-self: start;
+    margin-top: 3px;
+    font-size: 17px;
+  }
+
+  .sponsorship-page .sp-package-description {
+    grid-column: 2;
+    min-height: 0;
+    margin: 4px 0 6px;
+    font-size: 10.5px;
+  }
+
+  .sponsorship-page .sp-package-button {
+    grid-column: 2 / 4;
+    height: 36px;
+    font-size: 11px;
+  }
+
+  .sponsorship-page .sp-selected-panel {
+    padding: 16px 14px;
+  }
+
+  .sponsorship-page .sp-selected-panel > h2 {
+    font-size: 18px;
+  }
+
+  .sponsorship-page .sp-selected-heading img {
+    width: 58px;
+  }
+
+  .sponsorship-page .sp-selected-heading h3 {
+    font-size: 14px;
+  }
+
+  .sponsorship-page .sp-selected-price {
+    font-size: 18px;
+  }
+
+  .sponsorship-page .sp-selected-panel > p {
+    font-size: 11.5px;
+  }
+
+  .sponsorship-page .sp-benefit-list li {
+    font-size: 10.5px;
+    margin: 8px 0;
+  }
+
+  .sponsorship-page .sp-select-main {
+    min-height: 46px;
+    font-size: 12px;
+  }
+
+  .sponsorship-page .sp-comparison {
+    margin-top: 14px;
+  }
+
+  .sponsorship-page .sp-comparison h2 {
+    font-size: 19px;
+  }
+
+  .sponsorship-page .sp-comparison table {
+    min-width: 700px;
+    font-size: 10px;
+  }
+
+  .sponsorship-page .sp-comparison thead th {
+    font-size: 11px;
+  }
+
+  .sponsorship-page .sp-comparison th,
+  .sponsorship-page .sp-comparison td {
+    padding: 5px 7px;
+  }
+}
+
+@media (max-width: 380px) {
+  .sponsorship-page .sp-hero-title {
+    font-size: 34px;
+  }
+
+  .sponsorship-page .sp-hero-inner {
+    min-height: 425px;
+  }
+}
