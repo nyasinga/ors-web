@@ -55,8 +55,7 @@ const pillars = [
   { icon: Lightbulb, labelKey: "hero.pillars.innovation" },
 ] as const;
 
-const container =
-  "mx-auto w-[min(calc(100%-clamp(28px,5vw,80px)),1440px)] max-[1200px]:w-[min(calc(100%-48px),1440px)] max-[640px]:w-[calc(100%-32px)]";
+const container = "mx-auto w-[calc(100%-clamp(32px,5vw,120px))] max-w-[1440px] max-[768px]:w-[calc(100%-40px)] max-[480px]:w-[calc(100%-32px)]";
 
 /** Home — Tailwind port of index 2.html / home.css page body */
 export function HomePage() {
@@ -73,9 +72,10 @@ export function HomePage() {
       >
         {/* Desktop art: nudged right a bit for modest gap; curve still faces copy */}
         <div
-          className="pointer-events-none absolute inset-y-0 left-[min(44%,520px)] right-0 z-0 hidden bg-[url('/assets/hero-home-visual.png')] bg-[length:auto_110%] bg-[-140px_center] bg-no-repeat min-[961px]:block min-[1400px]:left-[min(46%,580px)] min-[1400px]:bg-[-100px_center]"
+          className="pointer-events-none absolute inset-y-0 left-[min(44%,520px)] right-0 z-0 hidden bg-[url('/assets/hero-home-visual.png')] bg-[length:auto_100%] bg-[-140px_center] bg-no-repeat min-[961px]:block min-[1400px]:left-[min(46%,580px)] min-[1400px]:bg-[-100px_center]"
           aria-hidden
         />
+        
         {/* White under copy, soft fade into the image */}
         <div
           className="pointer-events-none absolute inset-0 z-[1] hidden bg-[linear-gradient(90deg,#fff_0%,#fff_38%,rgba(255,255,255,.92)_44%,rgba(255,255,255,.4)_52%,transparent_62%)] min-[961px]:block"
@@ -95,9 +95,22 @@ export function HomePage() {
               "relative min-w-0 pt-[43px]",
               "min-[961px]:max-w-[min(40%,460px)] min-[961px]:pb-10",
               "max-[960px]:order-1 max-[960px]:w-full max-[960px]:max-w-none max-[960px]:pt-7",
-              "max-[640px]:pt-[22px]",
+              "max-[640px]:pt-[0px]",
             )}
           >
+            {/* Mobile/tablet visual band */}
+          <div
+            className={cn(
+              "relative z-0 hidden max-[960px]:order-2 max-[960px]:block",
+              "max-[960px]:mx-[calc(50%-50vw)] max-[960px]:mt-0",
+              "max-[960px]:h-[clamp(100px,20vw,180px)] max-[960px]:w-screen max-[960px]:max-w-none",
+              "max-[960px]:bg-[url('/assets/hero-home-visual-mobile.png')]",
+              "max-[960px]:bg-[length:100%_auto] max-[960px]:bg-top max-[960px]:bg-no-repeat",
+              "max-[640px]:h-[clamp(90px,20vw,140px)]",
+              "max-[380px]:h-[76px]",
+            )}
+          />
+          
             <div
               className="mb-[22px] flex h-1.5 w-[112px] max-[640px]:mb-3.5 max-[640px]:h-1 max-[640px]:w-[68px]"
               aria-hidden
@@ -108,13 +121,13 @@ export function HomePage() {
 
             <h1
               className={cn(
-                "m-0 whitespace-nowrap text-[82px] font-black leading-[0.92] tracking-[-4px] text-[#0b1016]",
+                "m-0 whitespace-nowrap text-[82px] font-black leading-[0.92] tracking-[-4px] text-[#0043a5]",
                 "max-[1200px]:text-[68px]",
                 "max-[960px]:whitespace-normal max-[960px]:text-[clamp(2.75rem,7vw,3.75rem)] max-[960px]:tracking-[-0.04em]",
                 "max-[640px]:text-[clamp(2.35rem,11vw,3.25rem)] max-[640px]:tracking-[-0.045em]",
               )}
             >
-              ISIPPE <span className="text-[#ed1c24]">2026</span>
+              ISIPPE <span className="text-[#ed1c24]/90">2026</span>
             </h1>
 
             <div
@@ -138,7 +151,7 @@ export function HomePage() {
               {t("common:event.fullName")}
             </div>
 
-            <div className="flex items-center gap-4 max-[640px]:flex-col max-[640px]:items-start max-[640px]:gap-2.5">
+            <div className="flex items-center gap-4 max-[640px]:flex-col max-[640px]:items-start max-[640px]:gap-2.5 mt-3">
               <div className="flex items-center gap-3 max-[640px]:gap-2.5">
                 <div className="w-[31px] shrink-0 text-[#075fd8] max-[640px]:w-7 [&_svg]:block [&_svg]:h-[31px] [&_svg]:w-[31px] max-[640px]:[&_svg]:h-7 max-[640px]:[&_svg]:w-7">
                   <CalendarDays size={27} strokeWidth={1.7} />
@@ -161,9 +174,9 @@ export function HomePage() {
 
             <p
               className={cn(
-                "mb-[13px] mt-5 max-w-[500px] text-[15.5px] leading-[1.38] text-[#374151]",
+                "mb-[13px] mt-5 max-w-[500px] text-[13.5px] leading-[1.38] text-[#676b71]",
                 "max-[960px]:max-w-none",
-                "max-[640px]:mb-4 max-[640px]:mt-3.5 max-[640px]:text-[14px] max-[640px]:leading-[1.45]",
+                "max-[640px]:mb-4 max-[640px]:mt-3.5 max-[640px]:text-[12px] max-[640px]:leading-[1.45]",
               )}
             >
               {t("hero.intro")}
@@ -173,7 +186,7 @@ export function HomePage() {
               className={cn(
                 "flex flex-wrap gap-3",
                 "max-[960px]:gap-3",
-                "max-[640px]:grid max-[640px]:grid-cols-1 max-[640px]:gap-2.5",
+                "max-[640px]:grid max-[640px]:grid-cols-1 max-[640px]:gap-2.5"
               )}
             >
               <Link
@@ -203,25 +216,13 @@ export function HomePage() {
             </div>
           </div>
 
-          {/* Mobile/tablet visual band */}
-          <div
-            className={cn(
-              "relative z-0 hidden max-[960px]:order-2 max-[960px]:block",
-              "max-[960px]:mx-[calc(50%-50vw)] max-[960px]:mt-2 max-[960px]:h-[clamp(240px,68vw,320px)] max-[960px]:w-screen max-[960px]:max-w-[100vw]",
-              "max-[960px]:bg-[url('/assets/hero-home-visual.png')] max-[960px]:bg-[length:auto_100%] max-[960px]:bg-center max-[960px]:bg-no-repeat",
-              "max-[640px]:h-[clamp(200px,62vw,280px)]",
-              "max-[380px]:h-[230px]",
-            )}
-            aria-hidden
-          />
-
           {/* Overlay on the photo: theme + pillars sit in the clear photo area */}
           <aside
             className={cn(
               "z-[3] flex min-w-0 flex-col text-left",
               "min-[961px]:absolute min-[961px]:bottom-8 min-[961px]:right-[clamp(28px,4vw,64px)] min-[961px]:top-[clamp(64px,12%,96px)] min-[961px]:w-[min(34%,360px)]",
               "max-[960px]:relative max-[960px]:order-3 max-[960px]:z-[2] max-[960px]:-mt-[72px] max-[960px]:w-[calc(100%-24px)] max-[960px]:max-w-[560px] max-[960px]:self-center max-[960px]:rounded-t-xl max-[960px]:bg-[linear-gradient(180deg,rgba(255,255,255,.92)_0%,rgba(255,255,255,.97)_28%,#fff_100%)] max-[960px]:px-3.5 max-[960px]:pb-[18px] max-[960px]:pt-3",
-              "max-[380px]:-mt-[58px] max-[380px]:w-[calc(100%-16px)] max-[380px]:px-2.5 max-[380px]:pb-4 max-[380px]:pt-2.5",
+              "max-[380px]:-mt-[58px] max-[380px]:w-[calc(100%-16px)] max-[380px]:px-2.5 max-[380px]:pb-4 max-[380px]:pt-2.5"
             )}
           >
             <div className="min-w-0 shrink-0">
@@ -309,12 +310,12 @@ export function HomePage() {
               key={item.titleKey}
               className={cn(
                 "flex min-h-[57px] items-center gap-4 border-r border-[#dfe5ea] px-6",
-                i === 0 && "pl-0",
+                i === 0 && "first:pl-5.5",
                 i === features.length - 1 && "border-r-0",
                 "max-[960px]:min-w-0 max-[960px]:border-b max-[960px]:border-r-0 max-[960px]:px-3.5 max-[960px]:py-4",
                 "max-[960px]:odd:border-r max-[960px]:odd:border-[#dfe5ea]",
                 "max-[960px]:[&:nth-last-child(-n+2)]:border-b-0",
-                "max-[960px]:first:pl-3.5",
+                "max-[640px]:first:pl-0",
                 "max-[640px]:gap-3.5 max-[640px]:border-b max-[640px]:border-r-0 max-[640px]:px-0 max-[640px]:py-3.5 max-[640px]:odd:border-r-0 max-[640px]:[&:nth-last-child(-n+2)]:border-b max-[640px]:last:border-b-0",
               )}
             >
