@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { CalendarDays, MapPin, Search } from "lucide-react";
+import { MapPin, Search } from "lucide-react";
+import { PageHero } from "../../components/public/PageHero";
 import { cn } from "../../lib/cn";
 import { programmeDays, programmeSessions } from "../../data/publicContent";
 
@@ -12,13 +12,6 @@ const dayMeta: Record<1 | 2 | 3, { date: string; weekday: string }> = {
 
 const container =
   "mx-auto box-border w-[min(calc(100%-clamp(28px,5vw,80px)),1440px)] max-w-full max-[1200px]:w-[min(calc(100%-48px),1440px)] max-[640px]:w-[calc(100%-32px)] max-[380px]:!w-[calc(100%-24px)]";
-
-const heroBg =
-  "[background:linear-gradient(90deg,#fff_0%,#fff_28%,rgba(255,255,255,0.92)_40%,rgba(255,255,255,0.28)_58%,rgba(255,255,255,0)_72%),url('/assets/programme-hero.jpg')_96%_center/auto_108%_no-repeat]";
-const heroBgTablet =
-  "max-[1100px]:[background:linear-gradient(180deg,#fff_0%,rgba(255,255,255,0.95)_48%,rgba(255,255,255,0.12)_100%),url('/assets/programme-hero.jpg')_center_bottom/auto_58%_no-repeat]";
-const heroBgMobile =
-  "max-[700px]:[background:linear-gradient(180deg,#fff_0%,#fff_56%,rgba(255,255,255,0.05)_100%),url('/assets/programme-hero.jpg')_center_bottom/auto_43%_no-repeat]";
 
 function tagClass(tone: (typeof programmeSessions)[number]["tone"]) {
   const base = "inline-block rounded px-[9px] py-1 text-[10px] font-semibold";
@@ -52,7 +45,6 @@ const td = {
 
 /** Programme — Tailwind port of isippe3-programme-pure-html-responsive */
 export function ProgrammePage() {
-  const { t } = useTranslation("common");
   const [dayFilter, setDayFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [openDays, setOpenDays] = useState<Record<1 | 2 | 3, boolean>>({
@@ -79,58 +71,28 @@ export function ProgrammePage() {
 
   return (
     <div className="bg-white text-[#101827]">
-      <section className="h-[234px] overflow-hidden bg-white max-[1100px]:h-[350px] max-[700px]:h-[385px]">
-        <div
-          className={cn(
-            container,
-            "h-full pt-6 max-[700px]:pt-5",
-            heroBg,
-            heroBgTablet,
-            heroBgMobile,
-            "min-[1600px]:[background-size:auto,auto_110%]",
-          )}
-        >
-          <div
-            className="mb-[11px] flex h-1.5 w-[133px] max-[700px]:h-1 max-[700px]:w-[68px]"
-            aria-hidden
-          >
-            <i className="block h-full w-1/2 bg-[#ed1c24]" />
-            <i className="block h-full w-1/2 bg-[#08713f]" />
-          </div>
-          <h1 className="text-[69px] font-black leading-[0.94] tracking-[-3.4px] text-[#101827] max-[700px]:text-[51px] max-[700px]:tracking-[-2.5px] max-[640px]:text-[clamp(1.85rem,8vw,2.75rem)] max-[640px]:leading-[1.05] max-[640px]:tracking-[-0.04em]">
-            Programme
-          </h1>
-          <div className="mb-[11px] mt-2 max-w-[610px] text-[23px] font-extrabold leading-[1.12] text-[#101827] max-[1100px]:text-[20px] max-[700px]:text-base max-[700px]:leading-[1.15]">
+      <PageHero
+        title="Programme"
+        subtitle={
+          <>
             ISIPPE-3 International Symposium on
             <br />
             Intellectual Property Protection and Enforcement
-          </div>
-          <div className="flex items-center gap-[15px] max-[700px]:block">
-            <div className="flex items-center gap-2.5 text-[#101827] max-[700px]:my-2 [&_svg]:h-8 [&_svg]:w-8 [&_svg]:shrink-0 [&_svg]:text-[#0964df] max-[700px]:[&_svg]:h-[27px] max-[700px]:[&_svg]:w-[27px]">
-              <CalendarDays size={32} strokeWidth={2} />
-              <strong className="text-[13px] font-extrabold max-[700px]:text-[11px]">
-                {t("event.datesShort")}
-              </strong>
-            </div>
-            <div className="h-[39px] w-px bg-[#b9c3ce] max-[700px]:hidden" aria-hidden />
-            <div className="flex items-center gap-2.5 text-[#101827] max-[700px]:my-2 [&_svg]:h-8 [&_svg]:w-8 [&_svg]:shrink-0 [&_svg]:text-[#0964df] max-[700px]:[&_svg]:h-[27px] max-[700px]:[&_svg]:w-[27px]">
-              <MapPin size={32} strokeWidth={0} fill="currentColor" />
-              <div>
-                <strong className="text-[13px] font-extrabold max-[700px]:text-[11px]">
-                  {t("event.city")}
-                </strong>
-                <small className="block text-[11px] text-[#53627a] max-[700px]:text-[9px]">
-                  {t("event.venue")}
-                </small>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+          </>
+        }
+        image="/assets/programme-hero.jpg"
+        imageAlt="Nairobi skyline and Kenyatta International Convention Centre"
+      />
 
       <section className="pb-3.5 pt-3 max-[700px]:pt-2.5">
         <div className={container}>
-          <div className="flex items-center gap-2.5 max-[1100px]:flex-wrap max-[900px]:gap-3 max-[700px]:grid max-[700px]:grid-cols-[1fr_1fr]">
+          <div
+            className={cn(
+              "flex flex-wrap items-center gap-2.5",
+              "max-[1100px]:gap-2",
+              "max-[700px]:grid max-[700px]:grid-cols-2 max-[700px]:gap-2",
+            )}
+          >
             {programmeDays.map((d, idx) => {
               const active = dayFilter === d.id;
               return (
@@ -138,7 +100,9 @@ export function ProgrammePage() {
                   key={d.id}
                   type="button"
                   className={cn(
-                    "h-[51px] cursor-pointer rounded-[7px] border px-[31px] text-[14px] leading-[1.1] max-[700px]:h-12 max-[700px]:w-full max-[700px]:px-2.5 max-[700px]:text-[11px]",
+                    "h-[51px] shrink-0 cursor-pointer rounded-[7px] border px-[31px] text-[14px] leading-[1.1]",
+                    "max-[1100px]:px-4 max-[1100px]:text-[13px]",
+                    "max-[700px]:h-12 max-[700px]:w-full max-[700px]:px-2.5 max-[700px]:text-[11px]",
                     active
                       ? "border-[#0964df] bg-[#0964df] text-center font-bold text-white"
                       : "border-[#d4dfeb] bg-white text-left text-[#17243a]",
@@ -157,7 +121,7 @@ export function ProgrammePage() {
                 >
                   {d.sub ? (
                     <>
-                      <strong className="block text-base font-extrabold max-[700px]:text-[13px]">
+                      <strong className="block text-base font-extrabold max-[1100px]:text-[14px] max-[700px]:text-[13px]">
                         {d.label}
                       </strong>
                       {d.sub}
@@ -168,7 +132,14 @@ export function ProgrammePage() {
                 </button>
               );
             })}
-            <label className="ml-auto flex h-[38px] w-[293px] items-center gap-[9px] rounded-[7px] border border-[#d4dfeb] bg-white px-[11px] max-[700px]:col-span-full max-[700px]:m-0 max-[700px]:w-full [&_svg]:h-[18px] [&_svg]:w-[18px] [&_svg]:shrink-0 [&_svg]:text-[#53627a]">
+            <label
+              className={cn(
+                "ml-auto flex h-[38px] w-[min(293px,100%)] min-w-[200px] flex-1 items-center gap-[9px] rounded-[7px] border border-[#d4dfeb] bg-white px-[11px]",
+                "max-[1100px]:ml-0 max-[1100px]:basis-full",
+                "max-[700px]:col-span-full max-[700px]:min-w-0 max-[700px]:w-full",
+                "[&_svg]:h-[18px] [&_svg]:w-[18px] [&_svg]:shrink-0 [&_svg]:text-[#53627a]",
+              )}
+            >
               <Search size={18} strokeWidth={2} aria-hidden />
               <span className="sr-only">Search sessions</span>
               <input

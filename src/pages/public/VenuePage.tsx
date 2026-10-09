@@ -1,13 +1,12 @@
-import { useTranslation } from "react-i18next";
 import {
   Bus,
-  CalendarDays,
   Globe2,
   MapPin,
   Shield,
   Users,
   Wifi,
 } from "lucide-react";
+import { PageHero } from "../../components/public/PageHero";
 import { cn } from "../../lib/cn";
 
 const benefits = [
@@ -103,19 +102,6 @@ const spaces = [
 const container =
   "mx-auto box-border w-[min(calc(100%-clamp(28px,5vw,80px)),1440px)] max-w-full max-[1200px]:w-[min(calc(100%-48px),1440px)] max-[640px]:w-[calc(100%-32px)] max-[380px]:!w-[calc(100%-24px)]";
 
-const heroBg =
-  "[background:linear-gradient(90deg,#fff_0%,#fff_28%,rgba(255,255,255,0.92)_40%,rgba(255,255,255,0.28)_58%,rgba(255,255,255,0)_72%),url('/assets/venue-hero.jpg')_96%_center/auto_108%_no-repeat]";
-const heroBgTablet =
-  "max-[960px]:[background:linear-gradient(180deg,#fff_0%,rgba(255,255,255,0.94)_48%,rgba(255,255,255,0.12)_100%),url('/assets/venue-hero.jpg')_center_bottom/auto_62%_no-repeat]";
-const heroBgMobile =
-  "max-[640px]:[background:linear-gradient(180deg,#fff_0%,#fff_50%,rgba(255,255,255,0.05)_100%),url('/assets/venue-hero.jpg')_center_bottom/auto_44%_no-repeat]";
-
-const eventIcon =
-  "w-8 shrink-0 grow-0 basis-8 text-[#075fd8] max-[640px]:h-[27px] max-[640px]:w-[27px] [&_svg]:block [&_svg]:h-8 [&_svg]:w-8 max-[640px]:[&_svg]:h-[27px] max-[640px]:[&_svg]:w-[27px]";
-const eventItem =
-  "flex items-center gap-[11px] text-[13px] font-semibold leading-[1.3] text-[#101620] max-[640px]:mb-2 max-[640px]:text-[11px]";
-const eventStrong = "text-[14px] font-extrabold max-[640px]:text-xs";
-
 const arrow = "text-[23px] font-normal leading-none";
 const btn =
   "inline-flex min-h-[39px] items-center justify-center gap-3 rounded-md border border-[#075fd8] bg-white px-5 text-[13px] font-bold text-[#075fd8] transition-all duration-200 ease-[ease] hover:-translate-y-px hover:bg-[#f3f8ff]";
@@ -124,61 +110,24 @@ const aboutP =
 
 /** Venue — Tailwind port of isippe3-venue-pure-html-responsive */
 export function VenuePage() {
-  const { t } = useTranslation("common");
-
   return (
     <div className="bg-white text-[#101620]">
-      <section className="relative min-h-[319px] overflow-hidden bg-white max-[960px]:min-h-0" id="venue">
-        <div
-          className={cn(
-            container,
-            "grid min-h-[319px] grid-cols-[43%_57%] items-start max-[1200px]:grid-cols-[45%_55%] max-[960px]:block max-[960px]:min-h-[480px] max-[640px]:min-h-[495px] max-[380px]:min-h-[480px]",
-            heroBg,
-            heroBgTablet,
-            heroBgMobile,
-            "min-[1600px]:[background-size:auto,auto_110%]",
-          )}
-        >
-          <div className="relative z-[3] pt-[30px] max-[960px]:pt-[27px] max-[640px]:pt-[23px]">
-            <div
-              className="mb-[18px] flex h-1.5 w-[132px] max-[640px]:mb-[15px] max-[640px]:h-1 max-[640px]:w-[68px]"
-              aria-hidden
-            >
-              <span className="block h-full w-1/2 bg-[#ed1c24]" />
-              <span className="block h-full w-1/2 bg-[#08713f]" />
-            </div>
-            <p className="mb-[11px] text-[14px] font-bold uppercase leading-none text-[#1d3551] max-[640px]:mb-2.5 max-[640px]:text-[11px]">
-              Venue
-            </p>
-            <h1 className="max-w-[600px] text-[44px] font-black leading-[1.04] tracking-[-2px] text-[#101620] max-[1200px]:text-[39px] max-[960px]:max-w-[650px] max-[960px]:text-[42px] max-[640px]:max-w-[370px] max-[640px]:text-[clamp(1.85rem,8vw,2.75rem)] max-[640px]:leading-[1.05] max-[640px]:tracking-[-0.04em]">
-              Kenyatta International
-              <br />
-              Convention Centre (KICC)
-            </h1>
-            <p className="mb-[17px] mt-2.5 max-w-[510px] text-[17px] leading-[1.34] text-[#344256] max-[1200px]:text-[15px] max-[960px]:max-w-[600px] max-[640px]:mb-3.5 max-[640px]:mt-[9px] max-[640px]:max-w-[360px] max-[640px]:text-[13px] max-[640px]:leading-[1.32]">
-              ISIPPE-3 will be held at the iconic Kenyatta International Convention Centre (KICC), a
-              world-class venue in the heart of Nairobi, Kenya.
-            </p>
-            <div className="flex items-center gap-[17px] max-[960px]:max-w-[680px] max-[640px]:block">
-              <div className={eventItem}>
-                <div className={eventIcon}>
-                  <CalendarDays size={32} strokeWidth={2} />
-                </div>
-                <strong className={eventStrong}>{t("event.datesShort")}</strong>
-              </div>
-              <div className="h-[42px] w-px bg-[#b9c2cc] max-[640px]:hidden" aria-hidden />
-              <div className={eventItem}>
-                <div className={eventIcon}>
-                  <MapPin size={32} strokeWidth={0} fill="currentColor" />
-                </div>
-                <strong className={eventStrong}>KICC, Nairobi, Kenya</strong>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <PageHero
+        eyebrow="Venue"
+        title={
+          <>
+            Kenyatta International
+            <br />
+            Convention Centre (KICC)
+          </>
+        }
+        description="ISIPPE-3 will be held at the iconic Kenyatta International Convention Centre (KICC), a world-class venue in the heart of Nairobi, Kenya."
+        image="/assets/venue-hero.jpg"
+        imageAlt="Kenyatta International Convention Centre in Nairobi"
+        combinedLocation
+      />
 
-      <section className="pb-[17px] pt-[15px] max-[640px]:pb-[15px] max-[640px]:pt-2.5">
+      <section className="pb-[17px] pt-[15px] max-[640px]:pb-[15px] max-[640px]:pt-2.5" id="venue">
         <div
           className={cn(
             container,

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import { CalendarDays, MapPin } from "lucide-react";
+import { PageHero } from "../../components/public/PageHero";
 import { cn } from "../../lib/cn";
 
 type PackageId = "platinum" | "gold" | "silver" | "bronze";
@@ -103,19 +102,6 @@ const comparisonRows: { label: string; cells: Cell[] }[] = [
 const container =
   "mx-auto box-border w-[min(calc(100%-clamp(28px,5vw,80px)),1440px)] max-w-full max-[1200px]:w-[min(calc(100%-48px),1440px)] max-[640px]:w-[calc(100%-32px)] max-[380px]:!w-[calc(100%-24px)]";
 
-const heroBg =
-  "[background:linear-gradient(90deg,#fff_0%,#fff_28%,rgba(255,255,255,0.92)_40%,rgba(255,255,255,0.28)_58%,rgba(255,255,255,0)_72%),url('/assets/sponsor-hero.jpg')_96%_center/auto_108%_no-repeat]";
-const heroBgTablet =
-  "max-[960px]:[background:linear-gradient(180deg,#fff_0%,rgba(255,255,255,0.94)_48%,rgba(255,255,255,0.12)_100%),url('/assets/sponsor-hero.jpg')_center_bottom/auto_65%_no-repeat]";
-const heroBgMobile =
-  "max-[640px]:[background:linear-gradient(180deg,#fff_0%,#fff_53%,rgba(255,255,255,0.08)_100%),url('/assets/sponsor-hero.jpg')_center_bottom/auto_42%_no-repeat]";
-
-const eventItem =
-  "flex items-center gap-2.5 text-[13px] text-[#101620] max-[640px]:mb-2 max-[640px]:gap-[9px] max-[640px]:text-[11px]";
-const eventStrong = "text-[14px] font-extrabold max-[640px]:text-xs";
-const eventIcon =
-  "h-8 w-8 shrink-0 grow-0 basis-8 text-[#075fd8] max-[640px]:h-[27px] max-[640px]:w-[27px] [&_svg]:block [&_svg]:h-8 [&_svg]:w-8 max-[640px]:[&_svg]:h-[27px] max-[640px]:[&_svg]:w-[27px]";
-
 const priceColor: Record<PackageId, string> = {
   platinum: "text-[#075fd8]",
   gold: "text-[#b77d00]",
@@ -142,64 +128,20 @@ const arrow = "text-[23px] font-normal leading-none";
 
 /** Sponsorship — Tailwind port of isippe3-sponsorship-pure-html-responsive */
 export function SponsorshipPage() {
-  const { t } = useTranslation("common");
   const [selected, setSelected] = useState<PackageId>("platinum");
   const pkg = packages[selected];
 
   return (
     <div className="bg-white text-[#101620]">
-      <section className="relative min-h-[274px] overflow-hidden bg-white max-[960px]:min-h-0" id="sponsorship">
-        <div
-          className={cn(
-            container,
-            "grid min-h-[274px] grid-cols-[44%_56%] max-[960px]:block max-[960px]:min-h-[410px] max-[640px]:min-h-[435px] max-[380px]:min-h-[425px]",
-            heroBg,
-            heroBgTablet,
-            heroBgMobile,
-            "min-[1600px]:[background-size:auto,auto_110%]",
-          )}
-        >
-          <div className="relative z-[2] pt-[25px] max-[960px]:pt-[26px] max-[640px]:pt-[23px]">
-            <div
-              className="mb-[18px] flex h-1.5 w-[132px] max-[640px]:mb-3.5 max-[640px]:h-1 max-[640px]:w-[68px]"
-              aria-hidden
-            >
-              <span className="block h-full w-1/2 bg-[#ed1c24]" />
-              <span className="block h-full w-1/2 bg-[#08713f]" />
-            </div>
-            <h1 className="text-[51px] font-black leading-[0.98] tracking-[-2.6px] text-[#101620] max-[1200px]:text-[45px] max-[960px]:text-[43px] max-[640px]:text-[clamp(1.85rem,8vw,2.75rem)] max-[640px]:leading-[1.05] max-[640px]:tracking-[-0.04em]">
-              Become a Sponsor
-            </h1>
-            <div className="mb-1.5 mt-[7px] text-[25px] font-extrabold leading-[1.05] text-[#101620] max-[1200px]:text-[22px] max-[960px]:text-[21px] max-[640px]:text-[19px]">
-              Partner with ISIPPE-3
-            </div>
-            <p className="mb-3 max-w-[570px] text-base leading-[1.32] text-[#344256] max-[1200px]:text-sm max-[960px]:max-w-[650px] max-[640px]:mb-[13px] max-[640px]:mt-2 max-[640px]:max-w-[370px] max-[640px]:text-[12.5px] max-[640px]:leading-[1.34]">
-              Position your brand as a leader in the fight against counterfeiting and support a
-              premier global platform on intellectual property protection and enforcement.
-            </p>
-            <div className="flex items-center gap-4 max-[640px]:block">
-              <div className={eventItem}>
-                <div className={eventIcon}>
-                  <CalendarDays size={32} strokeWidth={2} />
-                </div>
-                <strong className={eventStrong}>{t("event.datesShort")}</strong>
-              </div>
-              <div className="h-[39px] w-px bg-[#b8c2cc] max-[640px]:hidden" aria-hidden />
-              <div className={eventItem}>
-                <div className={eventIcon}>
-                  <MapPin size={32} strokeWidth={0} fill="currentColor" />
-                </div>
-                <div>
-                  <strong className={eventStrong}>{t("event.city")}</strong>
-                  <span className="block text-[11px]">{t("event.venue")}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <PageHero
+        title="Become a Sponsor"
+        subtitle="Partner with ISIPPE-3"
+        description="Position your brand as a leader in the fight against counterfeiting and support a premier global platform on intellectual property protection and enforcement."
+        image="/assets/sponsor-hero.jpg"
+        imageAlt="ISIPPE sponsorship partnership"
+      />
 
-      <section className="pt-[15px]">
+      <section className="pt-[15px]" id="sponsorship">
         <div className={container}>
           <div>
             <div className="mb-2 flex h-[5px] w-[102px] max-[640px]:h-1 max-[640px]:w-[67px]" aria-hidden>

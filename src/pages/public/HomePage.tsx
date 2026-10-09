@@ -64,28 +64,37 @@ export function HomePage() {
 
   return (
     <div className="text-[#0b1016]">
-      {/* Hero */}
+      {/* Hero — left copy + right artwork; theme overlay sits on the photo */}
       <section
         className={cn(
           "relative isolate min-h-[516px] overflow-hidden bg-white",
           "max-[960px]:min-h-0",
-          "min-[961px]:bg-[url('/assets/hero-home-visual.png')] min-[961px]:bg-right min-[961px]:bg-no-repeat min-[961px]:bg-[length:auto_100%]",
         )}
       >
+        {/* Desktop art: nudged right a bit for modest gap; curve still faces copy */}
+        <div
+          className="pointer-events-none absolute inset-y-0 left-[min(44%,520px)] right-0 z-0 hidden bg-[url('/assets/hero-home-visual.png')] bg-[length:auto_110%] bg-[-140px_center] bg-no-repeat min-[961px]:block min-[1400px]:left-[min(46%,580px)] min-[1400px]:bg-[-100px_center]"
+          aria-hidden
+        />
+        {/* White under copy, soft fade into the image */}
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] hidden bg-[linear-gradient(90deg,#fff_0%,#fff_38%,rgba(255,255,255,.92)_44%,rgba(255,255,255,.4)_52%,transparent_62%)] min-[961px]:block"
+          aria-hidden
+        />
+
         <div
           className={cn(
             container,
-            "relative box-border",
-            "min-[961px]:grid min-[961px]:min-h-[516px] min-[961px]:grid-cols-[minmax(0,1fr)_minmax(320px,38%)] min-[961px]:items-stretch min-[961px]:gap-x-[clamp(24px,3vw,44px)] min-[961px]:px-[clamp(24px,3vw,48px)] min-[961px]:pr-[clamp(24px,4vw,64px)]",
-            "min-[961px]:bg-[linear-gradient(90deg,#fff_0%,#fff_28%,rgba(255,255,255,.92)_40%,rgba(255,255,255,.35)_56%,rgba(255,255,255,.05)_72%,transparent_100%)]",
+            "relative z-[2] box-border",
+            "min-[961px]:min-h-[516px] min-[961px]:px-[clamp(24px,3vw,48px)]",
             "max-[960px]:flex max-[960px]:min-h-0 max-[960px]:flex-col max-[960px]:bg-white",
           )}
         >
           <div
             className={cn(
-              "relative z-[2] min-w-0 pt-[43px]",
-              "min-[961px]:self-start min-[961px]:pb-[34px]",
-              "max-[960px]:order-1 max-[960px]:w-full max-[960px]:pt-7",
+              "relative min-w-0 pt-[43px]",
+              "min-[961px]:max-w-[min(40%,460px)] min-[961px]:pb-10",
+              "max-[960px]:order-1 max-[960px]:w-full max-[960px]:max-w-none max-[960px]:pt-7",
               "max-[640px]:pt-[22px]",
             )}
           >
@@ -99,9 +108,9 @@ export function HomePage() {
 
             <h1
               className={cn(
-                "m-0 text-[82px] font-black leading-[0.92] tracking-[-4px] text-[#0b1016]",
+                "m-0 whitespace-nowrap text-[82px] font-black leading-[0.92] tracking-[-4px] text-[#0b1016]",
                 "max-[1200px]:text-[68px]",
-                "max-[960px]:text-[clamp(2.75rem,7vw,3.75rem)] max-[960px]:tracking-[-0.04em]",
+                "max-[960px]:whitespace-normal max-[960px]:text-[clamp(2.75rem,7vw,3.75rem)] max-[960px]:tracking-[-0.04em]",
                 "max-[640px]:text-[clamp(2.35rem,11vw,3.25rem)] max-[640px]:tracking-[-0.045em]",
               )}
             >
@@ -162,30 +171,30 @@ export function HomePage() {
 
             <div
               className={cn(
-                "flex flex-wrap gap-4",
+                "flex flex-wrap gap-3",
                 "max-[960px]:gap-3",
                 "max-[640px]:grid max-[640px]:grid-cols-1 max-[640px]:gap-2.5",
               )}
             >
               <Link
                 className={cn(
-                  "inline-flex min-h-[50px] min-w-[233px] items-center justify-center gap-[13px] rounded-[7px] bg-[#075fd8] px-7 text-[15px] font-bold text-white",
-                  "max-[960px]:min-w-0 max-[960px]:flex-[1_1_200px]",
-                  "max-[640px]:min-h-12 max-[640px]:w-full max-[640px]:px-[18px] max-[640px]:text-[14px]",
+                  "inline-flex min-h-[50px] flex-1 items-center justify-center gap-2.5 rounded-[7px] bg-[#075fd8] px-5 text-[14px] font-bold text-white",
+                  "max-[960px]:min-w-0 max-[960px]:flex-[1_1_160px]",
+                  "max-[640px]:min-h-12 max-[640px]:w-full max-[640px]:flex-none max-[640px]:px-[18px]",
                 )}
                 to="/register"
               >
                 {t("common:actions.registerNow")}
-                <span className="text-[23px] leading-none max-[640px]:text-xl" aria-hidden>
+                <span className="text-[22px] leading-none" aria-hidden>
                   →
                 </span>
               </Link>
 
               <Link
                 className={cn(
-                  "inline-flex min-h-[50px] min-w-[224px] items-center justify-center gap-[13px] rounded-[7px] border border-[#08713f] bg-white px-7 text-[15px] font-bold text-[#08713f]",
-                  "max-[960px]:min-w-0 max-[960px]:flex-[1_1_200px]",
-                  "max-[640px]:min-h-12 max-[640px]:w-full max-[640px]:px-[18px] max-[640px]:text-[14px]",
+                  "inline-flex min-h-[50px] flex-1 items-center justify-center gap-2.5 rounded-[7px] border border-[#08713f] bg-white px-5 text-[14px] font-bold text-[#08713f]",
+                  "max-[960px]:min-w-0 max-[960px]:flex-[1_1_160px]",
+                  "max-[640px]:min-h-12 max-[640px]:w-full max-[640px]:flex-none max-[640px]:px-[18px]",
                 )}
                 to="/programme"
               >
@@ -198,81 +207,89 @@ export function HomePage() {
           <div
             className={cn(
               "relative z-0 hidden max-[960px]:order-2 max-[960px]:block",
-              "max-[960px]:mx-[calc(50%-50vw)] max-[960px]:mt-2 max-[960px]:h-[clamp(220px,66vw,310px)] max-[960px]:w-screen max-[960px]:max-w-[100vw]",
-              "max-[960px]:bg-[url('/assets/hero-home-visual.png')] max-[960px]:bg-contain max-[960px]:bg-center max-[960px]:bg-no-repeat",
-              "max-[640px]:h-[clamp(170px,58vw,250px)]",
-              "max-[380px]:h-[220px]",
+              "max-[960px]:mx-[calc(50%-50vw)] max-[960px]:mt-2 max-[960px]:h-[clamp(240px,68vw,320px)] max-[960px]:w-screen max-[960px]:max-w-[100vw]",
+              "max-[960px]:bg-[url('/assets/hero-home-visual.png')] max-[960px]:bg-[length:auto_100%] max-[960px]:bg-center max-[960px]:bg-no-repeat",
+              "max-[640px]:h-[clamp(200px,62vw,280px)]",
+              "max-[380px]:h-[230px]",
             )}
             aria-hidden
           />
 
+          {/* Overlay on the photo: theme + pillars sit in the clear photo area */}
           <aside
             className={cn(
-              "relative z-[3] min-w-0",
-              "min-[961px]:mb-[30px] min-[961px]:w-full min-[961px]:max-w-[390px] min-[961px]:justify-self-end min-[961px]:self-end min-[961px]:pl-3 min-[961px]:text-left",
-              "max-[960px]:order-3 max-[960px]:z-[2] max-[960px]:-mt-[66px] max-[960px]:w-[calc(100%-24px)] max-[960px]:max-w-[560px] max-[960px]:self-center max-[960px]:rounded-t-xl max-[960px]:bg-[linear-gradient(180deg,rgba(255,255,255,.94)_0%,rgba(255,255,255,.98)_24%,#fff_100%)] max-[960px]:px-3.5 max-[960px]:pb-[18px] max-[960px]:pt-3",
-              "max-[380px]:-mt-[54px] max-[380px]:w-[calc(100%-16px)] max-[380px]:px-2.5 max-[380px]:pb-4 max-[380px]:pt-2.5",
+              "z-[3] flex min-w-0 flex-col text-left",
+              "min-[961px]:absolute min-[961px]:bottom-8 min-[961px]:right-[clamp(28px,4vw,64px)] min-[961px]:top-[clamp(64px,12%,96px)] min-[961px]:w-[min(34%,360px)]",
+              "max-[960px]:relative max-[960px]:order-3 max-[960px]:z-[2] max-[960px]:-mt-[72px] max-[960px]:w-[calc(100%-24px)] max-[960px]:max-w-[560px] max-[960px]:self-center max-[960px]:rounded-t-xl max-[960px]:bg-[linear-gradient(180deg,rgba(255,255,255,.92)_0%,rgba(255,255,255,.97)_28%,#fff_100%)] max-[960px]:px-3.5 max-[960px]:pb-[18px] max-[960px]:pt-3",
+              "max-[380px]:-mt-[58px] max-[380px]:w-[calc(100%-16px)] max-[380px]:px-2.5 max-[380px]:pb-4 max-[380px]:pt-2.5",
             )}
           >
-            <div
-              className="mb-3 h-[5px] w-[45px] bg-[#ed1c24] max-[960px]:mb-2 max-[640px]:h-1 max-[640px]:w-[39px]"
-              aria-hidden
-            />
-            <h2
-              className={cn(
-                "m-0 max-w-[275px] text-[20px] font-extrabold leading-[1.17] text-[#0b1016] [overflow-wrap:anywhere] [text-wrap:balance]",
-                "min-[961px]:max-w-[360px] min-[961px]:text-[clamp(1.05rem,1.35vw,1.25rem)] min-[961px]:leading-[1.25]",
-                "max-[960px]:max-w-none max-[960px]:text-[clamp(1rem,4.2vw,1.2rem)] max-[960px]:leading-[1.25]",
-                "max-[640px]:text-[clamp(1.05rem,4.5vw,1.2rem)]",
-              )}
-            >
-              {t("common:event.tagline")}
-            </h2>
-            <div
-              className={cn(
-                "mt-[18px] grid w-full grid-cols-3 items-start gap-[14px]",
-                "min-[961px]:mt-3.5 min-[961px]:gap-3",
-                "max-[960px]:mt-3 max-[960px]:gap-2",
-                "max-[640px]:mt-4 max-[640px]:gap-2.5",
-                "max-[380px]:gap-1.5",
-              )}
-            >
-              {pillars.map((item) => (
-                <div key={item.labelKey} className="min-w-0 text-center">
-                  <div
-                    className={cn(
-                      "mx-auto mb-[7px] grid h-[49px] w-[49px] place-items-center rounded-full border-2 border-[#15191e] bg-white text-[#0b1016]",
-                      "max-[960px]:mb-[5px] max-[960px]:h-[38px] max-[960px]:w-[38px]",
-                      "max-[640px]:h-[42px] max-[640px]:w-[42px]",
-                      "max-[380px]:h-[34px] max-[380px]:w-[34px]",
-                      "[&_svg]:h-[27px] [&_svg]:w-[27px] max-[960px]:[&_svg]:h-[21px] max-[960px]:[&_svg]:w-[21px] max-[640px]:[&_svg]:h-[22px] max-[640px]:[&_svg]:w-[22px]",
-                    )}
-                  >
-                    <item.icon size={25} strokeWidth={1.6} />
-                  </div>
-                  <strong
-                    className={cn(
-                      "block text-[10.5px] font-bold leading-[1.1] text-[#0b1016] [overflow-wrap:anywhere]",
-                      "min-[961px]:leading-[1.2]",
-                      "max-[960px]:text-[clamp(0.62rem,2.5vw,0.72rem)] max-[960px]:leading-[1.2]",
-                      "max-[640px]:text-[clamp(0.65rem,2.8vw,0.75rem)]",
-                    )}
-                  >
-                    {t(item.labelKey)}
-                  </strong>
-                </div>
-              ))}
+            <div className="min-w-0 shrink-0">
+              <div
+                className="mb-2.5 h-[5px] w-[40px] bg-[#ed1c24] max-[960px]:mb-2 max-[640px]:h-1 max-[640px]:w-[39px]"
+                aria-hidden
+              />
+              <h2
+                className={cn(
+                  "m-0 max-w-[340px] text-[clamp(1.05rem,1.3vw,1.25rem)] font-extrabold leading-[1.28] text-[#0b1016] [overflow-wrap:anywhere] [text-wrap:balance]",
+                  "max-[960px]:max-w-none max-[960px]:text-[clamp(1rem,4.2vw,1.2rem)]",
+                  "max-[640px]:text-[clamp(1.05rem,4.5vw,1.2rem)]",
+                )}
+              >
+                {t("common:event.tagline")}
+              </h2>
             </div>
-            <p
+
+            <div
               className={cn(
-                "mt-3.5 max-w-[500px] text-[13px] leading-[1.45] [overflow-wrap:anywhere]",
-                "min-[961px]:mt-2.5 min-[961px]:leading-[1.4]",
-                "max-[960px]:mt-2.5 max-[960px]:text-[12px] max-[960px]:leading-[1.4]",
+                "mt-auto flex min-w-0 flex-col",
+                "min-[961px]:pt-5",
+                "max-[960px]:mt-4",
               )}
             >
-              Early bird registration is <strong>now open</strong>. Register by 31
-              October 2026 for a special offer.
-            </p>
+              <div
+                className={cn(
+                  "grid w-full grid-cols-3 items-start gap-2.5",
+                  "max-[960px]:gap-2",
+                  "max-[640px]:gap-2.5",
+                  "max-[380px]:gap-1.5",
+                )}
+              >
+                {pillars.map((item) => (
+                  <div key={item.labelKey} className="min-w-0 text-center">
+                    <div
+                      className={cn(
+                        "mx-auto mb-1.5 grid h-[44px] w-[44px] place-items-center rounded-full border-2 border-[#15191e] bg-white text-[#0b1016]",
+                        "max-[960px]:mb-[5px] max-[960px]:h-[38px] max-[960px]:w-[38px]",
+                        "max-[640px]:h-[42px] max-[640px]:w-[42px]",
+                        "max-[380px]:h-[34px] max-[380px]:w-[34px]",
+                        "[&_svg]:h-[24px] [&_svg]:w-[24px] max-[960px]:[&_svg]:h-[21px] max-[960px]:[&_svg]:w-[21px] max-[640px]:[&_svg]:h-[22px] max-[640px]:[&_svg]:w-[22px]",
+                      )}
+                    >
+                      <item.icon size={22} strokeWidth={1.6} />
+                    </div>
+                    <strong
+                      className={cn(
+                        "block text-[10px] font-bold leading-[1.2] text-[#0b1016] [overflow-wrap:anywhere]",
+                        "max-[960px]:text-[clamp(0.62rem,2.5vw,0.72rem)]",
+                        "max-[640px]:text-[clamp(0.65rem,2.8vw,0.75rem)]",
+                      )}
+                    >
+                      {t(item.labelKey)}
+                    </strong>
+                  </div>
+                ))}
+              </div>
+              <p
+                className={cn(
+                  "mt-3 w-full max-w-[390px] text-[13px] leading-[1.4] [overflow-wrap:anywhere]",
+                  "max-[960px]:mt-2.5 max-[960px]:max-w-none max-[960px]:text-[12px]",
+                )}
+              >
+                Early bird registration is <strong>now open</strong>. Register by 31
+                October 2026 for a special offer.
+              </p>
+            </div>
           </aside>
         </div>
       </section>

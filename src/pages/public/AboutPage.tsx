@@ -10,6 +10,7 @@ import {
   MapPin,
   Users,
 } from "lucide-react";
+import { PageHero } from "../../components/public/PageHero";
 import { cn } from "../../lib/cn";
 
 const tabs = [
@@ -71,16 +72,6 @@ const objectives = [
 const container =
   "mx-auto box-border w-[min(calc(100%-clamp(28px,5vw,80px)),1440px)] max-w-full max-[1200px]:w-[min(calc(100%-48px),1440px)] max-[640px]:w-[calc(100%-32px)] max-[380px]:!w-[calc(100%-24px)]";
 
-const heroBg =
-  "[background:linear-gradient(90deg,rgba(2,28,93,0.98)_0%,rgba(2,31,101,0.96)_31%,rgba(2,31,101,0.55)_49%,rgba(2,31,101,0)_73%),url('/assets/about-hero.jpg')_96%_center/auto_108%_no-repeat]";
-const heroBgTablet =
-  "max-[1100px]:[background:linear-gradient(180deg,rgba(2,28,93,0.98)_0%,rgba(2,31,101,0.9)_42%,rgba(2,31,101,0.15)_100%),url('/assets/about-hero.jpg')_center_bottom/auto_72%_no-repeat]";
-const heroBgMobile =
-  "max-[760px]:[background:linear-gradient(180deg,rgba(2,28,93,0.98)_0%,rgba(2,31,101,0.95)_49%,rgba(2,31,101,0.08)_100%),url('/assets/about-hero.jpg')_center_bottom/auto_48%_no-repeat]";
-
-const eventIcon =
-  "h-[35px] w-[35px] shrink-0 grow-0 basis-[35px] text-white max-[760px]:h-[27px] max-[760px]:w-[27px] [&_svg]:block [&_svg]:h-[35px] [&_svg]:w-[35px] max-[760px]:[&_svg]:h-[27px] max-[760px]:[&_svg]:w-[27px]";
-
 const sideCard =
   "rounded-[7px] border border-[#e0e8f2] bg-[linear-gradient(160deg,#f3f9ff,#fff)] p-[15px] max-[760px]:p-[13px]";
 const sideTitle = "mb-[13px] text-sm font-extrabold text-[#10236f]";
@@ -96,63 +87,15 @@ export function AboutPage() {
 
   return (
     <div className="bg-white text-[#111a31]">
-      <section className="relative min-h-[305px] overflow-hidden bg-[#021c5d] text-white max-[1100px]:min-h-[410px] max-[760px]:min-h-[455px]">
-        <div
-          className={cn(
-            container,
-            "flex min-h-[305px] items-start max-[1100px]:min-h-[410px] max-[760px]:min-h-[455px]",
-            heroBg,
-            heroBgTablet,
-            heroBgMobile,
-            "min-[1600px]:[background-size:auto,auto_110%]",
-          )}
-        >
-          <div className="max-w-[660px] pt-[25px] max-[1100px]:pt-6 max-[760px]:pt-5">
-            <div className="mb-[15px] text-[15px] text-white max-[760px]:mb-3 max-[760px]:text-[11px]">
-              <Link to="/" className="hover:underline">
-                Home
-              </Link>{" "}
-              <span className="px-2 opacity-[0.65]">›</span> About
-            </div>
-            <div
-              className="mb-3.5 h-[5px] w-[45px] bg-[#ed1c24] max-[760px]:mb-3 max-[760px]:h-1 max-[760px]:w-11"
-              aria-hidden
-            />
-            <h1 className="mb-3 text-[49px] font-black leading-[1.02] tracking-[-2px] text-white max-[760px]:text-[36px] max-[760px]:tracking-[-1.4px] max-[640px]:text-[clamp(1.85rem,8vw,2.75rem)] max-[640px]:leading-[1.05] max-[640px]:tracking-[-0.04em]">
-              About ISIPPE-3
-            </h1>
-            <p className="mb-[18px] max-w-[650px] text-[20px] leading-[1.38] text-white max-[760px]:mb-[13px] max-[760px]:text-[13px] max-[760px]:leading-[1.4]">
-              A global platform for dialogue, collaboration and practical solutions to strengthen
-              intellectual property protection and enforcement.
-            </p>
-            <div className="flex items-center gap-[17px] max-[760px]:block">
-              <div className="flex items-center gap-2.5 text-white max-[760px]:mb-2">
-                <div className={eventIcon}>
-                  <CalendarDays size={35} strokeWidth={2} />
-                </div>
-                <strong className="text-[14px] font-extrabold max-[760px]:text-[11px]">
-                  {t("event.datesShort")}
-                </strong>
-              </div>
-              <div className="h-10 w-px bg-[#cbd6e7] max-[760px]:hidden" aria-hidden />
-              <div className="flex items-center gap-2.5 text-white max-[760px]:mb-2">
-                <div className={eventIcon}>
-                  <MapPin size={35} strokeWidth={0} fill="currentColor" />
-                </div>
-                <div>
-                  <strong className="text-[14px] font-extrabold max-[760px]:text-[11px]">
-                    Kenyatta International
-                    <br />
-                    Convention Centre (KICC)
-                    <br />
-                    Nairobi, Kenya
-                  </strong>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <PageHero
+        dark
+        breadcrumb="About"
+        title="About ISIPPE-3"
+        description="A global platform for dialogue, collaboration and practical solutions to strengthen intellectual property protection and enforcement."
+        image="/assets/about-hero.jpg"
+        imageAlt="About ISIPPE-3 symposium"
+        combinedLocation
+      />
 
       <nav
         className="h-[49px] border-b border-[#dce4ee] bg-white max-[760px]:h-auto max-[760px]:overflow-x-auto"
