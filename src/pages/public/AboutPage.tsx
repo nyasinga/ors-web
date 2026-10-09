@@ -10,6 +10,7 @@ import {
   MapPin,
   Users,
 } from "lucide-react";
+import { cn } from "../../lib/cn";
 
 const tabs = [
   { id: "overview", label: "Overview", target: "overview" },
@@ -67,39 +68,79 @@ const objectives = [
   },
 ] as const;
 
-/** About — structure & CSS adopted from isippe3-about-pure-html-responsive */
+const container =
+  "mx-auto box-border w-[min(calc(100%-clamp(28px,5vw,80px)),1440px)] max-w-full max-[1200px]:w-[min(calc(100%-48px),1440px)] max-[640px]:w-[calc(100%-32px)] max-[380px]:!w-[calc(100%-24px)]";
+
+const heroBg =
+  "[background:linear-gradient(90deg,rgba(2,28,93,0.98)_0%,rgba(2,31,101,0.96)_31%,rgba(2,31,101,0.55)_49%,rgba(2,31,101,0)_73%),url('/assets/about-hero.jpg')_96%_center/auto_108%_no-repeat]";
+const heroBgTablet =
+  "max-[1100px]:[background:linear-gradient(180deg,rgba(2,28,93,0.98)_0%,rgba(2,31,101,0.9)_42%,rgba(2,31,101,0.15)_100%),url('/assets/about-hero.jpg')_center_bottom/auto_72%_no-repeat]";
+const heroBgMobile =
+  "max-[760px]:[background:linear-gradient(180deg,rgba(2,28,93,0.98)_0%,rgba(2,31,101,0.95)_49%,rgba(2,31,101,0.08)_100%),url('/assets/about-hero.jpg')_center_bottom/auto_48%_no-repeat]";
+
+const eventIcon =
+  "h-[35px] w-[35px] shrink-0 grow-0 basis-[35px] text-white max-[760px]:h-[27px] max-[760px]:w-[27px] [&_svg]:block [&_svg]:h-[35px] [&_svg]:w-[35px] max-[760px]:[&_svg]:h-[27px] max-[760px]:[&_svg]:w-[27px]";
+
+const sideCard =
+  "rounded-[7px] border border-[#e0e8f2] bg-[linear-gradient(160deg,#f3f9ff,#fff)] p-[15px] max-[760px]:p-[13px]";
+const sideTitle = "mb-[13px] text-sm font-extrabold text-[#10236f]";
+const detailRow =
+  "my-[9px] flex gap-2.5 text-[11px] leading-[1.35] text-[#10236f] [&_svg]:h-[23px] [&_svg]:w-[23px] [&_svg]:flex-[0_0_23px] [&_svg]:text-[#075fd8]";
+
+const objectiveTone = ["bg-[#075fd8]", "bg-[#08713f]", "bg-[#ed1c24]", "bg-[#075fd8]"] as const;
+
+/** About — Tailwind port of isippe3-about-pure-html-responsive */
 export function AboutPage() {
   const { t } = useTranslation("common");
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]["id"]>("overview");
 
   return (
-    <div className="about-page">
-      <section className="ab-hero">
-        <div className="home-container ab-hero-inner">
-          <div className="ab-hero-copy">
-            <div className="ab-breadcrumb">
-              <Link to="/">Home</Link> <span>›</span> About
+    <div className="bg-white text-[#111a31]">
+      <section className="relative min-h-[305px] overflow-hidden bg-[#021c5d] text-white max-[1100px]:min-h-[410px] max-[760px]:min-h-[455px]">
+        <div
+          className={cn(
+            container,
+            "flex min-h-[305px] items-start max-[1100px]:min-h-[410px] max-[760px]:min-h-[455px]",
+            heroBg,
+            heroBgTablet,
+            heroBgMobile,
+            "min-[1600px]:[background-size:auto,auto_110%]",
+          )}
+        >
+          <div className="max-w-[660px] pt-[25px] max-[1100px]:pt-6 max-[760px]:pt-5">
+            <div className="mb-[15px] text-[15px] text-white max-[760px]:mb-3 max-[760px]:text-[11px]">
+              <Link to="/" className="hover:underline">
+                Home
+              </Link>{" "}
+              <span className="px-2 opacity-[0.65]">›</span> About
             </div>
-            <div className="ab-hero-accent" aria-hidden />
-            <h1 className="ab-hero-title">About ISIPPE-3</h1>
-            <p>
+            <div
+              className="mb-3.5 h-[5px] w-[45px] bg-[#ed1c24] max-[760px]:mb-3 max-[760px]:h-1 max-[760px]:w-11"
+              aria-hidden
+            />
+            <h1 className="mb-3 text-[49px] font-black leading-[1.02] tracking-[-2px] text-white max-[760px]:text-[36px] max-[760px]:tracking-[-1.4px] max-[640px]:text-[clamp(1.85rem,8vw,2.75rem)] max-[640px]:leading-[1.05] max-[640px]:tracking-[-0.04em]">
+              About ISIPPE-3
+            </h1>
+            <p className="mb-[18px] max-w-[650px] text-[20px] leading-[1.38] text-white max-[760px]:mb-[13px] max-[760px]:text-[13px] max-[760px]:leading-[1.4]">
               A global platform for dialogue, collaboration and practical solutions to strengthen
               intellectual property protection and enforcement.
             </p>
-            <div className="ab-event-row">
-              <div className="ab-event">
-                <div className="ab-event-icon">
+            <div className="flex items-center gap-[17px] max-[760px]:block">
+              <div className="flex items-center gap-2.5 text-white max-[760px]:mb-2">
+                <div className={eventIcon}>
                   <CalendarDays size={35} strokeWidth={2} />
                 </div>
-                <strong>{t("event.datesShort")}</strong>
+                <strong className="text-[14px] font-extrabold max-[760px]:text-[11px]">
+                  {t("event.datesShort")}
+                </strong>
               </div>
-              <div className="ab-event-divider" aria-hidden />
-              <div className="ab-event">
-                <div className="ab-event-icon">
+              <div className="h-10 w-px bg-[#cbd6e7] max-[760px]:hidden" aria-hidden />
+              <div className="flex items-center gap-2.5 text-white max-[760px]:mb-2">
+                <div className={eventIcon}>
                   <MapPin size={35} strokeWidth={0} fill="currentColor" />
                 </div>
                 <div>
-                  <strong>
+                  <strong className="text-[14px] font-extrabold max-[760px]:text-[11px]">
                     Kenyatta International
                     <br />
                     Convention Centre (KICC)
@@ -113,13 +154,26 @@ export function AboutPage() {
         </div>
       </section>
 
-      <nav className="ab-subnav" aria-label="About sections">
-        <div className="home-container ab-subnav-inner">
+      <nav
+        className="h-[49px] border-b border-[#dce4ee] bg-white max-[760px]:h-auto max-[760px]:overflow-x-auto"
+        aria-label="About sections"
+      >
+        <div
+          className={cn(
+            container,
+            "flex h-full items-center gap-[35px] max-[900px]:flex-wrap max-[900px]:gap-x-[18px] max-[900px]:gap-y-2.5 max-[760px]:h-[45px] max-[760px]:!w-max",
+          )}
+        >
           {tabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
-              className={activeTab === tab.id ? "active" : undefined}
+              className={cn(
+                "relative h-full cursor-pointer whitespace-nowrap bg-transparent p-0 text-xs max-[760px]:text-[10px]",
+                activeTab === tab.id
+                  ? "font-bold text-[#075fd8] after:absolute after:inset-x-0 after:bottom-0 after:h-[3px] after:bg-[#075fd8] after:content-['']"
+                  : "text-[#56627a]",
+              )}
               onClick={() => {
                 setActiveTab(tab.id);
                 if ("target" in tab && tab.target) {
@@ -135,13 +189,23 @@ export function AboutPage() {
         </div>
       </nav>
 
-      <section className="ab-main">
-        <div className="home-container ab-content-grid">
+      <section className="pb-[45px] pt-7 max-[760px]:pb-[35px] max-[760px]:pt-[17px]">
+        <div
+          className={cn(
+            container,
+            "grid grid-cols-[minmax(0,1fr)_225px] gap-[22px] max-[1100px]:grid-cols-1 max-[760px]:block",
+          )}
+        >
           <div>
-            <div className="ab-overview-top" id="overview">
+            <div
+              className="grid grid-cols-[1.3fr_0.8fr] gap-[25px] max-[760px]:flex max-[760px]:flex-col max-[760px]:gap-3.5"
+              id="overview"
+            >
               <div>
-                <h2 className="ab-section-title">Overview</h2>
-                <div className="ab-overview-text">
+                <h2 className="mb-3 text-[31px] font-black leading-none tracking-[-1.2px] text-[#10236f] max-[760px]:text-[26px]">
+                  Overview
+                </h2>
+                <div className="text-[13px] leading-[1.48] text-[#52617c] max-[760px]:text-[11.5px] [&_p]:mb-[13px]">
                   <p>
                     The 3rd International Symposium on Intellectual Property Protection and
                     Enforcement (ISIPPE-3) brings together policymakers, regulators, industry
@@ -157,33 +221,55 @@ export function AboutPage() {
                 </div>
               </div>
               <img
-                className="ab-overview-photo"
+                className="block h-[198px] w-full rounded-[7px] border border-[#d7e1ed] object-cover max-[760px]:h-[190px]"
                 src="/assets/about-overview.jpg"
                 alt="ISIPPE conference session"
               />
             </div>
 
-            <div className="ab-features">
+            <div className="mt-[17px] grid grid-cols-4 overflow-hidden rounded-lg bg-[linear-gradient(110deg,#f1f8ff,#f8fbff)] max-[760px]:grid-cols-2">
               {features.map((item) => (
-                <article key={item.title} className="ab-feature">
-                  <div className="ab-feature-icon" style={{ color: item.color }}>
+                <article
+                  key={item.title}
+                  className="min-h-[162px] border-r border-[#e2eaf3] px-4 py-[21px] text-center last:border-r-0 max-[760px]:min-h-[145px] max-[760px]:px-2.5 max-[760px]:py-[18px] max-[760px]:[&:nth-child(-n+2)]:border-b max-[760px]:[&:nth-child(2)]:border-r-0"
+                >
+                  <div
+                    className="mx-auto mb-2.5 grid h-11 w-11 place-items-center max-[760px]:h-[38px] max-[760px]:w-[38px] [&_svg]:block [&_svg]:h-11 [&_svg]:w-11 max-[760px]:[&_svg]:h-[38px] max-[760px]:[&_svg]:w-[38px]"
+                    style={{ color: item.color }}
+                  >
                     <item.icon size={44} strokeWidth={1.7} />
                   </div>
-                  <h3>{item.title}</h3>
-                  <p>{item.text}</p>
+                  <h3 className="mb-[7px] text-[13px] font-extrabold text-[#10236f] max-[760px]:text-[11px]">
+                    {item.title}
+                  </h3>
+                  <p className="text-[11px] leading-[1.45] text-[#53617a] max-[760px]:text-[9.5px]">
+                    {item.text}
+                  </p>
                 </article>
               ))}
             </div>
 
-            <section className="ab-objectives" id="objectives">
-              <h2>Objectives</h2>
-              <div className="ab-objective-intro">ISIPPE-3 aims to:</div>
-              <div className="ab-objective-grid">
+            <section className="mt-[25px] max-[760px]:mt-[19px]" id="objectives">
+              <h2 className="mb-2 text-[28px] font-black text-[#10236f] max-[760px]:text-[24px]">
+                Objectives
+              </h2>
+              <div className="mb-2.5 text-xs font-bold text-[#10236f]">ISIPPE-3 aims to:</div>
+              <div className="grid grid-cols-4 gap-[15px] max-[760px]:grid-cols-2 max-[760px]:gap-[13px]">
                 {objectives.map((item, i) => (
-                  <div key={item.title} className="ab-objective">
-                    <div className="ab-objective-num">{i + 1}</div>
-                    <p>
-                      <strong>{item.title}</strong>
+                  <div
+                    key={item.title}
+                    className="grid grid-cols-[36px_1fr] items-start gap-2 max-[760px]:grid-cols-[31px_1fr]"
+                  >
+                    <div
+                      className={cn(
+                        "grid h-8 w-8 place-items-center rounded-full text-sm font-extrabold text-white max-[760px]:h-7 max-[760px]:w-7 max-[760px]:text-xs",
+                        objectiveTone[i],
+                      )}
+                    >
+                      {i + 1}
+                    </div>
+                    <p className="mt-px text-[11px] leading-[1.4] text-[#53617a] max-[760px]:text-[9.5px]">
+                      <strong className="text-[#10236f]">{item.title}</strong>
                       <br />
                       {item.text}
                     </p>
@@ -193,14 +279,14 @@ export function AboutPage() {
             </section>
           </div>
 
-          <aside className="ab-side">
-            <div className="ab-side-card">
-              <h3>Event Details</h3>
-              <div className="ab-detail">
+          <aside className="flex flex-col gap-2.5 max-[1100px]:grid max-[1100px]:grid-cols-2 max-[760px]:mt-[17px] max-[760px]:flex">
+            <div className={sideCard}>
+              <h3 className={sideTitle}>Event Details</h3>
+              <div className={detailRow}>
                 <CalendarDays size={23} strokeWidth={2} />
                 <span>{t("event.datesShort")}</span>
               </div>
-              <div className="ab-detail">
+              <div className={detailRow}>
                 <MapPin size={23} strokeWidth={0} fill="currentColor" />
                 <span>
                   Kenyatta International Convention Centre (KICC)
@@ -208,41 +294,48 @@ export function AboutPage() {
                   Nairobi, Kenya
                 </span>
               </div>
-              <div className="ab-detail">
+              <div className={detailRow}>
                 <Users size={23} strokeWidth={2} />
                 <span>In-person event</span>
               </div>
-              <div className="ab-detail">
+              <div className={detailRow}>
                 <Globe2 size={23} strokeWidth={2} />
                 <span>International participation</span>
               </div>
-              <Link className="ab-side-register" to="/register">
+              <Link
+                className="mt-2 inline-flex h-[41px] w-full items-center justify-center gap-2.5 rounded-[5px] bg-[#075fd8] text-sm font-bold text-white no-underline"
+                to="/register"
+              >
                 Register Now{" "}
-                <span className="ab-arrow" aria-hidden>
+                <span className="text-[23px] font-normal leading-none" aria-hidden>
                   →
                 </span>
               </Link>
             </div>
 
-            <div className="ab-side-card ab-logo-box">
-              <h3>Organised by</h3>
-              <img src="/assets/logo-aca.png" alt={t("brand.aca")} />
+            <div className={cn(sideCard, "text-left")}>
+              <h3 className={sideTitle}>Organised by</h3>
+              <img className="m-auto block w-[170px]" src="/assets/logo-aca.png" alt={t("brand.aca")} />
             </div>
 
-            <div className="ab-side-card">
-              <h3>In Collaboration With</h3>
-              <div className="ab-collab-logos">
+            <div className={sideCard}>
+              <h3 className={sideTitle}>In Collaboration With</h3>
+              <div className="grid grid-cols-2 items-center gap-2.5 text-center text-[11px] font-semibold text-[#10236f]">
                 <div>
                   🇰🇪
-                  <small>REPUBLIC OF KENYA</small>
+                  <small className="mt-1 block text-[9px] font-bold tracking-[0.02em]">
+                    REPUBLIC OF KENYA
+                  </small>
                 </div>
                 <div>
                   🌐
-                  <small>WIPO</small>
+                  <small className="mt-1 block text-[9px] font-bold tracking-[0.02em]">WIPO</small>
                 </div>
-                <div className="ab-vision">
+                <div className="col-span-full">
                   🇰🇪
-                  <small>KENYA VISION 2030</small>
+                  <small className="mt-1 block text-[9px] font-bold tracking-[0.02em]">
+                    KENYA VISION 2030
+                  </small>
                 </div>
               </div>
             </div>

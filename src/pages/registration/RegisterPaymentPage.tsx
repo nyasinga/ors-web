@@ -6,6 +6,8 @@ import { participationTypes } from "../../data/registration";
 import { useTranslation } from "react-i18next";
 import { formatMoney } from "../../i18n/format";
 import { useEventCopy } from "../../i18n/useEventCopy";
+import { cn } from "../../lib/cn";
+import * as r from "../../components/registration/registerStyles";
 
 /** Registration step 3 — structure & CSS from HTML package */
 export function RegisterPaymentPage() {
@@ -17,28 +19,28 @@ export function RegisterPaymentPage() {
     participationTypes.find((item) => item.id === participationType)?.title ?? "Delegate";
 
   return (
-    <div className="register-page">
+    <div className={r.registerPage}>
       <RegisterHero current={3} />
 
-      <main className="rg-main">
-        <div className="home-container rg-pay-layout">
-          <section className="rg-card rg-section">
-            <h2>3. Payment</h2>
-            <p className="rg-subtitle">
+      <main className={r.main}>
+        <div className={cn(r.container, r.payLayout)}>
+          <section className={cn(r.card, r.section)}>
+            <h2 className={r.sectionTitle}>3. Payment</h2>
+            <p className={r.subtitle}>
               Complete your registration by making the payment using the eCitizen platform.
             </p>
 
-            <div className="rg-pay-top">
-              <div className="rg-side-price">
-                <div className="rg-price-label">🏷 Registration Fee</div>
+            <div className={r.payTop}>
+              <div className={r.sidePrice}>
+                <div className={r.priceLabel}>🏷 Registration Fee</div>
                 <b>{t(feeLabelKey)}</b>
-                <div className="rg-period">{t(fees.earlyBird.untilKey)}</div>
-                <div className="rg-price">{formatMoney(feeKes, "KES")}</div>
-                <div className="rg-price-sub">{formatMoney(feeUsd, "USD")} (Approx.)</div>
+                <div className={r.period}>{t(fees.earlyBird.untilKey)}</div>
+                <div className={r.price}>{formatMoney(feeKes, "KES")}</div>
+                <div className={r.priceSub}>{formatMoney(feeUsd, "USD")} (Approx.)</div>
               </div>
-              <div className="rg-info-box">
-                <div className="rg-info-title">▣ Registration Periods</div>
-                <p>
+              <div className={r.infoBox}>
+                <div className={r.infoTitle}>▣ Registration Periods</div>
+                <p className={r.infoText}>
                   <b>{t(fees.earlyBird.labelKey)}</b>
                   <br />
                   {t(fees.earlyBird.untilKey)} &nbsp; <b>{formatMoney(fees.earlyBird.kes, "KES")}</b>
@@ -51,21 +53,21 @@ export function RegisterPaymentPage() {
               </div>
             </div>
 
-            <h3 className="rg-pay-heading">Payment Method</h3>
-            <div className="rg-payment-method">
-              <span className="rg-radio-blue" aria-hidden />
-              <img className="rg-ecitizen" src="/assets/ecitizen.png" alt="eCitizen" />
+            <h3 className={r.payHeading}>Payment Method</h3>
+            <div className={r.paymentMethod}>
+              <span className={r.radioBlue} aria-hidden />
+              <img className={r.ecitizen} src="/assets/ecitizen.png" alt="eCitizen" />
               <div>
-                <strong>Pay via eCitizen (Default)</strong>
-                <p>
+                <strong className={r.paymentMethodTitle}>Pay via eCitizen (Default)</strong>
+                <p className={r.paymentMethodText}>
                   You will be redirected to the eCitizen payment platform to complete your payment
                   securely.
                 </p>
               </div>
             </div>
 
-            <div className="rg-notice">
-              <strong>ⓘ &nbsp; Important Information</strong>
+            <div className={r.notice}>
+              <strong className={r.noticeStrong}>ⓘ &nbsp; Important Information</strong>
               <br />
               • You will be redirected to the official eCitizen payment platform.
               <br />
@@ -74,54 +76,54 @@ export function RegisterPaymentPage() {
               ticket via email.
             </div>
 
-            <div className="rg-actions">
-              <Link className="rg-btn" to="/register/details">
+            <div className={r.actions}>
+              <Link className={r.btn} to="/register/details">
                 ← Back to Details
               </Link>
               <button
                 type="button"
-                className="rg-btn primary"
+                className={r.btnPrimary}
                 onClick={() => navigate("/register/confirmation")}
               >
                 Proceed to eCitizen Payment{" "}
-                <span className="rg-arrow" aria-hidden>
+                <span className={r.arrow} aria-hidden>
                   →
                 </span>
               </button>
             </div>
           </section>
 
-          <aside className="rg-sidebar">
-            <div className="rg-summary">
-              <h3>Registration Summary</h3>
-              <div className="rg-summary-row">
+          <aside className={r.sidebar}>
+            <div className={r.summary}>
+              <h3 className={r.summaryTitle}>Registration Summary</h3>
+              <div className={r.summaryRow()}>
                 <span>Event</span>
                 <b>{event.name}</b>
               </div>
-              <div className="rg-summary-row">
+              <div className={r.summaryRow()}>
                 <span>Dates</span>
                 <span>{event.datesShort}</span>
               </div>
-              <div className="rg-summary-row">
+              <div className={r.summaryRow()}>
                 <span>Venue</span>
                 <span>{event.venueShort}</span>
               </div>
-              <div className="rg-summary-row">
+              <div className={r.summaryRow()}>
                 <span>Participation Type</span>
                 <b>{typeLabel}</b>
               </div>
-              <div className="rg-summary-row">
+              <div className={r.summaryRow()}>
                 <span>Registration Fee</span>
                 <span>{formatMoney(feeKes, "KES")}</span>
               </div>
-              <div className="rg-summary-row total">
+              <div className={r.summaryRow(true)}>
                 <span>Total Amount</span>
-                <strong>{formatMoney(feeKes, "KES")}</strong>
+                <strong className={r.summaryTotalAmount}>{formatMoney(feeKes, "KES")}</strong>
               </div>
             </div>
-            <div className="rg-info-box">
-              <div className="rg-info-title">🎧 Need Assistance?</div>
-              <p>
+            <div className={r.infoBox}>
+              <div className={r.infoTitle}>🎧 Need Assistance?</div>
+              <p className={r.infoText}>
                 For registration support, please contact us:
                 <br />
                 <b>{event.supportEmail}</b>

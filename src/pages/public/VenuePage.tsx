@@ -8,6 +8,7 @@ import {
   Users,
   Wifi,
 } from "lucide-react";
+import { cn } from "../../lib/cn";
 
 const benefits = [
   {
@@ -99,103 +100,160 @@ const spaces = [
   },
 ] as const;
 
-/** Venue — structure & CSS adopted from isippe3-venue-pure-html-responsive */
+const container =
+  "mx-auto box-border w-[min(calc(100%-clamp(28px,5vw,80px)),1440px)] max-w-full max-[1200px]:w-[min(calc(100%-48px),1440px)] max-[640px]:w-[calc(100%-32px)] max-[380px]:!w-[calc(100%-24px)]";
+
+const heroBg =
+  "[background:linear-gradient(90deg,#fff_0%,#fff_28%,rgba(255,255,255,0.92)_40%,rgba(255,255,255,0.28)_58%,rgba(255,255,255,0)_72%),url('/assets/venue-hero.jpg')_96%_center/auto_108%_no-repeat]";
+const heroBgTablet =
+  "max-[960px]:[background:linear-gradient(180deg,#fff_0%,rgba(255,255,255,0.94)_48%,rgba(255,255,255,0.12)_100%),url('/assets/venue-hero.jpg')_center_bottom/auto_62%_no-repeat]";
+const heroBgMobile =
+  "max-[640px]:[background:linear-gradient(180deg,#fff_0%,#fff_50%,rgba(255,255,255,0.05)_100%),url('/assets/venue-hero.jpg')_center_bottom/auto_44%_no-repeat]";
+
+const eventIcon =
+  "w-8 shrink-0 grow-0 basis-8 text-[#075fd8] max-[640px]:h-[27px] max-[640px]:w-[27px] [&_svg]:block [&_svg]:h-8 [&_svg]:w-8 max-[640px]:[&_svg]:h-[27px] max-[640px]:[&_svg]:w-[27px]";
+const eventItem =
+  "flex items-center gap-[11px] text-[13px] font-semibold leading-[1.3] text-[#101620] max-[640px]:mb-2 max-[640px]:text-[11px]";
+const eventStrong = "text-[14px] font-extrabold max-[640px]:text-xs";
+
+const arrow = "text-[23px] font-normal leading-none";
+const btn =
+  "inline-flex min-h-[39px] items-center justify-center gap-3 rounded-md border border-[#075fd8] bg-white px-5 text-[13px] font-bold text-[#075fd8] transition-all duration-200 ease-[ease] hover:-translate-y-px hover:bg-[#f3f8ff]";
+const aboutP =
+  "max-w-[420px] text-[13.5px] leading-[1.28] text-[#344256] max-[960px]:max-w-[700px] max-[640px]:text-xs max-[640px]:leading-[1.34]";
+
+/** Venue — Tailwind port of isippe3-venue-pure-html-responsive */
 export function VenuePage() {
   const { t } = useTranslation("common");
 
   return (
-    <div className="venue-page">
-      <section className="venue-hero" id="venue">
-        <div className="home-container venue-hero-inner">
-          <div className="venue-hero-copy">
-            <div className="venue-accent" aria-hidden>
-              <span />
-              <span />
+    <div className="bg-white text-[#101620]">
+      <section className="relative min-h-[319px] overflow-hidden bg-white max-[960px]:min-h-0" id="venue">
+        <div
+          className={cn(
+            container,
+            "grid min-h-[319px] grid-cols-[43%_57%] items-start max-[1200px]:grid-cols-[45%_55%] max-[960px]:block max-[960px]:min-h-[480px] max-[640px]:min-h-[495px] max-[380px]:min-h-[480px]",
+            heroBg,
+            heroBgTablet,
+            heroBgMobile,
+            "min-[1600px]:[background-size:auto,auto_110%]",
+          )}
+        >
+          <div className="relative z-[3] pt-[30px] max-[960px]:pt-[27px] max-[640px]:pt-[23px]">
+            <div
+              className="mb-[18px] flex h-1.5 w-[132px] max-[640px]:mb-[15px] max-[640px]:h-1 max-[640px]:w-[68px]"
+              aria-hidden
+            >
+              <span className="block h-full w-1/2 bg-[#ed1c24]" />
+              <span className="block h-full w-1/2 bg-[#08713f]" />
             </div>
-            <p className="venue-section-label">Venue</p>
-            <h1 className="venue-hero-title">
+            <p className="mb-[11px] text-[14px] font-bold uppercase leading-none text-[#1d3551] max-[640px]:mb-2.5 max-[640px]:text-[11px]">
+              Venue
+            </p>
+            <h1 className="max-w-[600px] text-[44px] font-black leading-[1.04] tracking-[-2px] text-[#101620] max-[1200px]:text-[39px] max-[960px]:max-w-[650px] max-[960px]:text-[42px] max-[640px]:max-w-[370px] max-[640px]:text-[clamp(1.85rem,8vw,2.75rem)] max-[640px]:leading-[1.05] max-[640px]:tracking-[-0.04em]">
               Kenyatta International
               <br />
               Convention Centre (KICC)
             </h1>
-            <p className="venue-hero-description">
+            <p className="mb-[17px] mt-2.5 max-w-[510px] text-[17px] leading-[1.34] text-[#344256] max-[1200px]:text-[15px] max-[960px]:max-w-[600px] max-[640px]:mb-3.5 max-[640px]:mt-[9px] max-[640px]:max-w-[360px] max-[640px]:text-[13px] max-[640px]:leading-[1.32]">
               ISIPPE-3 will be held at the iconic Kenyatta International Convention Centre (KICC), a
               world-class venue in the heart of Nairobi, Kenya.
             </p>
-            <div className="venue-event-row">
-              <div className="venue-event-item">
-                <div className="venue-event-icon">
+            <div className="flex items-center gap-[17px] max-[960px]:max-w-[680px] max-[640px]:block">
+              <div className={eventItem}>
+                <div className={eventIcon}>
                   <CalendarDays size={32} strokeWidth={2} />
                 </div>
-                <strong>{t("event.datesShort")}</strong>
+                <strong className={eventStrong}>{t("event.datesShort")}</strong>
               </div>
-              <div className="venue-event-divider" aria-hidden />
-              <div className="venue-event-item">
-                <div className="venue-event-icon">
+              <div className="h-[42px] w-px bg-[#b9c2cc] max-[640px]:hidden" aria-hidden />
+              <div className={eventItem}>
+                <div className={eventIcon}>
                   <MapPin size={32} strokeWidth={0} fill="currentColor" />
                 </div>
-                <strong>KICC, Nairobi, Kenya</strong>
+                <strong className={eventStrong}>KICC, Nairobi, Kenya</strong>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="venue-benefits">
-        <div className="home-container venue-benefit-grid">
+      <section className="pb-[17px] pt-[15px] max-[640px]:pb-[15px] max-[640px]:pt-2.5">
+        <div
+          className={cn(
+            container,
+            "grid min-h-[122px] grid-cols-[repeat(5,1fr)] overflow-hidden rounded-lg border border-[#dce8f3] bg-[linear-gradient(110deg,#f4f9ff,#eef6fd)]",
+            "max-[960px]:grid-cols-[repeat(5,minmax(190px,1fr))] max-[960px]:overflow-x-auto max-[960px]:[scrollbar-width:none] max-[960px]:[&::-webkit-scrollbar]:hidden",
+            "max-[640px]:min-h-0 max-[640px]:grid-cols-[1fr_1fr] max-[640px]:overflow-visible",
+          )}
+        >
           {benefits.map((item) => (
-            <article key={item.title} className="venue-benefit">
-              <div className="venue-benefit-icon">
+            <article
+              key={item.title}
+              className="flex flex-col justify-center border-[rgba(207,222,236,0.55)] px-[22px] py-4 [&:not(:last-child)]:border-r max-[1200px]:px-[15px] max-[960px]:min-w-[190px] max-[640px]:min-w-0 max-[640px]:border-b max-[640px]:border-r max-[640px]:px-3 max-[640px]:py-[15px] max-[640px]:[&:nth-child(5)]:col-span-full max-[640px]:[&:nth-child(n+3)]:border-b-0"
+            >
+              <div className="mb-2 h-[39px] w-[39px] text-[#075fd8] max-[640px]:mb-1.5 max-[640px]:h-[34px] max-[640px]:w-[34px] [&_svg]:block [&_svg]:h-[39px] [&_svg]:w-[39px] max-[640px]:[&_svg]:h-[34px] max-[640px]:[&_svg]:w-[34px]">
                 {"filled" in item && item.filled ? (
                   <item.icon size={39} strokeWidth={0} fill="currentColor" />
                 ) : (
                   <item.icon size={39} strokeWidth={1.7} />
                 )}
               </div>
-              <h3>{item.title}</h3>
-              <p>{item.text}</p>
+              <h3 className="mb-1 text-[12.5px] font-extrabold leading-[1.1] text-[#101620] max-[640px]:text-[10.5px]">
+                {item.title}
+              </h3>
+              <p className="text-[11.5px] leading-[1.3] text-[#45536a] max-[640px]:text-[9.5px]">
+                {item.text}
+              </p>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="venue-about" id="about-kicc">
-        <div className="home-container venue-about-grid">
-          <div className="venue-about-copy">
-            <h2>About KICC</h2>
-            <p>
+      <section className="pb-[17px] max-[640px]:pb-[18px]" id="about-kicc">
+        <div
+          className={cn(
+            container,
+            "grid grid-cols-[35%_65%] items-start gap-0 max-[960px]:grid-cols-1 max-[960px]:gap-[15px]",
+          )}
+        >
+          <div className="pr-[30px] max-[960px]:pr-0">
+            <h2 className="mb-[7px] text-[22px] font-black leading-none tracking-[-0.7px] text-[#101620] max-[640px]:text-[23px]">
+              About KICC
+            </h2>
+            <p className={aboutP}>
               The Kenyatta International Convention Centre (KICC) is Kenya&apos;s premier conference
               and exhibition venue, known for its state-of-the-art facilities, accessibility and
               iconic status.
             </p>
-            <p>
+            <p className={cn(aboutP, "mt-[7px]")}>
               KICC provides a professional and inspiring environment for global conferences,
               exhibitions and high-level meetings, making it the perfect venue for ISIPPE-3.
             </p>
             <a
-              className="venue-btn"
+              className={cn(btn, "mt-3")}
               href="https://www.kicc.co.ke"
               target="_blank"
               rel="noreferrer"
             >
               <Globe2 size={18} strokeWidth={2} />
               Visit KICC Website{" "}
-              <span className="venue-arrow" aria-hidden>
+              <span className={arrow} aria-hidden>
                 →
               </span>
             </a>
           </div>
 
-          <div className="venue-map-card">
-            <img src="/assets/venue-map.jpg" alt="Map showing KICC in Nairobi" />
+          <div className="relative h-[178px] overflow-hidden rounded-[7px] border border-[#e3e8ee] bg-[#eef2f6] max-[960px]:h-[230px] max-[640px]:h-[205px]">
+            <img className="block h-full w-full object-cover" src="/assets/venue-map.jpg" alt="Map showing KICC in Nairobi" />
             <a
-              className="venue-map-button"
+              className="absolute right-[11px] top-[9px] z-[3] inline-flex h-[34px] items-center gap-2.5 rounded-md border border-[#075fd8] bg-white px-3 text-[11px] font-bold text-[#075fd8]"
               href="https://maps.google.com/?q=Kenyatta+International+Convention+Centre"
               target="_blank"
               rel="noreferrer"
             >
               View on Google Maps{" "}
-              <span className="venue-arrow" aria-hidden>
+              <span className={arrow} aria-hidden>
                 →
               </span>
             </a>
@@ -203,36 +261,49 @@ export function VenuePage() {
         </div>
       </section>
 
-      <section className="venue-spaces" id="spaces">
-        <div className="home-container">
-          <div className="venue-spaces-header">
-            <div className="venue-spaces-title-wrap">
-              <div className="venue-accent" aria-hidden>
-                <span />
-                <span />
+      <section className="pb-[30px]" id="spaces">
+        <div className={container}>
+          <div className="mb-2 flex items-end justify-between max-[640px]:items-center">
+            <div>
+              <div className="mb-2 flex h-[5px] w-[89px]" aria-hidden>
+                <span className="block h-full w-1/2 bg-[#ed1c24]" />
+                <span className="block h-full w-1/2 bg-[#08713f]" />
               </div>
-              <h2>Venue Spaces</h2>
-              <p className="venue-spaces-intro">
+              <h2 className="text-[21px] font-black leading-none text-[#101620] max-[640px]:text-[22px]">
+                Venue Spaces
+              </h2>
+              <p className="mt-[3px] text-[13px] leading-[1.25] text-[#344256] max-[640px]:text-[11.5px]">
                 ISIPPE-3 will utilise multiple spaces at KICC to deliver an engaging and seamless
                 experience.
               </p>
             </div>
-            <a className="venue-see-all" href="#spaces">
+            <a className="hidden text-xs font-bold text-[#075fd8] max-[640px]:block" href="#spaces">
               See All{" "}
-              <span className="venue-arrow" aria-hidden>
+              <span className={arrow} aria-hidden>
                 →
               </span>
             </a>
           </div>
 
-          <div className="venue-space-grid">
+          <div className="grid grid-cols-[repeat(4,1fr)] gap-3.5 max-[960px]:grid-cols-[repeat(2,1fr)] max-[640px]:grid-cols-[1fr] max-[640px]:gap-2.5">
             {spaces.map((space) => (
-              <article key={space.name} className="venue-space-card">
-                <img className="venue-space-image" src={space.image} alt={space.alt} />
-                <div className="venue-space-body">
-                  <h3>{space.name}</h3>
-                  <p>{space.text}</p>
-                  <div className="venue-capacity">
+              <article
+                key={space.name}
+                className="overflow-hidden rounded-[7px] border border-[#e2e8ee] bg-white max-[640px]:grid max-[640px]:min-h-[94px] max-[640px]:grid-cols-[100px_1fr]"
+              >
+                <img
+                  className="block h-[91px] w-full object-cover max-[640px]:h-full max-[640px]:min-h-[94px] max-[640px]:w-[100px]"
+                  src={space.image}
+                  alt={space.alt}
+                />
+                <div className="px-3 pb-[11px] pt-2 max-[640px]:px-[11px] max-[640px]:py-2.5">
+                  <h3 className="mb-[3px] text-[13px] font-extrabold leading-[1.1] text-[#101620] max-[640px]:text-xs">
+                    {space.name}
+                  </h3>
+                  <p className="min-h-[31px] text-[11px] leading-[1.18] text-[#4d5967] max-[640px]:min-h-0 max-[640px]:text-[10px]">
+                    {space.text}
+                  </p>
+                  <div className="mt-[7px] flex items-center gap-[7px] text-[10.5px] text-[#3e4b60] max-[640px]:mt-[5px] max-[640px]:text-[9.5px] [&_svg]:h-[19px] [&_svg]:w-[19px] [&_svg]:shrink-0 [&_svg]:text-[#075fd8]">
                     <Users size={19} strokeWidth={0} fill="currentColor" />
                     {space.capacity}
                   </div>

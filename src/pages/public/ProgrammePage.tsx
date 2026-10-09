@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CalendarDays, MapPin, Search } from "lucide-react";
+import { cn } from "../../lib/cn";
 import { programmeDays, programmeSessions } from "../../data/publicContent";
 
 const dayMeta: Record<1 | 2 | 3, { date: string; weekday: string }> = {
@@ -9,15 +10,47 @@ const dayMeta: Record<1 | 2 | 3, { date: string; weekday: string }> = {
   3: { date: "14 November 2026", weekday: "Saturday" },
 };
 
+const container =
+  "mx-auto box-border w-[min(calc(100%-clamp(28px,5vw,80px)),1440px)] max-w-full max-[1200px]:w-[min(calc(100%-48px),1440px)] max-[640px]:w-[calc(100%-32px)] max-[380px]:!w-[calc(100%-24px)]";
+
+const heroBg =
+  "[background:linear-gradient(90deg,#fff_0%,#fff_28%,rgba(255,255,255,0.92)_40%,rgba(255,255,255,0.28)_58%,rgba(255,255,255,0)_72%),url('/assets/programme-hero.jpg')_96%_center/auto_108%_no-repeat]";
+const heroBgTablet =
+  "max-[1100px]:[background:linear-gradient(180deg,#fff_0%,rgba(255,255,255,0.95)_48%,rgba(255,255,255,0.12)_100%),url('/assets/programme-hero.jpg')_center_bottom/auto_58%_no-repeat]";
+const heroBgMobile =
+  "max-[700px]:[background:linear-gradient(180deg,#fff_0%,#fff_56%,rgba(255,255,255,0.05)_100%),url('/assets/programme-hero.jpg')_center_bottom/auto_43%_no-repeat]";
+
 function tagClass(tone: (typeof programmeSessions)[number]["tone"]) {
-  if (tone === "red") return "pg-tag red";
-  if (tone === "green") return "pg-tag green";
-  if (tone === "purple") return "pg-tag purple";
-  if (tone === "orange") return "pg-tag orange";
-  return "pg-tag";
+  const base = "inline-block rounded px-[9px] py-1 text-[10px] font-semibold";
+  if (tone === "red") return cn(base, "bg-[#ffe6e8] text-[#e21d2a]");
+  if (tone === "green") return cn(base, "bg-[#dff4e8] text-[#168046]");
+  if (tone === "purple") return cn(base, "bg-[#eee5ff] text-[#6631e9]");
+  if (tone === "orange") return cn(base, "bg-[#fff0d4] text-[#c87000]");
+  return cn(base, "bg-[#e4eef8] text-[#1462d4]");
 }
 
-/** Programme — structure & CSS adopted from isippe3-programme-pure-html-responsive */
+const thBase = "bg-[#edf4f9] px-[17px] py-[7px] text-left";
+const tdBase =
+  "h-[43px] border-t border-[#edf1f5] px-[17px] py-[5px] align-middle max-[700px]:block max-[700px]:h-auto max-[700px]:border-0 max-[700px]:p-0";
+
+const th = {
+  time: "w-[12%] font-bold text-[#53627a]",
+  session: "w-[32%] text-xs font-semibold text-[#101827]",
+  type: "w-[11%] font-bold text-[#101827]",
+  speakers: "w-[21%] font-bold text-[#53627a]",
+  venue: "w-[24%] font-bold text-[#101827]",
+} as const;
+
+const td = {
+  time: "w-[12%] text-[#53627a] max-[700px]:absolute max-[700px]:left-2.5 max-[700px]:top-2.5 max-[700px]:w-12 max-[700px]:text-[9px] max-[700px]:leading-[1.35]",
+  session:
+    "w-[32%] text-xs font-semibold text-[#101827] max-[700px]:mb-1 max-[700px]:w-auto max-[700px]:text-[10px] max-[700px]:leading-[1.25]",
+  type: "w-[11%] text-[#101827] max-[700px]:mb-1 max-[700px]:w-auto",
+  speakers: "w-[21%] text-[#53627a] max-[700px]:mb-[3px] max-[700px]:w-auto max-[700px]:text-[9px]",
+  venue: "w-[24%] text-[#101827] max-[700px]:w-auto",
+} as const;
+
+/** Programme — Tailwind port of isippe3-programme-pure-html-responsive */
 export function ProgrammePage() {
   const { t } = useTranslation("common");
   const [dayFilter, setDayFilter] = useState("all");
@@ -45,46 +78,72 @@ export function ProgrammePage() {
     }));
 
   return (
-    <div className="programme-page">
-      <section className="pg-hero">
-        <div className="home-container pg-hero-inner">
-          <div className="pg-accent" aria-hidden>
-            <i />
-            <i />
+    <div className="bg-white text-[#101827]">
+      <section className="h-[234px] overflow-hidden bg-white max-[1100px]:h-[350px] max-[700px]:h-[385px]">
+        <div
+          className={cn(
+            container,
+            "h-full pt-6 max-[700px]:pt-5",
+            heroBg,
+            heroBgTablet,
+            heroBgMobile,
+            "min-[1600px]:[background-size:auto,auto_110%]",
+          )}
+        >
+          <div
+            className="mb-[11px] flex h-1.5 w-[133px] max-[700px]:h-1 max-[700px]:w-[68px]"
+            aria-hidden
+          >
+            <i className="block h-full w-1/2 bg-[#ed1c24]" />
+            <i className="block h-full w-1/2 bg-[#08713f]" />
           </div>
-          <h1 className="pg-hero-title">Programme</h1>
-          <div className="pg-subtitle">
+          <h1 className="text-[69px] font-black leading-[0.94] tracking-[-3.4px] text-[#101827] max-[700px]:text-[51px] max-[700px]:tracking-[-2.5px] max-[640px]:text-[clamp(1.85rem,8vw,2.75rem)] max-[640px]:leading-[1.05] max-[640px]:tracking-[-0.04em]">
+            Programme
+          </h1>
+          <div className="mb-[11px] mt-2 max-w-[610px] text-[23px] font-extrabold leading-[1.12] text-[#101827] max-[1100px]:text-[20px] max-[700px]:text-base max-[700px]:leading-[1.15]">
             ISIPPE-3 International Symposium on
             <br />
             Intellectual Property Protection and Enforcement
           </div>
-          <div className="pg-event-row">
-            <div className="pg-event">
+          <div className="flex items-center gap-[15px] max-[700px]:block">
+            <div className="flex items-center gap-2.5 text-[#101827] max-[700px]:my-2 [&_svg]:h-8 [&_svg]:w-8 [&_svg]:shrink-0 [&_svg]:text-[#0964df] max-[700px]:[&_svg]:h-[27px] max-[700px]:[&_svg]:w-[27px]">
               <CalendarDays size={32} strokeWidth={2} />
-              <strong>{t("event.datesShort")}</strong>
+              <strong className="text-[13px] font-extrabold max-[700px]:text-[11px]">
+                {t("event.datesShort")}
+              </strong>
             </div>
-            <div className="pg-event-divider" aria-hidden />
-            <div className="pg-event">
+            <div className="h-[39px] w-px bg-[#b9c3ce] max-[700px]:hidden" aria-hidden />
+            <div className="flex items-center gap-2.5 text-[#101827] max-[700px]:my-2 [&_svg]:h-8 [&_svg]:w-8 [&_svg]:shrink-0 [&_svg]:text-[#0964df] max-[700px]:[&_svg]:h-[27px] max-[700px]:[&_svg]:w-[27px]">
               <MapPin size={32} strokeWidth={0} fill="currentColor" />
               <div>
-                <strong>{t("event.city")}</strong>
-                <small>{t("event.venue")}</small>
+                <strong className="text-[13px] font-extrabold max-[700px]:text-[11px]">
+                  {t("event.city")}
+                </strong>
+                <small className="block text-[11px] text-[#53627a] max-[700px]:text-[9px]">
+                  {t("event.venue")}
+                </small>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="pg-controls">
-        <div className="home-container">
-          <div className="pg-control-row">
-            {programmeDays.map((d) => {
+      <section className="pb-3.5 pt-3 max-[700px]:pt-2.5">
+        <div className={container}>
+          <div className="flex items-center gap-2.5 max-[1100px]:flex-wrap max-[900px]:gap-3 max-[700px]:grid max-[700px]:grid-cols-[1fr_1fr]">
+            {programmeDays.map((d, idx) => {
               const active = dayFilter === d.id;
               return (
                 <button
                   key={d.id}
                   type="button"
-                  className={`pg-day-btn${active ? " active" : ""}`}
+                  className={cn(
+                    "h-[51px] cursor-pointer rounded-[7px] border px-[31px] text-[14px] leading-[1.1] max-[700px]:h-12 max-[700px]:w-full max-[700px]:px-2.5 max-[700px]:text-[11px]",
+                    active
+                      ? "border-[#0964df] bg-[#0964df] text-center font-bold text-white"
+                      : "border-[#d4dfeb] bg-white text-left text-[#17243a]",
+                    idx === 0 && "max-[700px]:col-span-full",
+                  )}
                   onClick={() => {
                     setDayFilter(d.id);
                     if (d.id === "all") setOpenDays({ 1: true, 2: false, 3: false });
@@ -98,7 +157,9 @@ export function ProgrammePage() {
                 >
                   {d.sub ? (
                     <>
-                      <strong>{d.label}</strong>
+                      <strong className="block text-base font-extrabold max-[700px]:text-[13px]">
+                        {d.label}
+                      </strong>
                       {d.sub}
                     </>
                   ) : (
@@ -107,10 +168,11 @@ export function ProgrammePage() {
                 </button>
               );
             })}
-            <label className="pg-search">
+            <label className="ml-auto flex h-[38px] w-[293px] items-center gap-[9px] rounded-[7px] border border-[#d4dfeb] bg-white px-[11px] max-[700px]:col-span-full max-[700px]:m-0 max-[700px]:w-full [&_svg]:h-[18px] [&_svg]:w-[18px] [&_svg]:shrink-0 [&_svg]:text-[#53627a]">
               <Search size={18} strokeWidth={2} aria-hidden />
               <span className="sr-only">Search sessions</span>
               <input
+                className="w-full border-0 bg-transparent text-[11px] text-[#53627a] outline-none"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search sessions, topics or speakers..."
@@ -120,82 +182,115 @@ export function ProgrammePage() {
         </div>
       </section>
 
-      <main className="pg-schedule">
-        <div className="home-container">
+      <main className="pb-7 max-[700px]:pb-5">
+        <div className={container}>
           {byDay.map(({ day, sessions }) => {
             const open = openDays[day];
             const meta = dayMeta[day];
             return (
               <section
                 key={day}
-                className={`pg-day-panel${open ? "" : " collapsed"}`}
+                className={cn(
+                  "mb-[13px] overflow-hidden rounded-[9px] border border-[#dbe6f0] bg-white shadow-[0_1px_4px_#0b4a7510] max-[700px]:mb-2",
+                  open
+                    ? "max-[1100px]:overflow-x-auto max-[700px]:overflow-visible"
+                    : "h-[53px] max-[700px]:h-[52px]",
+                )}
               >
                 <button
                   type="button"
-                  className="pg-day-head"
+                  className={cn(
+                    "relative flex w-full cursor-pointer items-center border-0 bg-white px-4 text-left text-inherit before:absolute before:left-3.5 before:top-[5px] before:h-[5px] before:w-[102px] before:bg-[linear-gradient(90deg,#ed1c24_50%,#08713f_50%)] before:content-[''] max-[700px]:px-2.5 max-[700px]:before:left-2.5 max-[700px]:before:w-[70px]",
+                    open ? "h-12 max-[700px]:h-[54px]" : "h-[53px] max-[700px]:h-[52px]",
+                  )}
                   aria-expanded={open}
                   onClick={() => setOpenDays((s) => ({ ...s, [day]: !s[day] }))}
                 >
-                  <div className="pg-day-title">Day {day}</div>
-                  <div className="pg-day-date">
+                  <div
+                    className={cn(
+                      "ml-2 border-l-4 border-[#ed1c24] pl-[9px] font-black text-[#101827] max-[700px]:ml-0.5",
+                      open ? "text-[25px] max-[700px]:text-[22px]" : "text-[23px] max-[700px]:text-[20px]",
+                    )}
+                  >
+                    Day {day}
+                  </div>
+                  <div className="ml-6 text-[13px] font-semibold text-[#101827] max-[700px]:ml-3.5 max-[700px]:text-[10px]">
                     {meta.date}, {meta.weekday}
                   </div>
-                  <div className="pg-location">
+                  <div className="ml-auto flex items-center gap-2 text-[11px] text-[#101827] max-[700px]:hidden [&_svg]:h-[19px] [&_svg]:w-[19px] [&_svg]:shrink-0 [&_svg]:text-[#0964df]">
                     <MapPin size={19} strokeWidth={0} fill="currentColor" />
                     Kenyatta International Convention Centre (KICC), Nairobi
                   </div>
-                  <span className="pg-chev" aria-hidden>
+                  <span
+                    className="ml-[18px] text-[22px] leading-none text-[#0964df] max-[700px]:ml-auto"
+                    aria-hidden
+                  >
                     {open ? "⌃" : "⌄"}
                   </span>
                 </button>
 
                 {open ? (
                   sessions.length === 0 ? (
-                    <p className="pg-empty">No sessions match your filters.</p>
+                    <p className="border-t border-[#edf1f5] px-[17px] py-7 text-center text-xs text-[#53627a]">
+                      No sessions match your filters.
+                    </p>
                   ) : (
-                    <table className="pg-table">
-                      <thead>
+                    <table className="w-full table-fixed border-collapse text-[11px] max-[1100px]:min-w-[900px] max-[700px]:block max-[700px]:min-w-0">
+                      <thead className="max-[700px]:hidden">
                         <tr>
-                          <th className="pg-time">Time</th>
-                          <th className="pg-session">Session</th>
-                          <th className="pg-type">Type</th>
-                          <th className="pg-speakers">Speakers</th>
-                          <th className="pg-venue">Venue</th>
+                          <th className={cn(thBase, th.time)}>Time</th>
+                          <th className={cn(thBase, th.session)}>Session</th>
+                          <th className={cn(thBase, th.type)}>Type</th>
+                          <th className={cn(thBase, th.speakers)}>Speakers</th>
+                          <th className={cn(thBase, th.venue)}>Venue</th>
                         </tr>
                       </thead>
-                      <tbody>
-                        {sessions.map((s) => (
-                          <tr key={s.id}>
-                            <td className="pg-time">{s.time}</td>
-                            <td className="pg-session">{s.title}</td>
-                            <td className="pg-type">
-                              <span className={tagClass(s.tone)}>{s.type}</span>
-                            </td>
-                            <td className="pg-speakers">
-                              {s.speakerLines
-                                ? s.speakerLines.map((line) => (
-                                    <span key={line}>
-                                      {line}
-                                      <br />
-                                    </span>
-                                  ))
-                                : s.speakers}
-                            </td>
-                            <td className="pg-venue">
-                              <div className="pg-venue-cell">
-                                <img src={s.venueImage} alt="" />
-                                <div className="pg-venue-name">
-                                  {s.venue}
-                                  <br />
-                                  <span>{s.venueSub ?? "KICC"}</span>
+                      <tbody className="max-[700px]:block">
+                        {sessions.map((s, rowIdx) => {
+                          const stripe = rowIdx % 2 === 0 ? "bg-[#f7fafc] max-[700px]:bg-transparent" : "";
+                          return (
+                            <tr
+                              key={s.id}
+                              className="max-[700px]:relative max-[700px]:block max-[700px]:border-t max-[700px]:border-[#e6edf4] max-[700px]:bg-white max-[700px]:py-[9px] max-[700px]:pl-[66px] max-[700px]:pr-2.5"
+                            >
+                              <td className={cn(tdBase, td.time, stripe)}>{s.time}</td>
+                              <td className={cn(tdBase, td.session, stripe)}>{s.title}</td>
+                              <td className={cn(tdBase, td.type, stripe)}>
+                                <span className={tagClass(s.tone)}>{s.type}</span>
+                              </td>
+                              <td className={cn(tdBase, td.speakers, stripe)}>
+                                {s.speakerLines
+                                  ? s.speakerLines.map((line) => (
+                                      <span key={line}>
+                                        {line}
+                                        <br />
+                                      </span>
+                                    ))
+                                  : s.speakers}
+                              </td>
+                              <td className={cn(tdBase, td.venue, stripe)}>
+                                <div className="flex items-center gap-2.5">
+                                  <img
+                                    className="block h-[33px] w-[51px] shrink-0 rounded object-cover max-[700px]:h-[29px] max-[700px]:w-[45px]"
+                                    src={s.venueImage}
+                                    alt=""
+                                  />
+                                  <div className="text-[10px] font-semibold leading-[1.2] text-[#15223a] max-[700px]:text-[9px]">
+                                    {s.venue}
+                                    <br />
+                                    <span className="font-medium text-[#53627a]">{s.venueSub ?? "KICC"}</span>
+                                  </div>
+                                  <span
+                                    className="ml-auto shrink-0 text-[22px] leading-none text-[#0964df] max-[700px]:text-lg"
+                                    aria-hidden
+                                  >
+                                    ›
+                                  </span>
                                 </div>
-                                <span className="pg-row-arrow" aria-hidden>
-                                  ›
-                                </span>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   )

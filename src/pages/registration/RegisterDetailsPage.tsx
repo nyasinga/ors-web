@@ -6,6 +6,8 @@ import { fees } from "../../data/event";
 import { useTranslation } from "react-i18next";
 import { formatMoney } from "../../i18n/format";
 import { useEventCopy } from "../../i18n/useEventCopy";
+import { cn } from "../../lib/cn";
+import * as r from "../../components/registration/registerStyles";
 
 const inclusions = [
   "Access to all plenary and parallel sessions",
@@ -38,26 +40,27 @@ export function RegisterDetailsPage() {
   };
 
   return (
-    <div className="register-page">
+    <div className={r.registerPage}>
       <RegisterHero current={2} />
 
-      <main className="rg-main">
-        <div className="home-container rg-layout">
-          <section className="rg-card rg-section">
-            <h2>2. Details</h2>
-            <p className="rg-subtitle">Please provide your information to register for ISIPPE-3.</p>
+      <main className={r.main}>
+        <div className={cn(r.container, r.layout)}>
+          <section className={cn(r.card, r.section)}>
+            <h2 className={r.sectionTitle}>2. Details</h2>
+            <p className={r.subtitle}>Please provide your information to register for ISIPPE-3.</p>
 
-            <div className="rg-card rg-form-card">
-              <div className="rg-form-title">
-                <span className="rg-dot">●</span>
+            <div className={r.formCard}>
+              <div className={r.formTitle}>
+                <span className={r.formDot}>●</span>
                 Personal Information
               </div>
-              <div className="rg-form-grid">
-                <div className="rg-field">
-                  <label>
-                    Title <span className="rg-required">*</span>
+              <div className={r.formGrid}>
+                <div>
+                  <label className={r.fieldLabel}>
+                    Title <span className={r.required}>*</span>
                   </label>
                   <select
+                    className={r.fieldControl}
                     value={details.title}
                     onChange={(e) => setDetails({ title: e.target.value })}
                   >
@@ -68,80 +71,86 @@ export function RegisterDetailsPage() {
                     <option value="Dr">Dr</option>
                     <option value="Prof">Prof</option>
                   </select>
-                  {errors.title ? <span className="rg-field-error">{errors.title}</span> : null}
+                  {errors.title ? <span className={r.fieldError}>{errors.title}</span> : null}
                 </div>
-                <div className="rg-field">
-                  <label>
-                    Full Name <span className="rg-required">*</span>
+                <div>
+                  <label className={r.fieldLabel}>
+                    Full Name <span className={r.required}>*</span>
                   </label>
                   <input
+                    className={r.fieldControl}
                     value={details.fullName}
                     onChange={(e) => setDetails({ fullName: e.target.value })}
                     placeholder="Enter your full name"
                   />
                   {errors.fullName ? (
-                    <span className="rg-field-error">{errors.fullName}</span>
+                    <span className={r.fieldError}>{errors.fullName}</span>
                   ) : null}
                 </div>
-                <div className="rg-field">
-                  <label>
-                    Email Address <span className="rg-required">*</span>
+                <div>
+                  <label className={r.fieldLabel}>
+                    Email Address <span className={r.required}>*</span>
                   </label>
                   <input
+                    className={r.fieldControl}
                     type="email"
                     value={details.email}
                     onChange={(e) => setDetails({ email: e.target.value })}
                     placeholder="Enter your email address"
                   />
-                  {errors.email ? <span className="rg-field-error">{errors.email}</span> : null}
+                  {errors.email ? <span className={r.fieldError}>{errors.email}</span> : null}
                 </div>
-                <div className="rg-field">
-                  <label>
-                    Phone Number <span className="rg-required">*</span>
+                <div>
+                  <label className={r.fieldLabel}>
+                    Phone Number <span className={r.required}>*</span>
                   </label>
-                  <div className="rg-phone">
-                    <select defaultValue="+254" aria-label="Country code">
+                  <div className={r.phone}>
+                    <select className={r.fieldControl} defaultValue="+254" aria-label="Country code">
                       <option value="+254">🇰🇪 +254</option>
                     </select>
                     <input
+                    className={r.fieldControl}
                       value={details.phone}
                       onChange={(e) => setDetails({ phone: e.target.value })}
                       placeholder="712 345 678"
                     />
                   </div>
-                  {errors.phone ? <span className="rg-field-error">{errors.phone}</span> : null}
+                  {errors.phone ? <span className={r.fieldError}>{errors.phone}</span> : null}
                 </div>
-                <div className="rg-field">
-                  <label>
-                    Organisation <span className="rg-required">*</span>
+                <div>
+                  <label className={r.fieldLabel}>
+                    Organisation <span className={r.required}>*</span>
                   </label>
                   <input
+                    className={r.fieldControl}
                     value={details.organisation}
                     onChange={(e) => setDetails({ organisation: e.target.value })}
                     placeholder="Enter your organisation"
                   />
                   {errors.organisation ? (
-                    <span className="rg-field-error">{errors.organisation}</span>
+                    <span className={r.fieldError}>{errors.organisation}</span>
                   ) : null}
                 </div>
-                <div className="rg-field">
-                  <label>
-                    Job Title <span className="rg-required">*</span>
+                <div>
+                  <label className={r.fieldLabel}>
+                    Job Title <span className={r.required}>*</span>
                   </label>
                   <input
+                    className={r.fieldControl}
                     value={details.jobTitle}
                     onChange={(e) => setDetails({ jobTitle: e.target.value })}
                     placeholder="Enter your job title"
                   />
                   {errors.jobTitle ? (
-                    <span className="rg-field-error">{errors.jobTitle}</span>
+                    <span className={r.fieldError}>{errors.jobTitle}</span>
                   ) : null}
                 </div>
-                <div className="rg-field">
-                  <label>
-                    Country <span className="rg-required">*</span>
+                <div>
+                  <label className={r.fieldLabel}>
+                    Country <span className={r.required}>*</span>
                   </label>
                   <select
+                    className={r.fieldControl}
                     value={details.country}
                     onChange={(e) => setDetails({ country: e.target.value })}
                   >
@@ -154,28 +163,30 @@ export function RegisterDetailsPage() {
                     <option value="Uganda">Uganda</option>
                     <option value="Other">Other</option>
                   </select>
-                  {errors.country ? <span className="rg-field-error">{errors.country}</span> : null}
+                  {errors.country ? <span className={r.fieldError}>{errors.country}</span> : null}
                 </div>
-                <div className="rg-field">
-                  <label>
-                    City <span className="rg-required">*</span>
+                <div>
+                  <label className={r.fieldLabel}>
+                    City <span className={r.required}>*</span>
                   </label>
                   <input
+                    className={r.fieldControl}
                     value={details.city}
                     onChange={(e) => setDetails({ city: e.target.value })}
                     placeholder="Enter your city"
                   />
-                  {errors.city ? <span className="rg-field-error">{errors.city}</span> : null}
+                  {errors.city ? <span className={r.fieldError}>{errors.city}</span> : null}
                 </div>
               </div>
             </div>
 
-            <div className="rg-optional">
-              <div className="rg-form-title">▣ &nbsp; Additional Information (Optional)</div>
-              <div className="rg-optional-grid">
-                <div className="rg-field">
-                  <label>Dietary Requirements</label>
+            <div className={r.optional}>
+              <div className={r.formTitle}>▣ &nbsp; Additional Information (Optional)</div>
+              <div className={r.optionalGrid}>
+                <div>
+                  <label className={r.fieldLabel}>Dietary Requirements</label>
                   <select
+                    className={r.fieldControl}
                     value={details.dietary}
                     onChange={(e) => setDetails({ dietary: e.target.value })}
                   >
@@ -186,9 +197,10 @@ export function RegisterDetailsPage() {
                     <option value="Other">Other</option>
                   </select>
                 </div>
-                <div className="rg-field">
-                  <label>Accessibility Needs</label>
+                <div>
+                  <label className={r.fieldLabel}>Accessibility Needs</label>
                   <select
+                    className={r.fieldControl}
                     value={details.accessibility}
                     onChange={(e) => setDetails({ accessibility: e.target.value })}
                   >
@@ -202,47 +214,47 @@ export function RegisterDetailsPage() {
               </div>
             </div>
 
-            <div className="rg-actions">
-              <Link className="rg-btn" to="/register">
+            <div className={r.actions}>
+              <Link className={r.btn} to="/register">
                 ← Back
               </Link>
               <button
                 type="button"
-                className="rg-btn primary"
+                className={r.btnPrimary}
                 onClick={() => {
                   if (validate()) navigate("/register/payment");
                 }}
               >
                 Next: Payment{" "}
-                <span className="rg-arrow" aria-hidden>
+                <span className={r.arrow} aria-hidden>
                   →
                 </span>
               </button>
             </div>
           </section>
 
-          <aside className="rg-sidebar">
-            <div className="rg-side-price">
-              <div className="rg-price-label">🏷 Registration Fee</div>
-              <div className="rg-period">
+          <aside className={r.sidebar}>
+            <div className={r.sidePrice}>
+              <div className={r.priceLabel}>🏷 Registration Fee</div>
+              <div className={r.period}>
                 {t(fees.earlyBird.labelKey)} &nbsp; <b>Current Period</b>
               </div>
-              <div className="rg-price">{formatMoney(fees.earlyBird.kes, "KES")}</div>
-              <div className="rg-price-sub">
+              <div className={r.price}>{formatMoney(fees.earlyBird.kes, "KES")}</div>
+              <div className={r.priceSub}>
                 {formatMoney(fees.earlyBird.usd, "USD")} (Approx.)
               </div>
-              <div className="rg-period">{t(fees.earlyBird.untilKey)}</div>
+              <div className={r.period}>{t(fees.earlyBird.untilKey)}</div>
             </div>
-            <div className="rg-late">
+            <div className={r.late}>
               <b>{t(fees.late.labelKey)}</b>
               <br />
-              <span style={{ fontSize: 11, color: "#61708a" }}>{t(fees.late.untilKey)}</span>
+              <span className="text-[11px] text-[#61708a]">{t(fees.late.untilKey)}</span>
               <br />
               <strong>{formatMoney(fees.late.kes, "KES")}</strong>
             </div>
-            <div className="rg-info-box">
-              <div className="rg-info-title">👥 What&apos;s Included?</div>
-              <p>
+            <div className={r.infoBox}>
+              <div className={r.infoTitle}>👥 What&apos;s Included?</div>
+              <p className={r.infoText}>
                 {inclusions.map((item) => (
                   <span key={item}>
                     ✓ {item}
@@ -251,9 +263,9 @@ export function RegisterDetailsPage() {
                 ))}
               </p>
             </div>
-            <div className="rg-info-box">
-              <div className="rg-info-title">🎧 Need Assistance?</div>
-              <p>
+            <div className={r.infoBox}>
+              <div className={r.infoTitle}>🎧 Need Assistance?</div>
+              <p className={r.infoText}>
                 For registration support, please contact us:
                 <br />
                 <b>{event.supportEmail}</b>
