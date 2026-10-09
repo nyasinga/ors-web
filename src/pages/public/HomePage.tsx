@@ -63,69 +63,83 @@ export function HomePage() {
       <section className="home-hero">
         <div className="home-container home-hero-inner">
           <div className="home-hero-copy">
-            <div className="home-accent" aria-hidden>
+            <div className="home-accent" aria-hidden="true">
+              <i />
               <i />
               <i />
             </div>
+
             <h1 className="home-hero-title">
-              ISIPPE-<span>3</span>
+              ISIPPE <span className="home-hero-year">2026</span>
             </h1>
-            <div className="home-hero-subtitle">{t("common:event.fullName")}</div>
-            <div className="home-rule" aria-hidden>
+
+            <div className="home-rule" aria-hidden="true">
               <span />
               <span />
               <span />
               <span />
             </div>
+
+            <div className="home-hero-subtitle">
+              {t("common:event.fullName")}
+            </div>
+
             <div className="home-meta">
               <div className="home-meta-item">
                 <div className="home-meta-icon">
-                  <CalendarDays size={31} strokeWidth={2} />
+                  <CalendarDays size={27} strokeWidth={1.7} />
                 </div>
                 <div className="home-meta-copy">
-                  <strong>{t("common:event.datesShort")}</strong>
+                  {t("common:event.datesShort")}
                 </div>
               </div>
-              <div className="home-meta-divider" aria-hidden />
+
               <div className="home-meta-item">
                 <div className="home-meta-icon">
-                  <MapPin size={31} strokeWidth={0} fill="currentColor" />
+                  <MapPin size={27} strokeWidth={1.7} fill="none" />
                 </div>
                 <div className="home-meta-copy">
-                  <strong>{t("common:event.city")}</strong>
-                  {t("common:event.venue")}
+                  <span>{t("common:event.city")}</span>
+                  <span>{t("common:event.venue")}</span>
                 </div>
               </div>
             </div>
-            <p className="home-description">{t("hero.intro")}</p>
+
+            <p className="home-description">
+              {t("hero.intro")}
+            </p>
+
             <div className="home-actions">
               <Link className="home-btn home-primary" to="/register">
-                {t("common:actions.registerNow")}{" "}
-                <span className="home-arrow" aria-hidden>
-                  →
-                </span>
+                {t("common:actions.registerNow")}
+                <span className="home-arrow" aria-hidden="true">→</span>
               </Link>
+
               <Link className="home-btn home-secondary" to="/programme">
                 {t("common:actions.viewProgramme")}
               </Link>
             </div>
           </div>
 
-          <div className="home-hero-visual" aria-hidden />
+          <div className="home-hero-visual" aria-hidden="true" />
 
           <aside className="home-theme">
-            <div className="home-theme-accent" aria-hidden />
+            <div className="home-theme-accent" aria-hidden="true" />
             <h2>{t("common:event.tagline")}</h2>
             <div className="home-theme-items">
               {pillars.map((item) => (
                 <div key={item.labelKey} className="home-theme-item">
                   <div className="home-theme-icon">
-                    <item.icon size={27} strokeWidth={1.75} />
+                    <item.icon size={25} strokeWidth={1.6} />
                   </div>
                   <strong>{t(item.labelKey)}</strong>
                 </div>
               ))}
             </div>
+            <p className="home-early-bird">
+              Early bird registration is <strong>now open</strong>.
+              Register by 31 October 2026 for a special offer.
+            </p>
           </aside>
         </div>
       </section>

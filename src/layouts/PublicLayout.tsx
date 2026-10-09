@@ -47,9 +47,9 @@ export function PublicLayout() {
       <header className="home-header">
         <div className="home-container home-header-inner">
           <Link to="/" className="home-brand" onClick={() => setOpen(false)}>
-            <img className="home-brand-aca" src="/assets/logo-aca.png" alt={t("brand.aca")} />
+            <img className="home-brand-aca" src="/assets/logo-ministry.png" alt={t("brand.aca")} />
             <span className="home-brand-divider" aria-hidden />
-            <img className="home-brand-isippe" src="/assets/logo-isippe.png" alt="ISIPPE 2026" />
+            <img className="home-brand-isippe" height="170" src="/assets/logo-aca.png" alt="Ministry of Investments, Trade and Industry" />
           </Link>
 
           <nav className="home-nav" aria-label={t("nav.main")}>
