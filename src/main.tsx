@@ -14,9 +14,6 @@ import "./styles/registration.css";
 import "./styles/login.css";
 import "./styles/participant-login.css";
 import "./styles/participant-dashboard.css";
-import "./styles/admin-dashboard.css";
-import "./styles/admin-events.css";
-import "./styles/admin-event-details.css";
 import "./styles/responsive-shared.css";
 
 createRoot(document.getElementById("root")!).render(
