@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
+  Copy,
   Download,
   ExternalLink,
   Eye,
@@ -26,6 +27,7 @@ import {
   Settings,
   Ticket,
   Timer,
+  Trash2,
   Users,
   Wallet,
   X,
@@ -64,6 +66,8 @@ import {
   asSponsors,
   asStringList,
   asTickets,
+  deleteEngagement,
+  duplicateEngagement,
   formatEngagementStatusLabel,
   formatModeLabel,
   getEngagement,
@@ -361,6 +365,8 @@ export function EventDetailsPage() {
   const [engagement, setEngagement] = useState<Engagement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -481,17 +487,104 @@ export function EventDetailsPage() {
         <b>Events</b>
         <span className="opacity-[.55]">›</span>
         <span>{detail.name}</span>
-        <div className="ml-auto flex flex-wrap gap-2 max-[1150px]:ml-0 max-[1150px]:w-full">
-          <button type="button" className={edBtn}>
-            <Eye size={12} /> Preview Event
-          </button>
+        <div className="relative ml-auto flex flex-wrap gap-2 max-[1150px]:ml-0 max-[1150px]:w-full">
+          <Link to={`/admin/events/${id}/overview`} className={edBtn}>
+            <Eye size={12} /> View Overview
+          </Link>
           <Link to={`/admin/events/${id}/edit`} className={edBtnPrimary}>
             <Pencil size={12} /> Edit Event
           </Link>
-          <button type="button" className={edBtn}>
-            <MoreHorizontal size={12} /> More Actions
-            <ChevronRight size={12} className="rotate-90" />
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              className={edBtn}
+              aria-expanded={moreOpen}
+              aria-haspopup="menu"
+              disabled={actionBusy}
+              onClick={() => setMoreOpen((v) => !v)}
+            >
+              <MoreHorizontal size={12} /> More Actions
+              <ChevronRight size={12} className="rotate-90" />
+            </button>
+            {moreOpen ? (
+              <div
+                className="absolute right-0 top-[calc(100%+6px)] z-40 w-[190px] rounded-lg border border-[#dfe8f2] bg-white py-1 shadow-[0_10px_28px_rgba(20,60,110,.14)]"
+                role="menu"
+              >
+                <Link
+                  role="menuitem"
+                  to={`/admin/events/${id}/edit`}
+                  className="flex items-center gap-2 px-3 py-2 text-[11px] font-semibold !text-[#09165f] no-underline hover:bg-[#f3f8ff]"
+                  onClick={() => setMoreOpen(false)}
+                >
+                  <Pencil size={13} /> Edit Event
+                </Link>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] font-semibold text-[#09165f] hover:bg-[#f3f8ff] disabled:opacity-50"
+                  disabled={actionBusy || !fromApi}
+                  onClick={async () => {
+                    setMoreOpen(false);
+                    setActionBusy(true);
+                    try {
+                      const created = await duplicateEngagement(id);
+                      const newId = created.engagementID;
+                      if (newId) navigate(`/admin/events/${newId}/edit`);
+                    } catch (err) {
+                      setError(
+                        err instanceof ApiError
+                          ? err.message
+                          : err instanceof Error
+                            ? err.message
+                            : "Failed to duplicate event",
+                      );
+                    } finally {
+                      setActionBusy(false);
+                    }
+                  }}
+                >
+                  <Copy size={13} /> Duplicate Event
+                </button>
+                <Link
+                  role="menuitem"
+                  to={`/admin/events/${id}/reports`}
+                  className="flex items-center gap-2 px-3 py-2 text-[11px] font-semibold !text-[#09165f] no-underline hover:bg-[#f3f8ff]"
+                  onClick={() => setMoreOpen(false)}
+                >
+                  <Download size={13} /> View Reports
+                </Link>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] font-semibold text-[#ed1c2e] hover:bg-[#fff1f2] disabled:opacity-50"
+                  disabled={actionBusy || !fromApi}
+                  onClick={async () => {
+                    const name = detail.name || "this event";
+                    const ok = window.confirm(`Delete “${name}”? This cannot be undone.`);
+                    if (!ok) return;
+                    setMoreOpen(false);
+                    setActionBusy(true);
+                    try {
+                      await deleteEngagement(id);
+                      navigate("/admin/events");
+                    } catch (err) {
+                      setError(
+                        err instanceof ApiError
+                          ? err.message
+                          : err instanceof Error
+                            ? err.message
+                            : "Failed to delete event",
+                      );
+                      setActionBusy(false);
+                    }
+                  }}
+                >
+                  <Trash2 size={13} /> Delete Event
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
 

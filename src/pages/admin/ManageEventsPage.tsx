@@ -1,17 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowDownUp,
   CalendarDays,
+  Copy,
   Download,
+  Eye,
   ListFilter,
   MapPin,
   MoreVertical,
+  Pencil,
   Plus,
   Search,
+  Trash2,
 } from "lucide-react";
 import type { EventStatus, EventType, ManagedEvent } from "../../data/adminEvents";
-import { listEngagements, toManagedEvent } from "../../lib/engagements";
+import {
+  deleteEngagement,
+  duplicateEngagement,
+  listEngagements,
+  toManagedEvent,
+} from "../../lib/engagements";
 import { ApiError } from "../../lib/api";
 import { cn } from "../../lib/cn";
 
@@ -72,8 +81,14 @@ const barClass = (tone: ManagedEvent["barTone"]) => {
   }
 };
 
+function csvEscape(value: string) {
+  if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
+  return value;
+}
+
 /** Admin Events — main content from aca-manage-events-tailwind HTML */
 export function ManageEventsPage() {
+  const navigate = useNavigate();
   const [tab, setTab] = useState<TabId>("all");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -82,6 +97,36 @@ export function ManageEventsPage() {
   const [events, setEvents] = useState<ManagedEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState<EventType | "all">("all");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const filtersRef = useRef<HTMLDivElement | null>(null);
+
+  const loadEvents = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const rows = await listEngagements({
+        limit: 200,
+        order: ["startDate DESC"],
+      });
+      setEvents((rows ?? []).map(toManagedEvent).filter((e) => e.id));
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Failed to load events";
+      setError(message);
+      setEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -114,6 +159,27 @@ export function ManageEventsPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!menuId && !filtersOpen) return;
+    const onPointer = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (menuRef.current && !menuRef.current.contains(target)) setMenuId(null);
+      if (filtersRef.current && !filtersRef.current.contains(target)) setFiltersOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMenuId(null);
+        setFiltersOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuId, filtersOpen]);
+
   const counts = useMemo(() => {
     const base = { all: events.length, Upcoming: 0, Ongoing: 0, Past: 0, Draft: 0 };
     for (const e of events) {
@@ -138,15 +204,16 @@ export function ManageEventsPage() {
   const filtered = useMemo(() => {
     return events.filter((e) => {
       const matchTab = tab === "all" || e.status === tab;
+      const matchType = typeFilter === "all" || e.type === typeFilter;
       const q = query.trim().toLowerCase();
       const matchQ =
         !q ||
         e.name.toLowerCase().includes(q) ||
         e.subtitle.toLowerCase().includes(q) ||
         e.venue.toLowerCase().includes(q);
-      return matchTab && matchQ;
+      return matchTab && matchType && matchQ;
     });
-  }, [events, tab, query]);
+  }, [events, tab, query, typeFilter]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
   const safePage = Math.min(page, pageCount);
@@ -160,6 +227,110 @@ export function ManageEventsPage() {
     const start = Math.min(Math.max(1, safePage - 2), pageCount - 4);
     return start + i;
   });
+
+  const eventTypes = useMemo(() => {
+    const set = new Set<EventType>();
+    for (const e of events) set.add(e.type);
+    return Array.from(set).sort();
+  }, [events]);
+
+  const handleDelete = async (row: ManagedEvent) => {
+    const ok = window.confirm(
+      `Delete “${row.name}”? This cannot be undone.`,
+    );
+    if (!ok) return;
+    setBusyId(row.id);
+    setActionError(null);
+    setMenuId(null);
+    try {
+      await deleteEngagement(row.id);
+      setEvents((prev) => prev.filter((e) => e.id !== row.id));
+      setSelected((prev) => prev.filter((id) => id !== row.id));
+    } catch (err) {
+      setActionError(
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Failed to delete event",
+      );
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selected.length === 0) return;
+    const ok = window.confirm(
+      `Delete ${selected.length} selected event${selected.length === 1 ? "" : "s"}? This cannot be undone.`,
+    );
+    if (!ok) return;
+    setBusyId("bulk");
+    setActionError(null);
+    const ids = [...selected];
+    const failed: string[] = [];
+    for (const id of ids) {
+      try {
+        await deleteEngagement(id);
+      } catch {
+        failed.push(id);
+      }
+    }
+    setEvents((prev) => prev.filter((e) => !ids.includes(e.id) || failed.includes(e.id)));
+    setSelected(failed);
+    if (failed.length) {
+      setActionError(`Could not delete ${failed.length} event${failed.length === 1 ? "" : "s"}.`);
+    }
+    setBusyId(null);
+  };
+
+  const handleDuplicate = async (row: ManagedEvent) => {
+    setBusyId(row.id);
+    setActionError(null);
+    setMenuId(null);
+    try {
+      const created = await duplicateEngagement(row.id);
+      const newId = created.engagementID;
+      await loadEvents();
+      if (newId) navigate(`/admin/events/${newId}/edit`);
+    } catch (err) {
+      setActionError(
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Failed to duplicate event",
+      );
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleExport = () => {
+    const header = ["Name", "Subtitle", "Date", "Venue", "Type", "Registered", "Capacity", "Status"];
+    const lines = [
+      header.join(","),
+      ...filtered.map((e) =>
+        [
+          csvEscape(e.name),
+          csvEscape(e.subtitle),
+          csvEscape(e.dateLabel),
+          csvEscape(e.venue),
+          csvEscape(e.type),
+          String(e.registered),
+          e.capacity > 0 ? String(e.capacity) : "",
+          csvEscape(e.status),
+        ].join(","),
+      ),
+    ];
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `events-export-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-3 bg-[radial-gradient(ellipse_at_12%_10%,#e0f0ff_0,#f4faff_48%,#e4f2ff_100%)] p-3 text-ink sm:p-4">
@@ -187,6 +358,46 @@ export function ManageEventsPage() {
           role="alert"
         >
           {error}
+        </div>
+      ) : null}
+
+      {actionError ? (
+        <div
+          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          role="alert"
+        >
+          {actionError}
+        </div>
+      ) : null}
+
+      {selected.length > 0 ? (
+        <div
+          className={cn(
+            glass,
+            "flex flex-wrap items-center justify-between gap-3 px-4 py-3",
+          )}
+        >
+          <p className="text-[13px] font-semibold text-[#07145b]">
+            {selected.length} selected
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="rounded-lg border border-blue-100 bg-white px-3 py-2 text-[12px] font-semibold text-slate-600 hover:bg-blue-50"
+              onClick={() => setSelected([])}
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-2 text-[12px] font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+              disabled={busyId === "bulk"}
+              onClick={() => void handleBulkDelete()}
+            >
+              <Trash2 size={14} strokeWidth={2.25} aria-hidden />
+              {busyId === "bulk" ? "Deleting…" : "Delete selected"}
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -238,16 +449,71 @@ export function ManageEventsPage() {
                 }}
               />
             </label>
+
+            <div className="relative" ref={filtersRef}>
+              <button
+                type="button"
+                className={cn(
+                  "flex h-[42px] items-center gap-2 rounded-lg bg-blue-50 px-4 text-[12px] font-semibold",
+                  typeFilter !== "all" && "ring-2 ring-[#075cff]/30",
+                )}
+                aria-expanded={filtersOpen}
+                aria-haspopup="listbox"
+                onClick={() => setFiltersOpen((v) => !v)}
+              >
+                <ListFilter size={16} strokeWidth={2.25} aria-hidden />
+                Filters{typeFilter !== "all" ? ` · ${typeFilter}` : ""}
+              </button>
+              {filtersOpen ? (
+                <div
+                  className="absolute right-0 z-30 mt-1 min-w-[180px] rounded-lg border border-blue-100 bg-white py-1 shadow-lg"
+                  role="listbox"
+                  aria-label="Filter by type"
+                >
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={typeFilter === "all"}
+                    className={cn(
+                      "block w-full px-3 py-2 text-left text-[12px] hover:bg-blue-50",
+                      typeFilter === "all" && "font-bold text-[#075cff]",
+                    )}
+                    onClick={() => {
+                      setTypeFilter("all");
+                      setPage(1);
+                      setFiltersOpen(false);
+                    }}
+                  >
+                    All types
+                  </button>
+                  {eventTypes.map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      role="option"
+                      aria-selected={typeFilter === type}
+                      className={cn(
+                        "block w-full px-3 py-2 text-left text-[12px] hover:bg-blue-50",
+                        typeFilter === type && "font-bold text-[#075cff]",
+                      )}
+                      onClick={() => {
+                        setTypeFilter(type);
+                        setPage(1);
+                        setFiltersOpen(false);
+                      }}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
             <button
               type="button"
-              className="flex h-[42px] items-center gap-2 rounded-lg bg-blue-50 px-4 text-[12px] font-semibold"
-            >
-              <ListFilter size={16} strokeWidth={2.25} aria-hidden />
-              Filters
-            </button>
-            <button
-              type="button"
-              className="flex h-[42px] items-center gap-2 rounded-lg bg-blue-50 px-4 text-[12px] font-semibold"
+              className="flex h-[42px] items-center gap-2 rounded-lg bg-blue-50 px-4 text-[12px] font-semibold hover:bg-blue-100"
+              onClick={handleExport}
+              disabled={filtered.length === 0}
             >
               <Download size={16} strokeWidth={2.25} aria-hidden />
               Export
@@ -332,6 +598,8 @@ export function ManageEventsPage() {
                     row.capacity > 0
                       ? Math.min(100, Math.round((row.registered / row.capacity) * 100))
                       : 0;
+                  const open = menuId === row.id;
+                  const busy = busyId === row.id;
                   return (
                     <tr
                       key={row.id}
@@ -411,13 +679,75 @@ export function ManageEventsPage() {
                         </span>
                       </td>
                       <td className="px-4 text-center">
-                        <Link
-                          to={`/admin/events/${row.id}/overview`}
-                          className="inline-flex place-items-center text-[#075cff]"
-                          aria-label={`Open ${row.name}`}
+                        <div
+                          className="relative inline-flex items-center justify-center gap-0.5"
+                          ref={open ? menuRef : undefined}
                         >
-                          <MoreVertical size={20} strokeWidth={2} aria-hidden />
-                        </Link>
+                          <Link
+                            to={`/admin/events/${row.id}/edit`}
+                            className="inline-grid h-8 w-8 place-items-center rounded-md text-[#075cff] hover:bg-blue-50"
+                            aria-label={`Edit ${row.name}`}
+                            title="Edit"
+                          >
+                            <Pencil size={15} strokeWidth={2.25} aria-hidden />
+                          </Link>
+                          <button
+                            type="button"
+                            className="inline-grid h-8 w-8 place-items-center rounded-md text-[#075cff] hover:bg-blue-50 disabled:opacity-50"
+                            aria-label={`More actions for ${row.name}`}
+                            aria-expanded={open}
+                            aria-haspopup="menu"
+                            disabled={busy}
+                            onClick={() => setMenuId(open ? null : row.id)}
+                          >
+                            <MoreVertical size={18} strokeWidth={2} aria-hidden />
+                          </button>
+                          {open ? (
+                            <div
+                              className="absolute right-0 top-9 z-40 w-[168px] rounded-lg border border-blue-100 bg-white py-1 text-left shadow-lg"
+                              role="menu"
+                            >
+                              <Link
+                                role="menuitem"
+                                to={`/admin/events/${row.id}/overview`}
+                                className="flex items-center gap-2 px-3 py-2 text-[12px] text-[#07145b] hover:bg-blue-50"
+                                onClick={() => setMenuId(null)}
+                              >
+                                <Eye size={14} strokeWidth={2} aria-hidden />
+                                View
+                              </Link>
+                              <Link
+                                role="menuitem"
+                                to={`/admin/events/${row.id}/edit`}
+                                className="flex items-center gap-2 px-3 py-2 text-[12px] text-[#07145b] hover:bg-blue-50"
+                                onClick={() => setMenuId(null)}
+                              >
+                                <Pencil size={14} strokeWidth={2} aria-hidden />
+                                Edit
+                              </Link>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-[#07145b] hover:bg-blue-50 disabled:opacity-50"
+                                disabled={busy}
+                                onClick={() => void handleDuplicate(row)}
+                              >
+                                <Copy size={14} strokeWidth={2} aria-hidden />
+                                Duplicate
+                              </button>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                                disabled={busy}
+                                onClick={() => void handleDelete(row)}
+                              >
+                                <Trash2 size={14} strokeWidth={2} aria-hidden />
+                                Delete
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   );

@@ -67,6 +67,29 @@ export async function deleteEngagement(id: string) {
   });
 }
 
+/** Clone an engagement as a new draft (Create from existing). */
+export async function duplicateEngagement(id: string) {
+  const source = await getEngagement(id);
+  const {
+    engagementID: _id,
+    createdAt: _c,
+    updatedAt: _u,
+    publishedAt: _p,
+    createdBy: _cb,
+    updatedBy: _ub,
+    ownerID: _o,
+    ...rest
+  } = source;
+  const baseName = String(rest.engagementName ?? "Untitled event").trim() || "Untitled event";
+  return createEngagement({
+    ...rest,
+    engagementName: `${baseName} (Copy)`,
+    status: "draft",
+    isPublished: false,
+    publishedAt: undefined,
+  } as NewEngagement);
+}
+
 /** UI Title Case → API enum */
 export function toEngagementType(uiType: string): EngagementType {
   const key = uiType.trim().toLowerCase().replace(/\s+/g, "_");
