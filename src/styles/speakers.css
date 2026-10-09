@@ -3,7 +3,8 @@
   Scoped under .speakers-page. Reuses .home-container for gutters.
 */
 
-.speakers-page {
+.speakers-page,
+.sk-speaker-grid {
   --sk-blue: #075fd8;
   --sk-green: #08713f;
   --sk-red: #ed1c24;
@@ -11,6 +12,9 @@
   --sk-ink: #101620;
   --sk-muted: #4d5967;
   --sk-line: #dbe5ef;
+}
+
+.speakers-page {
   color: var(--sk-ink);
   background: #fff;
 }
@@ -190,18 +194,34 @@
   font-family: inherit;
 }
 
-/* ── Grid ── */
+/* ── Grid + card (shared: public Speakers + admin Event Details) ── */
 .speakers-page .sk-speakers {
   padding-bottom: 30px;
 }
 
-.speakers-page .sk-speaker-grid {
+.sk-speaker-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 
-.speakers-page .sk-speaker-card {
+.sk-speaker-grid--2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.sk-speaker-grid--3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.sk-speaker-grid--4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.speakers-page .sk-speaker-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.sk-speaker-card {
   min-height: 185px;
   display: grid;
   grid-template-columns: 111px 1fr;
@@ -213,7 +233,7 @@
   box-shadow: 0 1px 5px rgba(15, 52, 86, 0.025);
 }
 
-.speakers-page .sk-speaker-photo {
+.sk-speaker-photo {
   width: 111px;
   height: 158px;
   object-fit: cover;
@@ -223,13 +243,22 @@
   display: block;
 }
 
-.speakers-page .sk-speaker-info {
+.sk-speaker-photo--empty {
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  font-weight: 800;
+  color: #075fd8;
+  background: #eef4fc;
+}
+
+.sk-speaker-info {
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
-.speakers-page .sk-badge {
+.sk-badge {
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
@@ -240,39 +269,40 @@
   font-size: 10px;
   font-weight: 700;
   white-space: nowrap;
+  background: var(--sk-blue, #075fd8);
 }
 
-.speakers-page .sk-badge.keynote {
-  background: var(--sk-blue);
+.sk-badge.keynote {
+  background: var(--sk-blue, #075fd8);
 }
 
-.speakers-page .sk-badge.panelist {
-  background: var(--sk-green);
+.sk-badge.panelist {
+  background: var(--sk-green, #08713f);
 }
 
-.speakers-page .sk-badge.moderator {
-  background: var(--sk-purple);
+.sk-badge.moderator {
+  background: var(--sk-purple, #6734e8);
 }
 
-.speakers-page .sk-badge.government {
-  background: var(--sk-red);
+.sk-badge.government {
+  background: var(--sk-red, #ed1c24);
 }
 
-.speakers-page .sk-speaker-name {
+.sk-speaker-name {
   margin: 10px 0 3px;
   font-size: 12px;
   line-height: 1.16;
   font-weight: 800;
-  color: var(--sk-ink);
+  color: var(--sk-ink, #101620);
 }
 
-.speakers-page .sk-speaker-role {
+.sk-speaker-role {
   color: #4c5d76;
   font-size: 11px;
   line-height: 1.22;
 }
 
-.speakers-page .sk-country {
+.sk-country {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -281,7 +311,7 @@
   font-size: 10.5px;
 }
 
-.speakers-page .sk-flag {
+.sk-flag {
   width: 23px;
   height: 15px;
   border: 1px solid #ccd5df;
@@ -293,10 +323,10 @@
   line-height: 1;
 }
 
-.speakers-page .sk-profile {
+.sk-profile {
   margin-top: auto;
   padding-top: 6px;
-  color: var(--sk-blue);
+  color: var(--sk-blue, #075fd8);
   font-size: 11px;
   font-weight: 700;
   display: inline-flex;
@@ -311,15 +341,15 @@
   padding-bottom: 0;
 }
 
-.speakers-page .sk-profile .sk-arrow {
+.sk-profile .sk-arrow {
   font-size: 20px;
 }
 
-.speakers-page .sk-empty {
+.sk-empty {
   grid-column: 1 / -1;
   padding: 40px 0;
   text-align: center;
-  color: var(--sk-muted);
+  color: var(--sk-muted, #4d5967);
   font-size: 13px;
 }
 
@@ -333,11 +363,11 @@
     font-size: 21px;
   }
 
-  .speakers-page .sk-speaker-card {
+  .sk-speaker-card {
     grid-template-columns: 95px 1fr;
   }
 
-  .speakers-page .sk-speaker-photo {
+  .sk-speaker-photo {
     width: 95px;
     height: 150px;
   }
@@ -378,7 +408,10 @@
     margin-left: auto;
   }
 
-  .speakers-page .sk-speaker-grid {
+  .sk-speaker-grid,
+  .speakers-page .sk-speaker-grid,
+  .sk-speaker-grid--3,
+  .sk-speaker-grid--4 {
     grid-template-columns: repeat(2, 1fr);
   }
 }
@@ -473,54 +506,58 @@
     margin: 0;
   }
 
-  .speakers-page .sk-speaker-grid {
+  .sk-speaker-grid,
+  .speakers-page .sk-speaker-grid,
+  .sk-speaker-grid--2,
+  .sk-speaker-grid--3,
+  .sk-speaker-grid--4 {
     grid-template-columns: 1fr;
     gap: 8px;
   }
 
-  .speakers-page .sk-speaker-card {
+  .sk-speaker-card {
     min-height: 126px;
     grid-template-columns: 82px 1fr;
     padding: 8px;
     gap: 9px;
   }
 
-  .speakers-page .sk-speaker-photo {
+  .sk-speaker-photo {
     width: 82px;
     height: 112px;
   }
 
-  .speakers-page .sk-badge {
+  .sk-badge {
     min-height: 20px;
     padding: 0 7px;
     font-size: 8px;
   }
 
-  .speakers-page .sk-speaker-name {
+  .sk-speaker-name {
     margin: 7px 0 2px;
     font-size: 11px;
   }
 
-  .speakers-page .sk-speaker-role {
+  .sk-speaker-role {
     font-size: 9.5px;
   }
 
-  .speakers-page .sk-country {
+  .sk-country {
     margin-top: 6px;
     font-size: 9px;
   }
 
-  .speakers-page .sk-flag {
+  .sk-flag {
     width: 20px;
     height: 13px;
     font-size: 10px;
   }
 
-  .speakers-page .sk-profile {
+  .sk-profile {
     font-size: 9.5px;
   }
 
-  .speakers-page .sk-profile .sk-arrow {
+  .sk-profile .sk-arrow {
     font-size: 17px;
   }
 }

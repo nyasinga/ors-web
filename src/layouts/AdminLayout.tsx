@@ -36,7 +36,8 @@ export function AdminLayout() {
   const initials = initialsFrom(user);
   const isDashboard = pathname === "/admin" || pathname === "/admin/";
   const isEventsList = pathname === "/admin/events" || pathname === "/admin/events/";
-  const bareOutlet = isDashboard || isEventsList;
+  const isEventDetails = /^\/admin\/events\/(?!new(?:\/|$))[^/]+/.test(pathname);
+  const bareOutlet = isDashboard || isEventsList || isEventDetails;
   const menuId = useId();
   const userMenuRef = useRef<HTMLDivElement>(null);
 

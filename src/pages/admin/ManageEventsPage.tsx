@@ -1,17 +1,19 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowDownUp,
   CalendarDays,
-  ChevronDown,
   Download,
+  ListFilter,
   MapPin,
   Plus,
   Search,
 } from "lucide-react";
-import { managedEvents, type EventType, type ManagedEvent } from "../../data/adminEvents";
+import type { EventType, ManagedEvent } from "../../data/adminEvents";
+import { listEngagements, toManagedEvent } from "../../lib/engagements";
+import { ApiError } from "../../lib/api";
 
-type TabId = "all" | "Upcoming" | "Ongoing" | "Past";
+type TabId = "all" | "Upcoming" | "Ongoing" | "Past" | "Draft";
 
 const typeClass = (type: EventType) => {
   if (type === "Roundtable") return "round";
@@ -28,17 +30,62 @@ export function ManageEventsPage() {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(8);
   const [selected, setSelected] = useState<string[]>([]);
+  const [events, setEvents] = useState<ManagedEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  /* Tab labels match the HTML package mock counts */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const rows = await listEngagements({
+          limit: 200,
+          order: ["startDate DESC"],
+        });
+        if (cancelled) return;
+        setEvents((rows ?? []).map(toManagedEvent).filter((e) => e.id));
+      } catch (err) {
+        if (cancelled) return;
+        const message =
+          err instanceof ApiError
+            ? err.message
+            : err instanceof Error
+              ? err.message
+              : "Failed to load events";
+        setError(message);
+        setEvents([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const counts = useMemo(() => {
+    const base = { all: events.length, Upcoming: 0, Ongoing: 0, Past: 0, Draft: 0 };
+    for (const e of events) {
+      if (e.status === "Upcoming") base.Upcoming += 1;
+      else if (e.status === "Ongoing") base.Ongoing += 1;
+      else if (e.status === "Past") base.Past += 1;
+      else if (e.status === "Draft") base.Draft += 1;
+    }
+    return base;
+  }, [events]);
+
   const tabs: { id: TabId; label: string }[] = [
-    { id: "all", label: "All Events (24)" },
-    { id: "Upcoming", label: "Upcoming (12)" },
-    { id: "Ongoing", label: "Ongoing (3)" },
-    { id: "Past", label: "Past (7)" },
+    { id: "all", label: `All Events (${counts.all})` },
+    { id: "Upcoming", label: `Upcoming (${counts.Upcoming})` },
+    { id: "Ongoing", label: `Ongoing (${counts.Ongoing})` },
+    { id: "Past", label: `Past (${counts.Past})` },
+    { id: "Draft", label: `Draft (${counts.Draft})` },
   ];
 
   const filtered = useMemo(() => {
-    return managedEvents.filter((e) => {
+    return events.filter((e) => {
       const matchTab = tab === "all" || e.status === tab;
       const q = query.trim().toLowerCase();
       const matchQ =
@@ -48,7 +95,7 @@ export function ManageEventsPage() {
         e.venue.toLowerCase().includes(q);
       return matchTab && matchQ;
     });
-  }, [tab, query]);
+  }, [events, tab, query]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
   const safePage = Math.min(page, pageCount);
@@ -57,7 +104,11 @@ export function ManageEventsPage() {
   const from = filtered.length === 0 ? 0 : (safePage - 1) * rowsPerPage + 1;
   const to = Math.min(safePage * rowsPerPage, filtered.length);
 
-  const pageButtons = Array.from({ length: Math.min(pageCount, 3) }, (_, i) => i + 1);
+  const pageButtons = Array.from({ length: Math.min(pageCount, 5) }, (_, i) => {
+    if (pageCount <= 5) return i + 1;
+    const start = Math.min(Math.max(1, safePage - 2), pageCount - 4);
+    return start + i;
+  });
 
   return (
     <section className="ae-page">
@@ -71,6 +122,15 @@ export function ManageEventsPage() {
           Create Event
         </Link>
       </div>
+
+      {error ? (
+        <div
+          className="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          role="alert"
+        >
+          {error}
+        </div>
+      ) : null}
 
       <section className="ae-panel">
         <div className="ae-tabs-tools">
@@ -106,7 +166,7 @@ export function ManageEventsPage() {
               />
             </label>
             <button type="button" className="ae-tool-btn">
-              <ChevronDown size={16} strokeWidth={2.25} aria-hidden />
+              <ListFilter size={16} strokeWidth={2.25} aria-hidden />
               Filters
             </button>
             <button type="button" className="ae-tool-btn">
@@ -157,15 +217,26 @@ export function ManageEventsPage() {
               </tr>
             </thead>
             <tbody>
-              {pageRows.length === 0 ? (
+              {loading ? (
                 <tr>
                   <td colSpan={8}>
-                    <div className="ae-empty">Nothing found. Please check again.</div>
+                    <div className="ae-empty">Loading events…</div>
+                  </td>
+                </tr>
+              ) : pageRows.length === 0 ? (
+                <tr>
+                  <td colSpan={8}>
+                    <div className="ae-empty">
+                      {error
+                        ? "Could not load events."
+                        : "No events yet. Create your first event."}
+                    </div>
                   </td>
                 </tr>
               ) : (
                 pageRows.map((row) => {
-                  const pct = Math.round((row.registered / row.capacity) * 100);
+                  const pct =
+                    row.capacity > 0 ? Math.min(100, Math.round((row.registered / row.capacity) * 100)) : 0;
                   const tone = barClass(row.barTone);
                   return (
                     <tr key={row.id}>
@@ -240,7 +311,7 @@ export function ManageEventsPage() {
 
         <div className="ae-footer">
           <span>
-            Showing {from} to {to} of {tab === "all" && !query.trim() ? 24 : filtered.length} events
+            Showing {from} to {to} of {filtered.length} events
           </span>
           <div className="ae-pagination">
             <button

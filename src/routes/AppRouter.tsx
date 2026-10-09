@@ -52,6 +52,7 @@ export function AppRouter() {
         <Route index element={<AdminDashboardPage />} />
         <Route path="events" element={<ManageEventsPage />} />
         <Route path="events/new" element={<CreateEventPage />} />
+        <Route path="events/:id/edit" element={<CreateEventPage />} />
         <Route path="events/:id/reports" element={<EventReportPage />} />
         <Route path="events/:id/:tab" element={<EventDetailsPage />} />
         <Route path="events/:id" element={<Navigate to="overview" replace />} />

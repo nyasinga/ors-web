@@ -1,0 +1,21 @@
+---
+description: Admin and participant shells must stay full-bleed (no floating card frame)
+alwaysApply: true
+---
+
+# Full-bleed app shells
+
+For **admin** (`.admin-dash` / `.ad-shell`) and **participant** (`.participant-dash` / `.pd-shell`) layouts:
+
+- Always use **full-screen fill**: edge-to-edge viewport.
+- **Do not** add outer page padding/margins around the shell.
+- **Do not** use a centered max-width floating card for the app chrome.
+- **Do not** use outer `border-radius` or outer drop-shadow that makes the whole app look like a floating panel.
+- Sidebar + main content must touch the viewport edges (sidebar left/top/bottom; main top/right/bottom).
+
+Allowed:
+- Inner cards, panels, tables, and buttons may still use radius/shadow.
+- Soft sidebar gradients, wave decorations, and active nav styles are fine.
+- Mobile can collapse the sidebar; still keep the remaining chrome full-bleed.
+
+If a design package HTML uses a boxed `.shell { margin; border-radius; box-shadow }`, adapt it to full-bleed when bringing it into this app.

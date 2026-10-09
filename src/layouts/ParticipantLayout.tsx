@@ -44,98 +44,100 @@ export function ParticipantLayout() {
 
   return (
     <div className="participant-dash">
-      <header className="pd-header">
-        <div className="pd-container pd-header-inner">
-          <Link to="/" className="pd-brand" aria-label="ISIPPE-3">
-            <img className="pd-aca" src="/assets/logo-aca.png" alt="Anti Counterfeit Authority" />
-            <span className="pd-brand-divider" aria-hidden />
-            <img className="pd-isippe" src="/assets/logo-isippe.png" alt="ISIPPE 2026" />
-          </Link>
-          <nav className="pd-nav" aria-label="Quick links">
+      <div className="pd-shell">
+        <header className="pd-header">
+          <div className="pd-container pd-header-inner">
+            <Link to="/" className="pd-brand" aria-label="ISIPPE-3">
+              <img className="pd-aca" src="/assets/logo-aca.png" alt="Anti Counterfeit Authority" />
+              <span className="pd-brand-divider" aria-hidden />
+              <img className="pd-isippe" src="/assets/logo-isippe.png" alt="ISIPPE 2026" />
+            </Link>
+            <nav className="pd-nav" aria-label="Quick links">
+              {topLinks.map((l) => (
+                <Link key={l.to} to={l.to}>
+                  {l.label}
+                </Link>
+              ))}
+            </nav>
+            <div className="pd-profile">
+              <div className="pd-avatar">{initials}</div>
+              <div>
+                <strong>{participantPass.name}</strong>
+                <small>Participant</small>
+              </div>
+              <span className="pd-chev" aria-hidden>
+                ⌄
+              </span>
+            </div>
+            <button
+              type="button"
+              className="pd-menu"
+              aria-label="Open menu"
+              aria-expanded={mobileNav}
+              onClick={() => setMobileNav((v) => !v)}
+            >
+              <span className="pd-hamb" />
+            </button>
+          </div>
+          <nav className={`pd-mobile-nav${mobileNav ? " open" : ""}`} aria-label="Mobile">
             {topLinks.map((l) => (
-              <Link key={l.to} to={l.to}>
+              <Link key={l.to} to={l.to} onClick={() => setMobileNav(false)}>
                 {l.label}
               </Link>
             ))}
+            {sideLinks.map((l) => (
+              <Link key={l.label} to={l.to} onClick={() => setMobileNav(false)}>
+                {l.label}
+              </Link>
+            ))}
+            <Link to="/" onClick={() => setMobileNav(false)}>
+              Sign out
+            </Link>
           </nav>
-          <div className="pd-profile">
-            <div className="pd-avatar">{initials}</div>
-            <div>
-              <strong>{participantPass.name}</strong>
-              <small>Participant</small>
-            </div>
-            <span className="pd-chev" aria-hidden>
-              ⌄
-            </span>
-          </div>
-          <button
-            type="button"
-            className="pd-menu"
-            aria-label="Open menu"
-            aria-expanded={mobileNav}
-            onClick={() => setMobileNav((v) => !v)}
-          >
-            <span className="pd-hamb" />
-          </button>
-        </div>
-        <nav className={`pd-mobile-nav${mobileNav ? " open" : ""}`} aria-label="Mobile">
-          {topLinks.map((l) => (
-            <Link key={l.to} to={l.to} onClick={() => setMobileNav(false)}>
-              {l.label}
-            </Link>
-          ))}
-          {sideLinks.map((l) => (
-            <Link key={l.label} to={l.to} onClick={() => setMobileNav(false)}>
-              {l.label}
-            </Link>
-          ))}
-          <Link to="/" onClick={() => setMobileNav(false)}>
-            Sign out
-          </Link>
-        </nav>
-      </header>
+        </header>
 
-      <div className="pd-layout">
-        <aside className="pd-sidebar" aria-label="Participant">
-          {sideLinks.map((item) => {
-            const linkBody = (
-              <>
-                <span className="pd-side-icon">
-                  <item.icon size={21} strokeWidth={1.8} />
-                </span>
-                {item.label}
-              </>
-            );
-            // Only Dashboard owns /me active state (My Registration shares the route for now)
-            if (item.label === "My Registration") {
-              return (
-                <Link key={item.label} to={item.to} className="pd-side-link">
-                  {linkBody}
-                </Link>
+        <div className="pd-layout">
+          <aside className="pd-sidebar" aria-label="Participant">
+            {sideLinks.map((item) => {
+              const linkBody = (
+                <>
+                  <span className="pd-side-icon">
+                    <item.icon size={21} strokeWidth={1.8} />
+                  </span>
+                  {item.label}
+                </>
               );
-            }
-            return (
-              <NavLink
-                key={item.label}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) => `pd-side-link${isActive ? " active" : ""}`}
-              >
-                {linkBody}
-              </NavLink>
-            );
-          })}
-          <Link to="/" className="pd-side-link pd-side-signout">
-            <span className="pd-side-icon">
-              <LogOut size={21} strokeWidth={1.8} />
-            </span>
-            Sign out
-          </Link>
-        </aside>
+              // Only Dashboard owns /me active state (My Registration shares the route for now)
+              if (item.label === "My Registration") {
+                return (
+                  <Link key={item.label} to={item.to} className="pd-side-link">
+                    {linkBody}
+                  </Link>
+                );
+              }
+              return (
+                <NavLink
+                  key={item.label}
+                  to={item.to}
+                  end={item.end}
+                  className={({ isActive }) => `pd-side-link${isActive ? " active" : ""}`}
+                >
+                  {linkBody}
+                </NavLink>
+              );
+            })}
+            <Link to="/" className="pd-side-link pd-side-signout">
+              <span className="pd-side-icon">
+                <LogOut size={21} strokeWidth={1.8} />
+              </span>
+              Sign out
+            </Link>
+          </aside>
 
-        <main className="pd-main">
-          <Outlet />
-        </main>
+          <main className="pd-main">
+            <Outlet />
+          </main>
+        </div>
       </div>
     </div>
   );

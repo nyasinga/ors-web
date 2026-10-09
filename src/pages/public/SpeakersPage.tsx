@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CalendarDays, MapPin, Search } from "lucide-react";
+import { SpeakerCardGrid, type SpeakerCardData } from "../../components/speakers/SpeakerCard";
 import { speakers, type SpeakerCategory } from "../../data/publicContent";
 
 const filters: { id: "all" | SpeakerCategory; label: string }[] = [
@@ -11,13 +12,6 @@ const filters: { id: "all" | SpeakerCategory; label: string }[] = [
   { id: "government", label: "Government Representatives" },
 ];
 
-const categoryLabel: Record<SpeakerCategory, string> = {
-  keynote: "Keynote Speaker",
-  panelist: "Panelist",
-  moderator: "Moderator",
-  government: "Government Representative",
-};
-
 /** Speakers — structure & CSS adopted from isippe3-speakers-pure-html-responsive */
 export function SpeakersPage() {
   const { t } = useTranslation("common");
@@ -26,11 +20,26 @@ export function SpeakersPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return speakers.filter((s) => {
-      const matchFilter = filter === "all" || s.category === filter;
-      const haystack = `${s.name} ${s.org} ${s.role} ${s.country}`.toLowerCase();
-      return matchFilter && (!q || haystack.includes(q));
-    });
+    return speakers
+      .filter((s) => {
+        const matchFilter = filter === "all" || s.category === filter;
+        const haystack = `${s.name} ${s.org} ${s.role} ${s.country}`.toLowerCase();
+        return matchFilter && (!q || haystack.includes(q));
+      })
+      .map(
+        (s): SpeakerCardData => ({
+          id: s.id,
+          name: s.name,
+          role: s.role,
+          org: s.org,
+          roleLines: s.roleLines,
+          country: s.country,
+          flag: s.flag,
+          category: s.category,
+          photo: s.photo,
+          bio: s.bio,
+        }),
+      );
   }, [query, filter]);
 
   return (
@@ -105,46 +114,11 @@ export function SpeakersPage() {
 
       <section className="sk-speakers">
         <div className="home-container">
-          <div className="sk-speaker-grid">
-            {filtered.map((speaker) => (
-              <article key={speaker.id} className="sk-speaker-card">
-                <img
-                  className="sk-speaker-photo"
-                  src={speaker.photo}
-                  alt={speaker.name}
-                />
-                <div className="sk-speaker-info">
-                  <span className={`sk-badge ${speaker.category}`}>
-                    {categoryLabel[speaker.category]}
-                  </span>
-                  <h2 className="sk-speaker-name">{speaker.name}</h2>
-                  <div className="sk-speaker-role">
-                    {speaker.roleLines.map((line) => (
-                      <span key={line}>
-                        {line}
-                        <br />
-                      </span>
-                    ))}
-                  </div>
-                  <div className="sk-country">
-                    <span className="sk-flag" aria-hidden>
-                      {speaker.flag}
-                    </span>
-                    {speaker.country}
-                  </div>
-                  <button type="button" className="sk-profile">
-                    View Profile{" "}
-                    <span className="sk-arrow" aria-hidden>
-                      →
-                    </span>
-                  </button>
-                </div>
-              </article>
-            ))}
-            {filtered.length === 0 ? (
-              <p className="sk-empty">No speakers match your search.</p>
-            ) : null}
-          </div>
+          <SpeakerCardGrid
+            speakers={filtered}
+            columns={4}
+            emptyMessage="No speakers match your search."
+          />
         </div>
       </section>
     </div>

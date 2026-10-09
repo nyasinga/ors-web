@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -49,6 +49,14 @@ import {
   draftTickets,
   eventTypeOptions,
 } from "../../data/adminEvents";
+import { ApiError } from "../../lib/api";
+import {
+  buildEngagementPayload,
+  createEngagement,
+  engagementToWizardState,
+  getEngagement,
+  updateEngagement,
+} from "../../lib/engagements";
 import { cn } from "../../lib/cn";
 
 const typeIcons = {
@@ -70,10 +78,17 @@ const typeToneClass = {
   yellow: "bg-amber-50 text-amber-700",
 };
 
-/** Screen E Create Event 1–6 */
+/** Screen E Create / Edit Event 1–6 */
 export function CreateEventPage() {
   const navigate = useNavigate();
+  const { id: routeId } = useParams();
+  const [searchParams] = useSearchParams();
+  const editId = routeId && routeId !== "new" ? routeId : null;
+  const isEdit = Boolean(editId);
+
   const [step, setStep] = useState(1);
+  const [loadingEdit, setLoadingEdit] = useState(isEdit);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [eventType, setEventType] = useState("Conference");
   const [title, setTitle] = useState(
     "3rd International Symposium on Intellectual Property Protection and Enforcement",
@@ -125,6 +140,10 @@ export function CreateEventPage() {
   const [payFree, setPayFree] = useState(false);
   const [visibility, setVisibility] = useState<"public" | "private" | "unlisted">("public");
   const [saveDraft, setSaveDraft] = useState(false);
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [facebookUrl, setFacebookUrl] = useState("");
+  const [twitterUrl, setTwitterUrl] = useState("");
+  const [linkedinUrl, setLinkedinUrl] = useState("");
   const [sessionModal, setSessionModal] = useState(false);
   const [speakerModal, setSpeakerModal] = useState(false);
   const [packageModal, setPackageModal] = useState(false);
@@ -139,11 +158,89 @@ export function CreateEventPage() {
   const [newSpeakerRole, setNewSpeakerRole] = useState("");
   const [newSpeakerOrg, setNewSpeakerOrg] = useState("");
   const [newSpeakerTopic, setNewSpeakerTopic] = useState("");
+  const [newSpeakerCategory, setNewSpeakerCategory] = useState("keynote");
+  const [newSpeakerCountry, setNewSpeakerCountry] = useState("");
   const [pkgName, setPkgName] = useState("");
   const [pkgPrice, setPkgPrice] = useState("");
   const [pkgDesc, setPkgDesc] = useState("");
   const [pkgAvail, setPkgAvail] = useState("1");
   const [pkgBenefits, setPkgBenefits] = useState(["Logo on main stage backdrop"]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!editId) {
+      setLoadingEdit(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setLoadingEdit(true);
+      setLoadError(null);
+      try {
+        const engagement = await getEngagement(editId);
+        if (cancelled) return;
+        const state = engagementToWizardState(engagement);
+        setEventType(state.eventType);
+        setTitle(state.title);
+        setDescription(state.description);
+        setCategory(state.category);
+        setAudience(state.audience);
+        setTone(state.tone);
+        setLanguage(state.language);
+        setTags(state.tags.length ? state.tags : []);
+        setStartDate(state.startDate);
+        setEndDate(state.endDate);
+        setAllDay(state.allDay);
+        setStartTime(state.startTime);
+        setEndTime(state.endTime);
+        setVenueMode(state.venueMode);
+        setVenueName(state.venueName);
+        setAddress(state.address);
+        setCity(state.city);
+        setCountry(state.country);
+        setCapacity(state.capacity || "500");
+        setVirtualLink(state.virtualLink);
+        if (state.sessions.length) setSessions(state.sessions);
+        if (state.speakers.length) setSpeakers(state.speakers);
+        if (state.packages.length) setPackages(state.packages);
+        if (state.tickets.length) setTickets(state.tickets);
+        setRequireApproval(state.requireApproval);
+        setDeadlineOn(state.deadlineOn);
+        setLimitOn(state.limitOn);
+        setWaitlist(state.waitlist);
+        setPayMpesa(state.payMpesa);
+        setPayCard(state.payCard);
+        setPayBank(state.payBank);
+        setPayFree(state.payFree);
+        setVisibility(state.visibility);
+        setSaveDraft(state.saveDraft);
+        setWebsiteUrl(state.websiteUrl);
+        setFacebookUrl(state.facebookUrl);
+        setTwitterUrl(state.twitterUrl);
+        setLinkedinUrl(state.linkedinUrl);
+      } catch (err) {
+        if (cancelled) return;
+        setLoadError(
+          err instanceof ApiError
+            ? err.message
+            : err instanceof Error
+              ? err.message
+              : "Failed to load event for editing",
+        );
+      } finally {
+        if (!cancelled) setLoadingEdit(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [editId]);
+
+  useEffect(() => {
+    const raw = Number(searchParams.get("step"));
+    if (Number.isInteger(raw) && raw >= 1 && raw <= 6) setStep(raw);
+  }, [searchParams]);
 
   const previewDate =
     startDate && endDate
@@ -192,9 +289,77 @@ export function CreateEventPage() {
     ];
   }, [step]);
 
-  const goNext = () => {
-    if (step < 6) setStep(step + 1);
-    else navigate("/admin/events/isippe-3/overview");
+  const goNext = async () => {
+    if (step < 6) {
+      setStep(step + 1);
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const payload = buildEngagementPayload({
+        eventType,
+        title,
+        description,
+        category,
+        audience,
+        tone,
+        language,
+        tags,
+        startDate,
+        endDate,
+        allDay,
+        startTime,
+        endTime,
+        venueMode,
+        venueName,
+        address,
+        city,
+        country,
+        capacity,
+        virtualLink,
+        sessions,
+        speakers,
+        packages,
+        tickets,
+        requireApproval,
+        waitlist,
+        deadlineOn,
+        limitOn,
+        payMpesa,
+        payCard,
+        payBank,
+        payFree,
+        visibility,
+        saveDraft,
+        websiteUrl,
+        facebookUrl,
+        twitterUrl,
+        linkedinUrl,
+      });
+      if (isEdit && editId) {
+        await updateEngagement(editId, payload);
+        navigate(`/admin/events/${editId}/overview`);
+      } else {
+        const created = await createEngagement(payload);
+        const id = created.engagementID;
+        if (!id) throw new Error("Event created but no engagementID was returned.");
+        navigate(`/admin/events/${id}/overview`);
+      }
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : isEdit
+              ? "Failed to update event"
+              : "Failed to create event";
+      setSubmitError(message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const goPrev = () => {
@@ -212,13 +377,26 @@ export function CreateEventPage() {
           Events
         </Link>
         <span>/</span>
-        <span className="font-medium text-navy">Create Event</span>
+        <span className="font-medium text-navy">{isEdit ? "Edit Event" : "Create Event"}</span>
       </nav>
 
       <div>
-        <h1 className="text-2xl font-extrabold text-navy">Create Event</h1>
-        <p className="mt-1 text-sm text-mute">Set up your event, configure details and publish.</p>
+        <h1 className="text-2xl font-extrabold text-navy">{isEdit ? "Edit Event" : "Create Event"}</h1>
+        <p className="mt-1 text-sm text-mute">
+          {isEdit
+            ? "Update event details, programme, speakers and publish settings."
+            : "Set up your event, configure details and publish."}
+        </p>
       </div>
+
+      {loadError ? (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+          {loadError}
+        </p>
+      ) : null}
+      {loadingEdit ? (
+        <p className="text-sm text-mute">Loading event…</p>
+      ) : null}
 
       <Stepper
         steps={createWizardSteps}
@@ -354,7 +532,7 @@ export function CreateEventPage() {
                   options={[
                     { value: "professional", label: "Professional and engaging" },
                     { value: "formal", label: "Formal" },
-                    { value: "casual", label: "Conversational" },
+                    { value: "conversational", label: "Conversational" },
                   ]}
                 />
                 <Select
@@ -1037,6 +1215,40 @@ export function CreateEventPage() {
               </div>
             </section>
             <section>
+              <h3 className="mb-2 font-semibold text-ink">Social Media & Links</h3>
+              <p className="mb-3 text-sm text-mute">Shown on the event details page.</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Input
+                  label="Event Website"
+                  type="url"
+                  placeholder="https://"
+                  value={websiteUrl}
+                  onChange={(e) => setWebsiteUrl(e.target.value)}
+                />
+                <Input
+                  label="Facebook"
+                  type="url"
+                  placeholder="https://facebook.com/…"
+                  value={facebookUrl}
+                  onChange={(e) => setFacebookUrl(e.target.value)}
+                />
+                <Input
+                  label="X (Twitter)"
+                  type="url"
+                  placeholder="https://x.com/…"
+                  value={twitterUrl}
+                  onChange={(e) => setTwitterUrl(e.target.value)}
+                />
+                <Input
+                  label="LinkedIn"
+                  type="url"
+                  placeholder="https://linkedin.com/…"
+                  value={linkedinUrl}
+                  onChange={(e) => setLinkedinUrl(e.target.value)}
+                />
+              </div>
+            </section>
+            <section>
               <h3 className="mb-2 font-semibold text-ink">Visibility & Publish</h3>
               <div className="grid gap-2">
                 {(
@@ -1113,25 +1325,47 @@ export function CreateEventPage() {
       ) : null}
 
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 backdrop-blur md:left-[220px] lg:left-[240px]">
-        <div className="flex w-full items-center justify-between gap-3 px-4 py-3 md:px-6 lg:px-6">
-          <Link to="/admin/events">
-            <Button variant="outline">Cancel</Button>
-          </Link>
-          <div className="flex gap-2">
-            <Button variant="outline" disabled={step <= 1} onClick={goPrev}>
-              <ArrowLeft size={16} /> Previous
-            </Button>
-            <Button onClick={goNext}>
-              {step === 6 ? (
-                <>
-                  <Send size={16} /> Publish Event
-                </>
-              ) : (
-                <>
-                  Next <ArrowRight size={16} />
-                </>
-              )}
-            </Button>
+        <div className="flex w-full flex-col gap-2 px-4 py-3 md:px-6 lg:px-6">
+          {submitError ? (
+            <p className="text-sm text-red-600" role="alert">
+              {submitError}
+            </p>
+          ) : null}
+          <div className="flex items-center justify-between gap-3">
+            <Link to="/admin/events">
+              <Button variant="outline" disabled={submitting}>
+                Cancel
+              </Button>
+            </Link>
+            <div className="flex gap-2">
+              <Button variant="outline" disabled={step <= 1 || submitting} onClick={goPrev}>
+                <ArrowLeft size={16} /> Previous
+              </Button>
+              <Button onClick={() => void goNext()} disabled={submitting || loadingEdit || Boolean(loadError)}>
+                {step === 6 ? (
+                  <>
+                    <Send size={16} />{" "}
+                    {submitting
+                      ? isEdit
+                        ? "Saving…"
+                        : saveDraft
+                          ? "Saving…"
+                          : "Publishing…"
+                      : isEdit
+                        ? saveDraft
+                          ? "Save Draft"
+                          : "Save Changes"
+                        : saveDraft
+                          ? "Save Draft"
+                          : "Publish Event"}
+                  </>
+                ) : (
+                  <>
+                    Next <ArrowRight size={16} />
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -1244,20 +1478,38 @@ export function CreateEventPage() {
             <Button
               onClick={() => {
                 if (!newSpeakerName.trim()) return;
+                const role = newSpeakerRole.trim() || "Speaker";
+                const org = newSpeakerOrg.trim() || "TBD";
+                const category = newSpeakerCategory || "panelist";
+                const badgeMap: Record<string, string> = {
+                  keynote: "Keynote Speaker",
+                  panelist: "Panelist",
+                  moderator: "Moderator",
+                  government: "Government Representative",
+                };
                 setSpeakers((prev) => [
                   ...prev,
                   {
                     id: `sp${prev.length + 1}`,
                     name: newSpeakerName.trim(),
-                    role: newSpeakerRole.trim() || "Speaker",
-                    org: newSpeakerOrg.trim() || "TBD",
+                    role,
+                    org,
+                    roleLines: [role, org],
                     topic: newSpeakerTopic.trim() || "To be announced",
+                    category,
+                    badge: badgeMap[category] || "Speaker",
+                    country: newSpeakerCountry.trim() || undefined,
+                    flag: undefined,
+                    photo: undefined,
+                    bio: undefined,
                   },
                 ]);
                 setNewSpeakerName("");
                 setNewSpeakerRole("");
                 setNewSpeakerOrg("");
                 setNewSpeakerTopic("");
+                setNewSpeakerCategory("keynote");
+                setNewSpeakerCountry("");
                 setSpeakerModal(false);
               }}
             >
@@ -1286,6 +1538,25 @@ export function CreateEventPage() {
             onChange={(e) => setNewSpeakerOrg(e.target.value)}
             placeholder="e.g. Anti-Counterfeit Authority"
           />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Select
+              label="Speaker type"
+              value={newSpeakerCategory}
+              onChange={(e) => setNewSpeakerCategory(e.target.value)}
+              options={[
+                { value: "keynote", label: "Keynote Speaker" },
+                { value: "panelist", label: "Panelist" },
+                { value: "moderator", label: "Moderator" },
+                { value: "government", label: "Government Representative" },
+              ]}
+            />
+            <Input
+              label="Country"
+              value={newSpeakerCountry}
+              onChange={(e) => setNewSpeakerCountry(e.target.value)}
+              placeholder="e.g. Kenya"
+            />
+          </div>
           <Input
             label="Session / topic"
             value={newSpeakerTopic}

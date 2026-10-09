@@ -14,9 +14,12 @@
   --ad-p: #7c2eea;
   --ad-o: #ff9300;
   min-height: 100dvh;
-  background: #f3f9ff;
+  background: #fff;
   color: var(--ad-n);
   font-family: Inter, Arial, sans-serif;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
 }
 
 .admin-dash a {
@@ -32,7 +35,7 @@
   grid-template-columns: 220px 1fr;
   background: #fff;
   border-radius: 0;
-  overflow: visible;
+  overflow: hidden;
   box-shadow: none;
   min-height: 100dvh;
 }
@@ -41,16 +44,14 @@
   position: relative;
   z-index: 2;
   isolation: isolate;
-  overflow: visible;
+  overflow: hidden;
   background:
     linear-gradient(180deg, #f8fcff 0%, #f3f8fd 42%, #edf5fb 100%);
   padding: 12px 12px 18px;
   border-right: 1px solid #e2ecf5;
   display: flex;
   flex-direction: column;
-  box-shadow:
-    10px 0 32px rgba(52, 117, 173, 0.12),
-    1px 0 0 rgba(220, 232, 245, 0.9);
+  box-shadow: inset -1px 0 0 rgba(220, 232, 245, 0.9);
 }
 
 .admin-dash .ad-sidebar::before {
@@ -492,9 +493,19 @@
 }
 
 .admin-dash .ad-outlet {
-  padding: 16px clamp(14px, 1.6vw, 22px) 22px;
+  padding: 19px clamp(14px, 1.6vw, 22px) 22px;
   flex: 1;
   min-width: 0;
+  background: linear-gradient(180deg, #fbfdff 0%, #fff 48px);
+}
+
+.admin-dash .ad-outlet h1 {
+  letter-spacing: -0.03em;
+}
+
+.admin-dash .ad-outlet .bg-white,
+.admin-dash .ad-outlet [class*="shadow"] {
+  border-color: #e1ebf5;
 }
 
 .admin-dash .ad-stats {
@@ -1066,6 +1077,7 @@
     border-radius: 0;
     display: block;
     min-height: 100dvh;
+    box-shadow: none;
   }
 
   .admin-dash .ad-sidebar {

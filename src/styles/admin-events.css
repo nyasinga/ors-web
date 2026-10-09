@@ -4,23 +4,24 @@
 */
 
 .admin-dash .ae-page {
-  padding: 19px clamp(14px, 1.6vw, 22px) 15px;
+  padding: 22px clamp(16px, 1.8vw, 26px) 18px;
   flex: 1;
   min-width: 0;
+  background: linear-gradient(180deg, #fbfdff 0%, #fff 56px);
 }
 
 .admin-dash .ae-pagehead {
   display: flex;
   align-items: flex-start;
-  margin: 0 0 15px 8px;
+  margin: 0 0 18px 4px;
   gap: 12px;
   flex-wrap: wrap;
 }
 
 .admin-dash .ae-pagehead h1 {
-  font-size: clamp(29px, 3.2vw, 42px);
+  font-size: clamp(30px, 3.2vw, 42px);
   line-height: 1;
-  margin: 0 0 7px;
+  margin: 0 0 8px;
   letter-spacing: -1.5px;
   font-weight: 800;
   color: #091653;
@@ -37,7 +38,7 @@
   background: #0864e8;
   color: #fff;
   border: 0;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 12px 19px;
   font-size: 12px;
   font-weight: 600;
@@ -47,6 +48,7 @@
   cursor: pointer;
   font-family: inherit;
   text-decoration: none;
+  box-shadow: 0 6px 16px rgba(8, 100, 232, 0.22);
 }
 
 .admin-dash .ae-create:hover {
@@ -56,9 +58,9 @@
 .admin-dash .ae-panel {
   border: 1px solid #e1ebf5;
   background: #fff;
-  border-radius: 9px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 8px #3b75a80a;
+  box-shadow: 0 4px 18px rgba(59, 117, 168, 0.08);
 }
 
 .admin-dash .ae-tabs-tools {
@@ -162,6 +164,11 @@
   white-space: nowrap;
 }
 
+.admin-dash .ae-tool-btn:hover,
+.admin-dash .ae-tool-search:focus-within {
+  background: #e3efff;
+}
+
 .admin-dash .ae-table-wrap {
   overflow-x: auto;
 }
@@ -257,7 +264,7 @@
 .admin-dash .ae-event-name {
   font-size: 12px;
   font-weight: 700;
-  color: #08175b;
+  color: #075bd8;
 }
 
 .admin-dash .ae-event-name a {
@@ -266,7 +273,7 @@
 }
 
 .admin-dash .ae-event-name a:hover {
-  color: #0761e4;
+  color: #0547b0;
 }
 
 .admin-dash .ae-event-desc {
@@ -349,6 +356,11 @@
 .admin-dash .ae-status.ongoing {
   background: #e3efff;
   color: #0861dd;
+}
+
+.admin-dash .ae-status.draft {
+  background: #eef2f7;
+  color: #4b5d7a;
 }
 
 .admin-dash .ae-status.past {
