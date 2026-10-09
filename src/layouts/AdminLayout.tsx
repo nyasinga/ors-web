@@ -15,7 +15,13 @@ import {
   X,
 } from "lucide-react";
 import { useAuthUser } from "../hooks/useAuthUser";
-import { clearAuthSession, displayName, initialsFrom, roleLabel } from "../lib/auth";
+import {
+  clearAuthSession,
+  displayName,
+  getValidAuthToken,
+  initialsFrom,
+  roleLabel,
+} from "../lib/auth";
 import { cn } from "../lib/cn";
 
 const links = [
@@ -54,6 +60,12 @@ export function AdminLayout() {
     setMobileNav(false);
     setUserMenuOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (getValidAuthToken()) return;
+    clearAuthSession();
+    navigate("/admin-login", { replace: true, state: { from: pathname } });
+  }, [navigate, pathname, user]);
 
   useEffect(() => {
     if (!mobileNav) return;

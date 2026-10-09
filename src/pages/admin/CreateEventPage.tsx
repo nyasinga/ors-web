@@ -348,6 +348,13 @@ export function CreateEventPage() {
         navigate(`/admin/events/${id}/overview`);
       }
     } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        navigate("/admin-login", {
+          replace: true,
+          state: { from: isEdit && editId ? `/admin/events/${editId}/edit` : "/admin/events/new" },
+        });
+        return;
+      }
       const message =
         err instanceof ApiError
           ? err.message

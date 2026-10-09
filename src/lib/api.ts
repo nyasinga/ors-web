@@ -63,6 +63,15 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   }
 
   if (!res.ok) {
+    if (res.status === 401 && typeof window !== "undefined") {
+      // Avoid importing auth.ts here (circular with login()); wipe session keys directly.
+      localStorage.removeItem("ors_auth_token");
+      localStorage.removeItem("ors_auth_user");
+      sessionStorage.removeItem("ors_auth_token");
+      sessionStorage.removeItem("ors_auth_user");
+      window.dispatchEvent(new Event("ors-auth-change"));
+      throw new ApiError("Your session has expired. Please sign in again.", 401, parsed);
+    }
     throw new ApiError(
       messageFromBody(parsed, `Request failed (${res.status})`),
       res.status,

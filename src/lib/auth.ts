@@ -93,6 +93,29 @@ export function getAuthToken(): string | null {
   return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
 }
 
+/** True when a stored JWT exists but its `exp` claim is in the past. */
+export function isAuthTokenExpired(token = getAuthToken()): boolean {
+  if (!token) return false;
+  const parts = token.split(".");
+  if (parts.length < 2) return false;
+  try {
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))) as {
+      exp?: number;
+    };
+    if (typeof payload.exp !== "number") return false;
+    return payload.exp * 1000 <= Date.now();
+  } catch {
+    return false;
+  }
+}
+
+/** Token usable for API calls (present and not expired). */
+export function getValidAuthToken(): string | null {
+  const token = getAuthToken();
+  if (!token || isAuthTokenExpired(token)) return null;
+  return token;
+}
+
 export function getAuthUser(): AuthUser | null {
   const raw = localStorage.getItem(USER_KEY) || sessionStorage.getItem(USER_KEY);
   if (!raw) return null;

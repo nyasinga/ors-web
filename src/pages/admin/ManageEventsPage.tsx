@@ -102,8 +102,17 @@ export function ManageEventsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<EventType | "all">("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<ManagedEvent | "bulk" | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const filtersRef = useRef<HTMLDivElement | null>(null);
+
+  const redirectIfUnauthorized = (err: unknown) => {
+    if (err instanceof ApiError && err.status === 401) {
+      navigate("/admin-login", { replace: true, state: { from: "/admin/events" } });
+      return true;
+    }
+    return false;
+  };
 
   const loadEvents = async () => {
     setLoading(true);
@@ -234,19 +243,55 @@ export function ManageEventsPage() {
     return Array.from(set).sort();
   }, [events]);
 
-  const handleDelete = async (row: ManagedEvent) => {
-    const ok = window.confirm(
-      `Delete “${row.name}”? This cannot be undone.`,
-    );
-    if (!ok) return;
-    setBusyId(row.id);
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
     setActionError(null);
     setMenuId(null);
+
+    if (pendingDelete === "bulk") {
+      if (selected.length === 0) {
+        setPendingDelete(null);
+        return;
+      }
+      setBusyId("bulk");
+      const ids = [...selected];
+      const failed: string[] = [];
+      let unauthorized = false;
+      for (const id of ids) {
+        try {
+          await deleteEngagement(id);
+        } catch (err) {
+          if (redirectIfUnauthorized(err)) {
+            unauthorized = true;
+            break;
+          }
+          failed.push(id);
+        }
+      }
+      if (unauthorized) {
+        setBusyId(null);
+        setPendingDelete(null);
+        return;
+      }
+      setEvents((prev) => prev.filter((e) => !ids.includes(e.id) || failed.includes(e.id)));
+      setSelected(failed);
+      if (failed.length) {
+        setActionError(`Could not delete ${failed.length} event${failed.length === 1 ? "" : "s"}.`);
+      }
+      setBusyId(null);
+      setPendingDelete(null);
+      return;
+    }
+
+    const row = pendingDelete;
+    setBusyId(row.id);
     try {
       await deleteEngagement(row.id);
       setEvents((prev) => prev.filter((e) => e.id !== row.id));
       setSelected((prev) => prev.filter((id) => id !== row.id));
+      setPendingDelete(null);
     } catch (err) {
+      if (redirectIfUnauthorized(err)) return;
       setActionError(
         err instanceof ApiError
           ? err.message
@@ -259,31 +304,6 @@ export function ManageEventsPage() {
     }
   };
 
-  const handleBulkDelete = async () => {
-    if (selected.length === 0) return;
-    const ok = window.confirm(
-      `Delete ${selected.length} selected event${selected.length === 1 ? "" : "s"}? This cannot be undone.`,
-    );
-    if (!ok) return;
-    setBusyId("bulk");
-    setActionError(null);
-    const ids = [...selected];
-    const failed: string[] = [];
-    for (const id of ids) {
-      try {
-        await deleteEngagement(id);
-      } catch {
-        failed.push(id);
-      }
-    }
-    setEvents((prev) => prev.filter((e) => !ids.includes(e.id) || failed.includes(e.id)));
-    setSelected(failed);
-    if (failed.length) {
-      setActionError(`Could not delete ${failed.length} event${failed.length === 1 ? "" : "s"}.`);
-    }
-    setBusyId(null);
-  };
-
   const handleDuplicate = async (row: ManagedEvent) => {
     setBusyId(row.id);
     setActionError(null);
@@ -294,6 +314,7 @@ export function ManageEventsPage() {
       await loadEvents();
       if (newId) navigate(`/admin/events/${newId}/edit`);
     } catch (err) {
+      if (redirectIfUnauthorized(err)) return;
       setActionError(
         err instanceof ApiError
           ? err.message
@@ -392,7 +413,7 @@ export function ManageEventsPage() {
               type="button"
               className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-2 text-[12px] font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
               disabled={busyId === "bulk"}
-              onClick={() => void handleBulkDelete()}
+              onClick={() => setPendingDelete("bulk")}
             >
               <Trash2 size={14} strokeWidth={2.25} aria-hidden />
               {busyId === "bulk" ? "Deleting…" : "Delete selected"}
@@ -740,7 +761,10 @@ export function ManageEventsPage() {
                                 role="menuitem"
                                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-rose-600 hover:bg-rose-50 disabled:opacity-50"
                                 disabled={busy}
-                                onClick={() => void handleDelete(row)}
+                                onClick={() => {
+                                  setMenuId(null);
+                                  setPendingDelete(row);
+                                }}
                               >
                                 <Trash2 size={14} strokeWidth={2} aria-hidden />
                                 Delete
@@ -814,6 +838,44 @@ export function ManageEventsPage() {
           </label>
         </footer>
       </section>
+
+      {pendingDelete ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-[rgba(7,20,91,.45)] p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-event-title"
+        >
+          <div className="w-full max-w-md rounded-xl border border-blue-100 bg-white p-5 shadow-xl">
+            <h2 id="delete-event-title" className="text-[18px] font-extrabold text-[#07145b]">
+              Delete event?
+            </h2>
+            <p className="mt-2 text-[13px] leading-[1.45] text-[#4f5e9a]">
+              {pendingDelete === "bulk"
+                ? `Delete ${selected.length} selected event${selected.length === 1 ? "" : "s"}? This cannot be undone.`
+                : `Delete “${pendingDelete.name}”? This cannot be undone.`}
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-blue-100 bg-white px-4 py-2 text-[12px] font-semibold text-slate-600 hover:bg-slate-50"
+                disabled={Boolean(busyId)}
+                onClick={() => setPendingDelete(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="rounded-lg bg-rose-600 px-4 py-2 text-[12px] font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+                disabled={Boolean(busyId)}
+                onClick={() => void confirmDelete()}
+              >
+                {busyId ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

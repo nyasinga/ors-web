@@ -14,10 +14,10 @@ import type {
   NewEngagement,
 } from "../types/engagement";
 import { apiRequest } from "./api";
-import { getAuthToken, getAuthUser } from "./auth";
+import { getAuthUser, getValidAuthToken } from "./auth";
 
 function authToken() {
-  return getAuthToken();
+  return getValidAuthToken();
 }
 
 function filterQuery(filter?: EngagementFilter) {
@@ -428,7 +428,40 @@ export type EngagementKpiSummary = {
   totalEvents: number;
   upcomingEvents: number;
   publishedEvents: number;
+  draftEvents: number;
+  pastEvents: number;
+  totalCapacity: number;
+  paymentEnabledEvents: number;
+  ticketTypes: number;
+  currency: string;
 };
+
+const COUNTRY_META: Record<string, { name: string; flag: string }> = {
+  KE: { name: "Kenya", flag: "🇰🇪" },
+  UG: { name: "Uganda", flag: "🇺🇬" },
+  TZ: { name: "Tanzania", flag: "🇹🇿" },
+  RW: { name: "Rwanda", flag: "🇷🇼" },
+  NG: { name: "Nigeria", flag: "🇳🇬" },
+  ZA: { name: "South Africa", flag: "🇿🇦" },
+  GH: { name: "Ghana", flag: "🇬🇭" },
+  US: { name: "USA", flag: "🇺🇸" },
+  GB: { name: "UK", flag: "🇬🇧" },
+  UK: { name: "UK", flag: "🇬🇧" },
+};
+
+function countryMeta(codeOrName?: string) {
+  const raw = String(codeOrName ?? "").trim();
+  if (!raw) return { name: "Unspecified", flag: "🌍" };
+  const upper = raw.toUpperCase();
+  if (COUNTRY_META[upper]) return COUNTRY_META[upper];
+  return { name: raw, flag: "🌍" };
+}
+
+function parseTicketPrice(price?: string) {
+  if (!price) return 0;
+  const n = Number(String(price).replace(/[^0-9.]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
 
 export function summarizeEngagementKpis(rows: Engagement[]): EngagementKpiSummary {
   let totalRegistrations = 0;
@@ -436,13 +469,25 @@ export function summarizeEngagementKpis(rows: Engagement[]): EngagementKpiSummar
   let sponsors = 0;
   let upcomingEvents = 0;
   let publishedEvents = 0;
+  let draftEvents = 0;
+  let pastEvents = 0;
+  let totalCapacity = 0;
+  let paymentEnabledEvents = 0;
+  let ticketTypes = 0;
+  let currency = "KES";
 
   for (const row of rows) {
     totalRegistrations += pickRegistered(row);
     speakers += asSpeakers(row.speakers).length;
     sponsors += asSponsors(row.sponsors).length;
+    ticketTypes += asTickets(row.tickets).length;
+    totalCapacity += pickCapacity(row);
+    if (row.paymentEnabled) paymentEnabledEvents += 1;
+    if (row.currency) currency = String(row.currency);
     const ui = toUiListStatus(row);
     if (ui === "Upcoming" || ui === "Ongoing") upcomingEvents += 1;
+    if (ui === "Draft") draftEvents += 1;
+    if (ui === "Past") pastEvents += 1;
     if (row.isPublished || row.status === "published" || row.status === "ongoing") {
       publishedEvents += 1;
     }
@@ -455,6 +500,160 @@ export function summarizeEngagementKpis(rows: Engagement[]): EngagementKpiSummar
     totalEvents: rows.length,
     upcomingEvents,
     publishedEvents,
+    draftEvents,
+    pastEvents,
+    totalCapacity,
+    paymentEnabledEvents,
+    ticketTypes,
+    currency,
+  };
+}
+
+export type DashboardCountryRow = {
+  name: string;
+  flag: string;
+  count: number;
+  pct: number;
+};
+
+export type DashboardRecentEvent = {
+  id: string;
+  name: string;
+  initials: string;
+  org: string;
+  type: string;
+  status: string;
+  date: string;
+};
+
+export type DashboardPaymentMethod = {
+  label: string;
+  value: number;
+  color: string;
+};
+
+export type DashboardSnapshot = {
+  kpis: EngagementKpiSummary;
+  countries: DashboardCountryRow[];
+  recentEvents: DashboardRecentEvent[];
+  paymentMethods: DashboardPaymentMethod[];
+  /** Relative bar heights (0–100) from engagement capacity / ticket capacity */
+  capacityBars: number[];
+  estimatedTicketValue: number;
+};
+
+const METHOD_LABELS: Record<string, string> = {
+  mpesa: "M-Pesa",
+  card: "Card",
+  bank_transfer: "Bank Transfer",
+  bank: "Bank Transfer",
+  free: "Free",
+  other: "Other",
+};
+
+const METHOD_COLORS = ["#0874ed", "#13a457", "#ffad1b", "#a56bfa", "#64748b"];
+
+export function buildDashboardSnapshot(rows: Engagement[]): DashboardSnapshot {
+  const kpis = summarizeEngagementKpis(rows);
+
+  const countryCounts = new Map<string, number>();
+  for (const row of rows) {
+    const meta = countryMeta(row.country || row.city);
+    countryCounts.set(meta.name, (countryCounts.get(meta.name) ?? 0) + 1);
+  }
+  const maxCountry = Math.max(1, ...countryCounts.values());
+  const countries: DashboardCountryRow[] = [...countryCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([name, count]) => {
+      const match = Object.values(COUNTRY_META).find((c) => c.name === name);
+      return {
+        name,
+        flag: match?.flag ?? "🌍",
+        count,
+        pct: Math.round((count / maxCountry) * 100),
+      };
+    });
+
+  const recentEvents: DashboardRecentEvent[] = [...rows]
+    .sort((a, b) => {
+      const aT = new Date(a.updatedAt || a.createdAt || a.startDate || 0).getTime();
+      const bT = new Date(b.updatedAt || b.createdAt || b.startDate || 0).getTime();
+      return bT - aT;
+    })
+    .slice(0, 5)
+    .map((row) => {
+      const name = String(row.engagementName ?? "Untitled event").trim() || "Untitled event";
+      const parts = name.split(/\s+/).filter(Boolean);
+      const initials =
+        parts.length >= 2
+          ? `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase()
+          : name.slice(0, 2).toUpperCase();
+      const when = row.updatedAt || row.createdAt || row.startDate;
+      const date = when
+        ? new Date(when).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+        : "—";
+      return {
+        id: String(row.engagementID ?? ""),
+        name,
+        initials,
+        org: [row.venue, row.city].filter(Boolean).join(", ") || "—",
+        type: toUiEventType(row.engagementType),
+        status: toUiListStatus(row),
+        date,
+      };
+    })
+    .filter((r) => r.id);
+
+  const methodCounts = new Map<string, number>();
+  for (const row of rows) {
+    const methods = Array.isArray(row.paymentMethods) ? row.paymentMethods : [];
+    if (methods.length === 0 && row.paymentEnabled) {
+      methodCounts.set("other", (methodCounts.get("other") ?? 0) + 1);
+      continue;
+    }
+    for (const m of methods) {
+      const key = String(m).trim().toLowerCase() || "other";
+      methodCounts.set(key, (methodCounts.get(key) ?? 0) + 1);
+    }
+  }
+  const methodTotal = Math.max(1, [...methodCounts.values()].reduce((a, b) => a + b, 0));
+  const paymentMethods: DashboardPaymentMethod[] = [...methodCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([key, count], i) => ({
+      label: METHOD_LABELS[key] ?? key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+      value: Math.round((count / methodTotal) * 100),
+      color: METHOD_COLORS[i % METHOD_COLORS.length],
+    }));
+
+  const capacityBars = rows.slice(0, 21).map((row) => {
+    const cap = pickCapacity(row);
+    const tickets = asTickets(row.tickets);
+    const ticketCap = tickets.reduce((sum, t) => sum + (Number(t.capacity) || 0), 0);
+    const value = Math.max(cap, ticketCap, pickRegistered(row));
+    return value;
+  });
+  const maxBar = Math.max(1, ...capacityBars, 1);
+  const normalizedBars =
+    capacityBars.length > 0
+      ? capacityBars.map((v) => Math.max(6, Math.round((v / maxBar) * 100)))
+      : [];
+
+  let estimatedTicketValue = 0;
+  for (const row of rows) {
+    for (const ticket of asTickets(row.tickets)) {
+      estimatedTicketValue += parseTicketPrice(ticket.price) * (Number(ticket.capacity) || 0);
+    }
+  }
+
+  return {
+    kpis,
+    countries,
+    recentEvents,
+    paymentMethods,
+    capacityBars: normalizedBars,
+    estimatedTicketValue,
   };
 }
 

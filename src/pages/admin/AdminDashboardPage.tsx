@@ -14,18 +14,13 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import {
-  paymentSummary,
-  recentRegistrations,
-  topCountries,
-} from "../../data/dashboards";
 import { useAuthUser } from "../../hooks/useAuthUser";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { displayName } from "../../lib/auth";
 import { cn } from "../../lib/cn";
 import {
+  buildDashboardSnapshot,
   listEngagements,
-  summarizeEngagementKpis,
   toDashboardUpcoming,
   toUiListStatus,
   type DashboardUpcomingItem,
@@ -66,36 +61,30 @@ const kpiMeta = [
   },
 ] as const;
 
-const chartHeights = [
-  24, 30, 38, 54, 43, 35, 46, 61, 52, 48, 43, 68, 59, 80, 72, 62, 82, 92, 76, 88, 98,
-];
-
-const countryWidths = [100, 29, 26, 21, 19, 16, 11, 10, 48];
-
 const payMetricMeta = [
   {
     wrap: "bg-blue-50",
     iconWrap: "rounded-lg bg-blue-100 text-blue-600",
     Icon: CreditCard,
-    trend: "text-green-600",
+    trend: "text-slate-500",
   },
   {
     wrap: "bg-green-50",
     iconWrap: "rounded-full bg-green-600 text-white",
     Icon: Check,
-    trend: "text-green-600",
+    trend: "text-slate-500",
   },
   {
     wrap: "bg-amber-50",
     iconWrap: "rounded-full bg-amber-100 text-amber-600",
     Icon: Clock3,
-    trend: "text-amber-600",
+    trend: "text-slate-500",
   },
   {
     wrap: "bg-red-50",
     iconWrap: "rounded-full bg-red-500 text-white",
     Icon: X,
-    trend: "text-red-600",
+    trend: "text-slate-500",
   },
 ] as const;
 
@@ -119,7 +108,28 @@ function formatHeroDates(engagement: Engagement | null, fallback: string) {
   return `${start.toLocaleDateString("en-GB", opts)} – ${end.toLocaleDateString("en-GB", opts)}`;
 }
 
-/** Admin dashboard — main content from aca-admin-dashboard-tailwind HTML */
+function formatMoney(amount: number, currency: string) {
+  if (!amount) return `${currency} 0`;
+  if (amount >= 1_000_000) return `${currency} ${(amount / 1_000_000).toFixed(2)}M`;
+  if (amount >= 1_000) return `${currency} ${Math.round(amount).toLocaleString()}`;
+  return `${currency} ${amount.toLocaleString()}`;
+}
+
+function statusTone(status: string) {
+  switch (status) {
+    case "Upcoming":
+    case "Published":
+      return "bg-green-100 text-green-700";
+    case "Ongoing":
+      return "bg-blue-100 text-blue-700";
+    case "Draft":
+      return "bg-amber-100 text-amber-700";
+    default:
+      return "bg-slate-100 text-slate-600";
+  }
+}
+
+/** Admin dashboard — live engagement aggregates from the API */
 export function AdminDashboardPage() {
   const event = useEventCopy();
   const user = useAuthUser();
@@ -128,19 +138,24 @@ export function AdminDashboardPage() {
 
   const [engagements, setEngagements] = useState<Engagement[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setEventsLoading(true);
+      setLoadError(null);
       try {
         const rows = await listEngagements({
           limit: 200,
           order: ["startDate ASC"],
         });
         if (!cancelled) setEngagements(rows ?? []);
-      } catch {
-        if (!cancelled) setEngagements([]);
+      } catch (err) {
+        if (!cancelled) {
+          setEngagements([]);
+          setLoadError(err instanceof Error ? err.message : "Failed to load dashboard data");
+        }
       } finally {
         if (!cancelled) setEventsLoading(false);
       }
@@ -150,31 +165,59 @@ export function AdminDashboardPage() {
     };
   }, []);
 
+  const snapshot = useMemo(() => buildDashboardSnapshot(engagements), [engagements]);
+
   const kpis = useMemo(() => {
-    const summary = summarizeEngagementKpis(engagements);
+    const s = snapshot.kpis;
     return [
       {
-        label: "Total Registrations",
-        value: eventsLoading ? "…" : summary.totalRegistrations.toLocaleString(),
-        trend: eventsLoading ? "—" : `${summary.totalEvents} events`,
+        label: "Total Events",
+        value: eventsLoading ? "…" : s.totalEvents.toLocaleString(),
+        trend: eventsLoading ? "—" : `${s.publishedEvents} published`,
       },
       {
-        label: "Confirmed Delegates",
-        value: eventsLoading ? "…" : summary.totalRegistrations.toLocaleString(),
-        trend: eventsLoading ? "—" : `${summary.upcomingEvents} upcoming`,
+        label: "Upcoming Events",
+        value: eventsLoading ? "…" : s.upcomingEvents.toLocaleString(),
+        trend: eventsLoading ? "—" : `${s.draftEvents} drafts`,
       },
       {
         label: "Speakers",
-        value: eventsLoading ? "…" : summary.speakers.toLocaleString(),
+        value: eventsLoading ? "…" : s.speakers.toLocaleString(),
         trend: eventsLoading ? "—" : "Across all events",
       },
       {
         label: "Sponsors & Exhibitors",
-        value: eventsLoading ? "…" : summary.sponsors.toLocaleString(),
+        value: eventsLoading ? "…" : s.sponsors.toLocaleString(),
         trend: eventsLoading ? "—" : "Across all events",
       },
     ];
-  }, [engagements, eventsLoading]);
+  }, [snapshot, eventsLoading]);
+
+  const paymentCards = useMemo(() => {
+    const s = snapshot.kpis;
+    return [
+      {
+        label: "Ticket Inventory Value",
+        value: eventsLoading ? "…" : formatMoney(snapshot.estimatedTicketValue, s.currency),
+        trend: "From ticket capacities",
+      },
+      {
+        label: "Total Capacity",
+        value: eventsLoading ? "…" : s.totalCapacity.toLocaleString(),
+        trend: `${s.ticketTypes} ticket types`,
+      },
+      {
+        label: "Payments Enabled",
+        value: eventsLoading ? "…" : s.paymentEnabledEvents.toLocaleString(),
+        trend: "Events accepting pay",
+      },
+      {
+        label: "Registrations",
+        value: eventsLoading ? "…" : s.totalRegistrations.toLocaleString(),
+        trend: s.totalRegistrations ? "Recorded on events" : "No registrant feed yet",
+      },
+    ];
+  }, [snapshot, eventsLoading]);
 
   const upcomingEvents = useMemo(() => {
     const items: DashboardUpcomingItem[] = [];
@@ -205,6 +248,24 @@ export function AdminDashboardPage() {
   const heroCity = [featured?.city, featured?.country === "KE" ? "Kenya" : featured?.country]
     .filter(Boolean)
     .join(", ") || "Nairobi, Kenya";
+
+  const methodGradient = useMemo(() => {
+    if (snapshot.paymentMethods.length === 0) {
+      return "conic-gradient(#e2e8f0 0 100%)";
+    }
+    let cursor = 0;
+    const stops = snapshot.paymentMethods.map((m) => {
+      const start = cursor;
+      cursor += m.value;
+      return `${m.color} ${start}% ${cursor}%`;
+    });
+    if (cursor < 100) stops.push(`#e2e8f0 ${cursor}% 100%`);
+    return `conic-gradient(${stops.join(", ")})`;
+  }, [snapshot.paymentMethods]);
+
+  const participantsLink = featured?.engagementID
+    ? `/admin/events/${featured.engagementID}/participants`
+    : "/admin/events";
 
   return (
     <div className="space-y-3 bg-[radial-gradient(ellipse_at_4%_10%,#dcefff_0,#eef7ff_45%,#e4f2ff_100%)] p-3 text-ink sm:p-4">
@@ -240,7 +301,7 @@ export function AdminDashboardPage() {
               {welcome}
             </h1>
             <p className="mt-2 text-[12px] text-blue-50">
-              Event registration and key activities at a glance.
+              Live event activity from your engagements database.
             </p>
           </div>
 
@@ -264,6 +325,15 @@ export function AdminDashboardPage() {
           </div>
         </div>
       </section>
+
+      {loadError ? (
+        <div
+          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          role="alert"
+        >
+          {loadError}
+        </div>
+      ) : null}
 
       {/* KPI cards */}
       <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
@@ -308,24 +378,21 @@ export function AdminDashboardPage() {
         })}
       </section>
 
-      {/* Payments overview */}
+      {/* Capacity / payments overview from engagement ticket data */}
       <section className="grid grid-cols-1 gap-2.5 lg:grid-cols-[1.65fr_1fr]">
         <article className={cn(glass, "p-3 shadow-card")}>
           <div className="flex items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 text-[15px] font-extrabold">
               <CreditCard size={18} strokeWidth={2} className="text-blue-600" aria-hidden />
-              Payments Overview
+              Event Capacity Overview
             </h2>
-            <button
-              type="button"
-              className="rounded-lg border border-blue-100 bg-white px-3 py-1.5 text-[10px]"
-            >
-              Last 30 Days ⌄
-            </button>
+            <span className="rounded-lg border border-blue-100 bg-white px-3 py-1.5 text-[10px] text-slate-500">
+              From engagements
+            </span>
           </div>
 
           <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">
-            {paymentSummary.map((item, i) => {
+            {paymentCards.map((item, i) => {
               const meta = payMetricMeta[i];
               const Icon = meta.Icon;
               return (
@@ -354,10 +421,10 @@ export function AdminDashboardPage() {
 
           <div className="mt-3 grid grid-cols-[35px_minmax(0,1fr)_86px] gap-2">
             <div className="flex h-[126px] flex-col justify-between pb-0.5 text-[10px] text-slate-500">
-              <span>400K</span>
-              <span>300K</span>
-              <span>200K</span>
-              <span>100K</span>
+              <span>Max</span>
+              <span>—</span>
+              <span>—</span>
+              <span>—</span>
               <span>0</span>
             </div>
             <div
@@ -368,80 +435,68 @@ export function AdminDashboardPage() {
               }}
               aria-hidden
             >
-              {chartHeights.map((h, i) => (
-                <i
-                  key={i}
-                  className="min-w-[4px] flex-1 rounded-t-[3px]"
-                  style={{
-                    height: `${h}%`,
-                    background: "linear-gradient(to top, #0870ed 0 56%, #80bdff 56% 100%)",
-                  }}
-                />
-              ))}
+              {eventsLoading ? (
+                <span className="w-full self-center text-center text-[11px] text-slate-400">
+                  Loading…
+                </span>
+              ) : snapshot.capacityBars.length === 0 ? (
+                <span className="w-full self-center text-center text-[11px] text-slate-400">
+                  No capacity data yet
+                </span>
+              ) : (
+                snapshot.capacityBars.map((h, i) => (
+                  <i
+                    key={i}
+                    className="min-w-[4px] flex-1 rounded-t-[3px]"
+                    style={{
+                      height: `${h}%`,
+                      background: "linear-gradient(to top, #0870ed 0 56%, #80bdff 56% 100%)",
+                    }}
+                  />
+                ))
+              )}
             </div>
             <div className="flex flex-col justify-center gap-3 text-[10px]">
               <span>
                 <i className="mr-2 inline-block h-3 w-3 rounded bg-blue-600" />
-                Completed
+                Capacity
               </span>
-              <span>
-                <i className="mr-2 inline-block h-3 w-3 rounded bg-blue-300" />
-                Pending
-              </span>
+              <span className="text-slate-500">Per event</span>
             </div>
-          </div>
-          <div className="ml-10 mr-[88px] mt-1 flex justify-between text-[9px] text-slate-500">
-            <span>Sep 01</span>
-            <span>Sep 05</span>
-            <span>Sep 10</span>
-            <span>Sep 15</span>
-            <span>Sep 20</span>
-            <span>Sep 25</span>
-            <span>Sep 30</span>
           </div>
         </article>
 
         <article className={cn(glass, "p-3 shadow-card")}>
-          <h2 className="text-[15px] font-extrabold">Payments by Method</h2>
+          <h2 className="text-[15px] font-extrabold">Payment Methods Enabled</h2>
           <div className="flex h-[205px] items-center justify-center gap-4">
             <div className="relative">
               <div
                 className="relative h-[162px] w-[162px] shrink-0 rounded-full max-[760px]:h-[125px] max-[760px]:w-[125px]"
-                style={{
-                  background:
-                    "conic-gradient(#0874ed 0 55%, #13a457 55% 80%, #ffad1b 80% 92%, #a56bfa 92% 100%)",
-                }}
+                style={{ background: methodGradient }}
               >
                 <span className="absolute inset-[22%] rounded-full bg-white" aria-hidden />
               </div>
               <div className="absolute inset-0 z-[1] grid place-content-center text-center text-[11px] font-bold leading-[1.25]">
-                KES
+                {snapshot.kpis.currency}
                 <br />
-                <span className="text-[17px]">1.25M</span>
-                <span>Total</span>
+                <span className="text-[17px]">{snapshot.paymentMethods.length || 0}</span>
+                <span>Methods</span>
               </div>
             </div>
             <div className="space-y-3 text-[11px]">
-              <div className="flex items-center gap-2">
-                <i className="h-3 w-3 rounded-full bg-blue-600" />
-                <span className="min-w-[64px]">M-Pesa</span>
-                <b>55%</b>
-              </div>
-              <div className="flex items-center gap-2">
-                <i className="h-3 w-3 rounded-full bg-green-600" />
-                <span className="min-w-[64px]">Card</span>
-                <b>25%</b>
-              </div>
-              <div className="flex items-center gap-2">
-                <i className="h-3 w-3 rounded-full bg-amber-400" />
-                <span className="min-w-[64px]">Bank Transfer</span>
-                <b>12%</b>
-              </div>
-              <div className="flex items-center gap-2">
-                <i className="h-3 w-3 rounded-full bg-violet-400" />
-                <span className="min-w-[64px]">Other</span>
-                <b>8%</b>
-              </div>
+              {eventsLoading ? (
+                <span className="text-slate-400">Loading…</span>
+              ) : snapshot.paymentMethods.length === 0 ? (
+                <span className="text-slate-400">No payment methods on events yet</span>
+              ) : (
+                snapshot.paymentMethods.map((m) => (
+                  <div key={m.label} className="flex items-center gap-2">
+                    <i className="h-3 w-3 rounded-full" style={{ background: m.color }} />
+                    <span className="min-w-[88px]">{m.label}</span>
+                    <b>{m.value}%</b>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </article>
@@ -510,54 +565,57 @@ export function AdminDashboardPage() {
           <div className="mb-2 flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-[13px] font-extrabold">
               <Users size={14} strokeWidth={2} className="text-blue-600" aria-hidden />
-              Recent Registrations
+              Recent Events
             </h2>
-            <Link
-              to="/admin/events/isippe-3/participants"
-              className="text-[10px] font-semibold text-blue-600"
-            >
+            <Link to="/admin/events" className="text-[10px] font-semibold text-blue-600">
               View All →
             </Link>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-[9px]">
-              <thead>
-                <tr className="bg-blue-50 text-slate-600">
-                  <th className="p-2 font-medium">Name</th>
-                  <th className="p-2 font-medium">Organization</th>
-                  <th className="p-2 font-medium">Type</th>
-                  <th className="p-2 font-medium">Status</th>
-                  <th className="p-2 font-medium">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentRegistrations.map((r) => (
-                  <tr key={r.name} className="border-b border-blue-50 last:border-0">
-                    <td className="whitespace-nowrap p-2">
-                      <span className="mr-1 inline-grid h-6 w-6 place-items-center rounded-full bg-blue-100 font-bold text-blue-700">
-                        {r.initials}
-                      </span>
-                      {r.name}
-                    </td>
-                    <td className="whitespace-nowrap p-2">{r.org}</td>
-                    <td className="p-2">{r.type}</td>
-                    <td className="p-2">
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-1",
-                          r.status === "Confirmed"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-amber-100 text-amber-700",
-                        )}
-                      >
-                        {r.status}
-                      </span>
-                    </td>
-                    <td className="p-2">{r.date}</td>
+            {eventsLoading ? (
+              <p className="py-6 text-center text-[11px] text-slate-500">Loading…</p>
+            ) : snapshot.recentEvents.length === 0 ? (
+              <p className="py-6 text-center text-[11px] text-slate-500">
+                No events in the database yet.
+              </p>
+            ) : (
+              <table className="w-full border-collapse text-left text-[9px]">
+                <thead>
+                  <tr className="bg-blue-50 text-slate-600">
+                    <th className="p-2 font-medium">Name</th>
+                    <th className="p-2 font-medium">Venue</th>
+                    <th className="p-2 font-medium">Type</th>
+                    <th className="p-2 font-medium">Status</th>
+                    <th className="p-2 font-medium">Updated</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {snapshot.recentEvents.map((r) => (
+                    <tr key={r.id} className="border-b border-blue-50 last:border-0">
+                      <td className="whitespace-nowrap p-2">
+                        <Link
+                          to={`/admin/events/${r.id}/overview`}
+                          className="inline-flex items-center text-[#07145b] hover:underline"
+                        >
+                          <span className="mr-1 inline-grid h-6 w-6 place-items-center rounded-full bg-blue-100 font-bold text-blue-700">
+                            {r.initials}
+                          </span>
+                          {r.name}
+                        </Link>
+                      </td>
+                      <td className="whitespace-nowrap p-2">{r.org}</td>
+                      <td className="p-2">{r.type}</td>
+                      <td className="p-2">
+                        <span className={cn("rounded-full px-2 py-1", statusTone(r.status))}>
+                          {r.status}
+                        </span>
+                      </td>
+                      <td className="p-2">{r.date}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </article>
 
@@ -565,35 +623,35 @@ export function AdminDashboardPage() {
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-[13px] font-extrabold">
               <span className="mr-2 text-blue-600">◉</span>
-              Top Countries
+              Event Countries
             </h2>
-            <Link
-              to="/admin/events/isippe-3/participants"
-              className="text-[10px] font-semibold text-blue-600"
-            >
+            <Link to={participantsLink} className="text-[10px] font-semibold text-blue-600">
               View All
             </Link>
           </div>
           <div className="space-y-2 text-[10px]">
-            {topCountries.map((c, i) => (
-              <div
-                key={c.name}
-                className="grid grid-cols-[22px_1fr_72px_25px] items-center gap-1"
-              >
-                <span>{c.flag}</span>
-                <span className="truncate">{c.name}</span>
-                <div className="h-3 rounded bg-slate-100">
-                  <i
-                    className={cn(
-                      "block h-full rounded",
-                      c.name === "Other" ? "bg-slate-400" : "bg-blue-400",
-                    )}
-                    style={{ width: `${countryWidths[i] ?? 20}%` }}
-                  />
+            {eventsLoading ? (
+              <p className="py-4 text-center text-slate-500">Loading…</p>
+            ) : snapshot.countries.length === 0 ? (
+              <p className="py-4 text-center text-slate-500">No country data on events yet.</p>
+            ) : (
+              snapshot.countries.map((c) => (
+                <div
+                  key={c.name}
+                  className="grid grid-cols-[22px_1fr_72px_25px] items-center gap-1"
+                >
+                  <span>{c.flag}</span>
+                  <span className="truncate">{c.name}</span>
+                  <div className="h-3 rounded bg-slate-100">
+                    <i
+                      className="block h-full rounded bg-blue-400"
+                      style={{ width: `${c.pct}%` }}
+                    />
+                  </div>
+                  <b>{c.count}</b>
                 </div>
-                <b>{c.count}</b>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </article>
       </section>

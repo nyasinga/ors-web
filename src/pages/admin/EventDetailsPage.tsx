@@ -9,7 +9,6 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
-  Clock,
   Copy,
   Download,
   ExternalLink,
@@ -33,6 +32,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { EventProgrammeSchedule } from "../../components/admin/EventProgrammeSchedule";
 import { PaymentsDashboard } from "../../components/admin/PaymentsDashboard";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
@@ -569,6 +569,13 @@ export function EventDetailsPage() {
                       await deleteEngagement(id);
                       navigate("/admin/events");
                     } catch (err) {
+                      if (err instanceof ApiError && err.status === 401) {
+                        navigate("/admin-login", {
+                          replace: true,
+                          state: { from: `/admin/events/${id}/overview` },
+                        });
+                        return;
+                      }
                       setError(
                         err instanceof ApiError
                           ? err.message
@@ -716,7 +723,13 @@ export function EventDetailsPage() {
       ) : null}
       {validTab === "programme" ? (
         <div className="mt-1">
-          <ProgrammeTab programme={detail.programme} />
+          <ProgrammeTab
+            programme={detail.programme}
+            startDate={detail.startDate}
+            venueTitle={detail.venueTitle}
+            venueCity={detail.venueCity}
+            fromApi={fromApi}
+          />
         </div>
       ) : null}
       {validTab === "speakers" ? (
@@ -2233,44 +2246,28 @@ function ParticipantsTab({ fromApi, loading }: { fromApi: boolean; loading: bool
   );
 }
 
-function ProgrammeTab({ programme }: { programme: ReturnType<typeof asProgramme> }) {
-  const rows =
-    programme.length > 0
-      ? programme.map((s, i) => ({
-          key: s.id || `${s.title}-${i}`,
-          day: s.day != null ? String(s.day) : String(i + 1),
-          time: s.time || [s.startTime, s.endTime].filter(Boolean).join(" - ") || "—",
-          title: s.title,
-          place: s.venue || s.place || "—",
-        }))
-      : eventSchedule.map((s) => ({
-          key: s.title,
-          day: `${s.month} ${s.day}`,
-          time: s.time,
-          title: s.title,
-          place: s.place,
-        }));
+function ProgrammeTab({
+  programme,
+  startDate,
+  venueTitle,
+  venueCity,
+  fromApi,
+}: {
+  programme: ReturnType<typeof asProgramme>;
+  startDate?: string;
+  venueTitle: string;
+  venueCity: string;
+  fromApi: boolean;
+}) {
+  const location = [venueTitle, venueCity].filter(Boolean).join(", ") || "Event venue";
 
   return (
-    <Card>
-      <h2 className="mb-4 text-lg font-bold text-ink">Programme</h2>
-      <ul className="grid gap-3">
-        {rows.map((s) => (
-          <li key={s.key} className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-100 px-3 py-3">
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue">
-              <CalendarDays size={14} /> {s.day}
-            </span>
-            <span className="inline-flex items-center gap-1.5 text-xs text-mute">
-              <Clock size={14} /> {s.time}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-ink">{s.title}</p>
-              <p className="text-xs text-mute">{s.place}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </Card>
+    <EventProgrammeSchedule
+      programme={programme}
+      startDate={startDate}
+      location={location}
+      fromApi={fromApi}
+    />
   );
 }
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   BarChart3,
   CalendarDays,
@@ -64,12 +64,19 @@ export function AdminLoginPage() {
   const { t } = useTranslation("common");
   const event = useEventCopy();
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo =
+    typeof (location.state as { from?: unknown } | null)?.from === "string"
+      ? String((location.state as { from: string }).from)
+      : "/admin";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(
+    returnTo !== "/admin" ? "Your session expired. Sign in again to continue." : null,
+  );
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   const submit = async (e: React.FormEvent) => {
@@ -87,7 +94,7 @@ export function AdminLoginPage() {
       if (!session.token) throw new Error("Login succeeded but no token was returned.");
       const { token, ...user } = session;
       saveAuthSession(user, token, remember);
-      navigate("/admin");
+      navigate(returnTo.startsWith("/admin") ? returnTo : "/admin", { replace: true });
     } catch (err) {
       const message =
         err instanceof ApiError
