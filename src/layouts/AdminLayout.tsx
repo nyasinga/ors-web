@@ -93,7 +93,7 @@ export function AdminLayout() {
       aria-label="Anti Counterfeit Authority"
       onClick={() => setMobileNav(false)}
     >
-      <img src="/assets/aca-logo.png" alt="" className="h-16 w-[168px] object-contain" />
+      <img src="/assets/logo-aca.png" alt="" className="h-16 w-[168px] object-contain" />
     </Link>
   );
 

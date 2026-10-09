@@ -298,22 +298,140 @@ export function asTickets(value: unknown): EngagementTicket[] {
     .filter(Boolean) as EngagementTicket[];
 }
 
+function truncateText(value: string, max = 90) {
+  const text = value.replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  if (text.length <= max) return text;
+  return `${text.slice(0, max - 1).trimEnd()}…`;
+}
+
+function pickRegistered(engagement: Engagement) {
+  const record = engagement as Engagement & Record<string, unknown>;
+  const raw =
+    engagement.registered ??
+    record.registrationCount ??
+    record.participantCount ??
+    record.registeredCount ??
+    0;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+function pickCapacity(engagement: Engagement) {
+  const n = Number(engagement.capacity || engagement.registrationLimit || 0);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function venueLabel(engagement: Engagement) {
+  const parts = [engagement.venue, engagement.city].map((v) => String(v ?? "").trim()).filter(Boolean);
+  if (parts.length) return parts.join(", ");
+  const mode = toUiMode(engagement.mode);
+  if (mode === "virtual") return "Virtual";
+  if (mode === "hybrid") return "Hybrid";
+  return "—";
+}
+
 export function toManagedEvent(engagement: Engagement): ManagedEvent {
   const type = toUiEventType(engagement.engagementType);
-  const capacity = Number(engagement.capacity || engagement.registrationLimit || 0);
-  const registered = Number(engagement.registered ?? 0);
+  const capacity = pickCapacity(engagement);
+  const registered = pickRegistered(engagement);
+  const subtitle = truncateText(
+    engagement.shortDescription || engagement.description || "",
+  );
   return {
-    id: engagement.engagementID || "",
-    name: engagement.engagementName,
-    subtitle: engagement.shortDescription || engagement.description || "",
+    id: String(engagement.engagementID ?? "").trim(),
+    name: String(engagement.engagementName ?? "").trim() || "Untitled event",
+    subtitle,
     dateLabel: formatDateLabel(engagement.startDate, engagement.endDate),
     daysLabel: formatDaysLabel(engagement.startDate, engagement.endDate),
-    venue: [engagement.venue, engagement.city].filter(Boolean).join(", ") || "—",
+    venue: venueLabel(engagement),
     type,
     registered,
-    capacity: capacity > 0 ? capacity : Math.max(registered, 1),
+    capacity,
     status: toUiListStatus(engagement),
     barTone: barToneFor(type),
+  };
+}
+
+export type DashboardUpcomingItem = {
+  id: string;
+  month: string;
+  day: string;
+  title: string;
+  time: string;
+  place: string;
+  status: "Published" | "Draft";
+};
+
+/** Compact list row for admin dashboard “Upcoming Events”. */
+export function toDashboardUpcoming(engagement: Engagement): DashboardUpcomingItem | null {
+  const id = String(engagement.engagementID ?? "").trim();
+  if (!id) return null;
+  const start = engagement.startDate ? new Date(engagement.startDate) : null;
+  if (!start || Number.isNaN(start.getTime())) return null;
+
+  const end = engagement.endDate ? new Date(engagement.endDate) : null;
+  const timeOpts: Intl.DateTimeFormatOptions = {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: engagement.timezone || undefined,
+  };
+  let time = start.toLocaleTimeString("en-GB", timeOpts);
+  if (end && !Number.isNaN(end.getTime())) {
+    time = `${time} – ${end.toLocaleTimeString("en-GB", timeOpts)}`;
+  }
+
+  const published =
+    engagement.isPublished === true ||
+    engagement.status === "published" ||
+    engagement.status === "ongoing";
+
+  return {
+    id,
+    month: start.toLocaleDateString("en-GB", { month: "short" }).toUpperCase(),
+    day: String(start.getDate()).padStart(2, "0"),
+    title: String(engagement.engagementName ?? "").trim() || "Untitled event",
+    time,
+    place: venueLabel(engagement),
+    status: published ? "Published" : "Draft",
+  };
+}
+
+export type EngagementKpiSummary = {
+  totalRegistrations: number;
+  speakers: number;
+  sponsors: number;
+  totalEvents: number;
+  upcomingEvents: number;
+  publishedEvents: number;
+};
+
+export function summarizeEngagementKpis(rows: Engagement[]): EngagementKpiSummary {
+  let totalRegistrations = 0;
+  let speakers = 0;
+  let sponsors = 0;
+  let upcomingEvents = 0;
+  let publishedEvents = 0;
+
+  for (const row of rows) {
+    totalRegistrations += pickRegistered(row);
+    speakers += asSpeakers(row.speakers).length;
+    sponsors += asSponsors(row.sponsors).length;
+    const ui = toUiListStatus(row);
+    if (ui === "Upcoming" || ui === "Ongoing") upcomingEvents += 1;
+    if (row.isPublished || row.status === "published" || row.status === "ongoing") {
+      publishedEvents += 1;
+    }
+  }
+
+  return {
+    totalRegistrations,
+    speakers,
+    sponsors,
+    totalEvents: rows.length,
+    upcomingEvents,
+    publishedEvents,
   };
 }
 

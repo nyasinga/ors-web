@@ -388,7 +388,7 @@ export function ManageEventsPage() {
                       </td>
                       <td className="px-2">
                         <b className="block text-[13px]">
-                          {row.registered} / {row.capacity}
+                          {row.registered} / {row.capacity > 0 ? row.capacity : "—"}
                         </b>
                         <div className="mt-1 flex items-center gap-2">
                           <span className="inline-block h-[9px] w-[100px] overflow-hidden rounded-full bg-[#e3edf9] align-middle">

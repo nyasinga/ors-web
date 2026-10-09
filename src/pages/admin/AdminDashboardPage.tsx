@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Building2,
@@ -14,16 +15,22 @@ import {
   Zap,
 } from "lucide-react";
 import {
-  adminKpis,
   paymentSummary,
   recentRegistrations,
   topCountries,
-  upcomingEvents,
 } from "../../data/dashboards";
 import { useAuthUser } from "../../hooks/useAuthUser";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { displayName } from "../../lib/auth";
 import { cn } from "../../lib/cn";
+import {
+  listEngagements,
+  summarizeEngagementKpis,
+  toDashboardUpcoming,
+  toUiListStatus,
+  type DashboardUpcomingItem,
+} from "../../lib/engagements";
+import type { Engagement } from "../../types/engagement";
 
 const glass =
   "rounded-xl border border-[rgba(215,231,248,.95)] bg-[rgba(255,255,255,.86)] shadow-[0_5px_22px_rgba(56,126,190,.09)]";
@@ -92,12 +99,112 @@ const payMetricMeta = [
   },
 ] as const;
 
+function formatHeroDates(engagement: Engagement | null, fallback: string) {
+  if (!engagement?.startDate) return fallback;
+  const start = new Date(engagement.startDate);
+  const end = engagement.endDate ? new Date(engagement.endDate) : start;
+  if (Number.isNaN(start.getTime())) return fallback;
+  const opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year: "numeric" };
+  if (Number.isNaN(end.getTime()) || start.toDateString() === end.toDateString()) {
+    return start.toLocaleDateString("en-GB", opts);
+  }
+  const sameMonth =
+    start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth();
+  if (sameMonth) {
+    return `${start.getDate()}–${end.getDate()} ${start.toLocaleDateString("en-GB", {
+      month: "short",
+      year: "numeric",
+    })}`;
+  }
+  return `${start.toLocaleDateString("en-GB", opts)} – ${end.toLocaleDateString("en-GB", opts)}`;
+}
+
 /** Admin dashboard — main content from aca-admin-dashboard-tailwind HTML */
 export function AdminDashboardPage() {
   const event = useEventCopy();
   const user = useAuthUser();
   const welcome =
     displayName(user, "there").split(/\s+/).filter(Boolean)[0] ?? "there";
+
+  const [engagements, setEngagements] = useState<Engagement[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setEventsLoading(true);
+      try {
+        const rows = await listEngagements({
+          limit: 200,
+          order: ["startDate ASC"],
+        });
+        if (!cancelled) setEngagements(rows ?? []);
+      } catch {
+        if (!cancelled) setEngagements([]);
+      } finally {
+        if (!cancelled) setEventsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const kpis = useMemo(() => {
+    const summary = summarizeEngagementKpis(engagements);
+    return [
+      {
+        label: "Total Registrations",
+        value: eventsLoading ? "…" : summary.totalRegistrations.toLocaleString(),
+        trend: eventsLoading ? "—" : `${summary.totalEvents} events`,
+      },
+      {
+        label: "Confirmed Delegates",
+        value: eventsLoading ? "…" : summary.totalRegistrations.toLocaleString(),
+        trend: eventsLoading ? "—" : `${summary.upcomingEvents} upcoming`,
+      },
+      {
+        label: "Speakers",
+        value: eventsLoading ? "…" : summary.speakers.toLocaleString(),
+        trend: eventsLoading ? "—" : "Across all events",
+      },
+      {
+        label: "Sponsors & Exhibitors",
+        value: eventsLoading ? "…" : summary.sponsors.toLocaleString(),
+        trend: eventsLoading ? "—" : "Across all events",
+      },
+    ];
+  }, [engagements, eventsLoading]);
+
+  const upcomingEvents = useMemo(() => {
+    const items: DashboardUpcomingItem[] = [];
+    const sorted = [...engagements].sort((a, b) => {
+      const aT = a.startDate ? new Date(a.startDate).getTime() : Number.POSITIVE_INFINITY;
+      const bT = b.startDate ? new Date(b.startDate).getTime() : Number.POSITIVE_INFINITY;
+      return aT - bT;
+    });
+    for (const row of sorted) {
+      const status = toUiListStatus(row);
+      if (status !== "Upcoming" && status !== "Ongoing") continue;
+      const item = toDashboardUpcoming(row);
+      if (item) items.push(item);
+      if (items.length >= 4) break;
+    }
+    return items;
+  }, [engagements]);
+
+  const featured = useMemo(() => {
+    const published = engagements.find(
+      (e) => e.isPublished || e.status === "published" || e.status === "ongoing",
+    );
+    return published ?? engagements[0] ?? null;
+  }, [engagements]);
+
+  const heroDates = formatHeroDates(featured, event.dates);
+  const heroVenue = featured?.venue?.trim() || "Kenyatta International Convention Centre (KICC)";
+  const heroCity = [featured?.city, featured?.country === "KE" ? "Kenya" : featured?.country]
+    .filter(Boolean)
+    .join(", ") || "Nairobi, Kenya";
 
   return (
     <div className="space-y-3 bg-[radial-gradient(ellipse_at_4%_10%,#dcefff_0,#eef7ff_45%,#e4f2ff_100%)] p-3 text-ink sm:p-4">
@@ -140,13 +247,11 @@ export function AdminDashboardPage() {
           <div className="flex items-center gap-4 border-white/70 text-white sm:border-l sm:pl-6">
             <CalendarDays size={28} strokeWidth={1.8} className="shrink-0 opacity-95" aria-hidden />
             <div className="text-[12px] leading-[1.6]">
-              <b className="text-[13px]">{event.dates}</b>
+              <b className="text-[13px]">{heroDates}</b>
               <br />
-              Kenyatta International
+              {heroVenue}
               <br />
-              Convention Centre (KICC)
-              <br />
-              Nairobi, Kenya
+              {heroCity}
             </div>
           </div>
 
@@ -162,7 +267,7 @@ export function AdminDashboardPage() {
 
       {/* KPI cards */}
       <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-        {adminKpis.map((kpi, i) => {
+        {kpis.map((kpi, i) => {
           const meta = kpiMeta[i];
           const Icon = meta.Icon;
           return (
@@ -355,37 +460,49 @@ export function AdminDashboardPage() {
             </Link>
           </div>
           <div className="space-y-1.5">
-            {upcomingEvents.map((ev) => (
-              <div
-                key={`${ev.day}-${ev.title}`}
-                className="flex items-center gap-2 border-b border-blue-50 pb-2 last:border-0 last:pb-0"
-              >
-                <div className="w-12 rounded-lg bg-blue-50 py-1 text-center">
-                  <small className="block text-[9px] text-blue-700">{ev.month}</small>
-                  <b className="text-lg">{ev.day}</b>
-                </div>
-                <div className="h-9 w-3 border-l-2 border-blue-500" />
-                <div className="min-w-0 flex-1">
-                  <b className="block truncate text-[10px]">{ev.title}</b>
-                  <span className="text-[9px] text-slate-500">
-                    ⌖ {ev.time}　|　{ev.place}
-                  </span>
-                </div>
-                <span
-                  className={cn(
-                    "rounded-full px-2 py-1 text-[8px] font-bold",
-                    ev.status === "Published"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-slate-100 text-slate-600",
-                  )}
+            {eventsLoading ? (
+              <p className="py-4 text-center text-[11px] text-slate-500">Loading events…</p>
+            ) : upcomingEvents.length === 0 ? (
+              <p className="py-4 text-center text-[11px] text-slate-500">
+                No upcoming events yet.{" "}
+                <Link to="/admin/events/new" className="font-semibold text-blue-600">
+                  Create one
+                </Link>
+              </p>
+            ) : (
+              upcomingEvents.map((ev) => (
+                <Link
+                  key={ev.id}
+                  to={`/admin/events/${ev.id}/overview`}
+                  className="flex items-center gap-2 border-b border-blue-50 pb-2 last:border-0 last:pb-0 hover:bg-blue-50/40"
                 >
-                  {ev.status === "Published" ? "✓ Published" : "⌄ Draft"}
-                </span>
-                <b className="text-blue-600" aria-hidden>
-                  ›
-                </b>
-              </div>
-            ))}
+                  <div className="w-12 rounded-lg bg-blue-50 py-1 text-center">
+                    <small className="block text-[9px] text-blue-700">{ev.month}</small>
+                    <b className="text-lg">{ev.day}</b>
+                  </div>
+                  <div className="h-9 w-3 border-l-2 border-blue-500" />
+                  <div className="min-w-0 flex-1">
+                    <b className="block truncate text-[10px]">{ev.title}</b>
+                    <span className="text-[9px] text-slate-500">
+                      ⌖ {ev.time}　|　{ev.place}
+                    </span>
+                  </div>
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-1 text-[8px] font-bold",
+                      ev.status === "Published"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-slate-100 text-slate-600",
+                    )}
+                  >
+                    {ev.status === "Published" ? "✓ Published" : "⌄ Draft"}
+                  </span>
+                  <b className="text-blue-600" aria-hidden>
+                    ›
+                  </b>
+                </Link>
+              ))
+            )}
           </div>
         </article>
 
@@ -518,7 +635,11 @@ export function AdminDashboardPage() {
           </b>
         </Link>
         <Link
-          to="/admin/events/isippe-3/reports"
+          to={
+            featured?.engagementID
+              ? `/admin/events/${featured.engagementID}/reports`
+              : "/admin/events"
+          }
           className="flex min-h-[54px] items-center gap-3 rounded-xl bg-sky-50 px-3 text-[11px] font-bold text-blue-800"
         >
           <FileBarChart size={18} strokeWidth={2} className="text-blue-600" aria-hidden />
