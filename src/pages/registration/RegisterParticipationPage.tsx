@@ -65,6 +65,7 @@ export function RegisterParticipationPage() {
                       className={cn(
                         "absolute right-2 top-2 w-[25px] h-[25px] rounded-full bg-[#075fe5] text-white place-items-center text-[15px] leading-none max-[760px]:right-[7px] max-[760px]:top-[7px]",
                         active ? "grid" : "hidden",
+                        "max-[760px]:hidden"
                       )}
                       aria-hidden
                     >
@@ -92,12 +93,13 @@ export function RegisterParticipationPage() {
                     </div>
                     <span
                       className={cn(
-                        "block w-5 h-5 border-2 rounded-full m-auto max-[760px]:m-[0_2px_0_auto]",
+                        "relative block size-5 shrink-0 rounded-full border-2",
+                        "mx-auto max-[760px]:mx-0 max-[760px]:ml-auto",
                         active
-                          ? "border-[#075fe5] relative after:content-[''] after:absolute after:inset-1 after:rounded-full after:bg-[#075fe5]"
+                          ? "border-[#075fe5] after:absolute after:inset-1 after:rounded-full after:bg-[#075fe5] after:content-['']"
                           : "border-[#acbad0]",
                       )}
-                      aria-hidden
+                      aria-hidden="true"
                     />
                   </button>
                 );
@@ -144,7 +146,7 @@ export function RegisterParticipationPage() {
             </div>
           </section>
 
-          <aside className={r.sidebar}>
+          <aside className={cn(r.sidebar, "max-[760px]:hidden")}>
             <div className={r.infoBox}>
               <div className={r.infoTitle}>
                 <span className={r.infoIcon}>i</span>

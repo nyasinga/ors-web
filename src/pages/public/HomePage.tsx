@@ -121,13 +121,23 @@ export function HomePage() {
 
             <h1
               className={cn(
-                "m-0 whitespace-nowrap text-[82px] font-black leading-[0.92] tracking-[-4px] text-[#0043a5]",
+                "m-0 whitespace-nowrap text-[82px] font-black leading-[0.92] tracking-[-4px] text-[#3F5BA9]",
                 "max-[1200px]:text-[68px]",
                 "max-[960px]:whitespace-normal max-[960px]:text-[clamp(2.75rem,7vw,3.75rem)] max-[960px]:tracking-[-0.04em]",
                 "max-[640px]:text-[clamp(2.35rem,11vw,3.25rem)] max-[640px]:tracking-[-0.045em]",
+                "max-[640px]:mt-10"
               )}
             >
-              ISIPPE <span className="text-[#ed1c24]/90">2026</span>
+              ISIPP<span className="relative inline-block">
+                E
+                <img
+                  src="/assets/logo-issipe.png"
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute bottom-[90%] left-1/2 h-[0.85em] w-[0.85em] max-w-none -translate-x-1/2 object-contain"
+                />
+              </span>{" "}
+              <span className="text-[#ed1c24]/90">2026</span>
             </h1>
 
             <div
@@ -148,7 +158,7 @@ export function HomePage() {
                 "max-[640px]:max-w-none max-[640px]:text-[clamp(1rem,4.2vw,1.15rem)] max-[640px]:leading-[1.2]",
               )}
             >
-              {t("common:event.fullName")}
+              {t("common:event.fullName",{ number: '3rd'})}
             </div>
 
             <div className="flex items-center gap-4 max-[640px]:flex-col max-[640px]:items-start max-[640px]:gap-2.5 mt-3">
@@ -221,20 +231,25 @@ export function HomePage() {
             className={cn(
               "z-[3] flex min-w-0 flex-col text-left",
               "min-[961px]:absolute min-[961px]:bottom-8 min-[961px]:right-[clamp(28px,4vw,64px)] min-[961px]:top-[clamp(64px,12%,96px)] min-[961px]:w-[min(34%,360px)]",
-              "max-[960px]:relative max-[960px]:order-3 max-[960px]:z-[2] max-[960px]:-mt-[72px] max-[960px]:w-[calc(100%-24px)] max-[960px]:max-w-[560px] max-[960px]:self-center max-[960px]:rounded-t-xl max-[960px]:bg-[linear-gradient(180deg,rgba(255,255,255,.92)_0%,rgba(255,255,255,.97)_28%,#fff_100%)] max-[960px]:px-3.5 max-[960px]:pb-[18px] max-[960px]:pt-3",
-              "max-[380px]:-mt-[58px] max-[380px]:w-[calc(100%-16px)] max-[380px]:px-2.5 max-[380px]:pb-4 max-[380px]:pt-2.5"
+              "max-[960px]:relative max-[960px]:order-3 max-[960px]:z-[2] max-[960px]:mt-0 max-[960px]:w-full max-[960px]:max-w-none max-[960px]:self-stretch",
+              "max-[960px]:rounded-xl max-[960px]:border-[1px] max-[960px]:border-dotted max-[960px]:border-[#3F5BA9] max-[960px]:bg-white",
+              "max-[960px]:px-4 max-[960px]:pb-4 max-[960px]:pt-5",
+              "max-[640px]:mt-4 max-[640px]:mb-6 max-[640px]:rounded-lg max-[640px]:px-3.5 max-[640px]:pb-4 max-[640px]:pt-4",
+              "max-[380px]:px-3",
+              "text-[#3F5BA9]"
             )}
           >
             <div className="min-w-0 shrink-0">
               <div
-                className="mb-2.5 h-[5px] w-[40px] bg-[#ed1c24] max-[960px]:mb-2 max-[640px]:h-1 max-[640px]:w-[39px]"
+                className="mb-2.5 h-1 w-10 bg-[#ed1c24] max-[960px]:mb-2"
                 aria-hidden
               />
+
               <h2
                 className={cn(
                   "m-0 max-w-[340px] text-[clamp(1.05rem,1.3vw,1.25rem)] font-extrabold leading-[1.28] text-[#0b1016] [overflow-wrap:anywhere] [text-wrap:balance]",
                   "max-[960px]:max-w-none max-[960px]:text-[clamp(1rem,4.2vw,1.2rem)]",
-                  "max-[640px]:text-[clamp(1.05rem,4.5vw,1.2rem)]",
+                  "max-[640px]:text-[clamp(1.05rem,4.5vw,1.2rem)]"
                 )}
               >
                 {t("common:event.tagline")}
@@ -245,7 +260,7 @@ export function HomePage() {
               className={cn(
                 "mt-auto flex min-w-0 flex-col",
                 "min-[961px]:pt-5",
-                "max-[960px]:mt-4",
+                "max-[960px]:mt-4 max-[960px]:pt-0"
               )}
             >
               <div
@@ -283,8 +298,9 @@ export function HomePage() {
               </div>
               <p
                 className={cn(
-                  "mt-3 w-full max-w-[390px] text-[13px] leading-[1.4] [overflow-wrap:anywhere]",
+                  "mt-10 w-full max-w-[390px] text-[13px] leading-[1.4] [overflow-wrap:anywhere]",
                   "max-[960px]:mt-2.5 max-[960px]:max-w-none max-[960px]:text-[12px]",
+                  "max-[640px]:mt-6",
                 )}
               >
                 Early bird registration is <strong>now open</strong>. Register by 31

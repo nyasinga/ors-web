@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { CalendarDays, MapPin } from "lucide-react";
+import { CalendarDays, MapPin, MapPinIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/cn";
@@ -178,19 +178,18 @@ export function PageHero({
                   dark ? "text-white" : "text-[#101827]",
                 )}
               >
-                <MapPin
+                <MapPinIcon
                   size={28}
-                  strokeWidth={0}
-                  fill="currentColor"
+                  strokeWidth={2}
                   className={cn(
                     "h-7 w-7 shrink-0 max-[640px]:h-[22px] max-[640px]:w-[22px]",
                     dark ? "text-white" : "text-[#0964df]",
                   )}
                 />
                 {combinedLocation ? (
-                  <strong className="font-extrabold">
+                  <div className="font-extrabold">
                     {t("event.venue")}, {t("event.city")}
-                  </strong>
+                  </div>
                 ) : (
                   <div>
                     <strong className="block font-extrabold">{t("event.city")}</strong>

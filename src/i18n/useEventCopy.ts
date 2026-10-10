@@ -9,7 +9,7 @@ export function useEventCopy() {
     name: eventInfo.name,
     supportEmail: eventInfo.supportEmail,
     supportPhone: eventInfo.supportPhone,
-    fullName: t("event.fullName"),
+    fullName: t("event.fullName", { number: '3rd'}),
     edition: t("event.edition"),
     dates: t("event.dates"),
     datesShort: t("event.datesShort"),

@@ -179,29 +179,54 @@ export function PublicLayout() {
       </main>
 
       <footer className="bg-[#081522] text-white">
-        <div className={cn(pageContainer, "grid gap-4 py-9 md:grid-cols-[2fr_1fr_1fr] md:gap-12")}>
+        <div
+          className={cn(
+            pageContainer,
+            "grid grid-cols-1 gap-4 py-9 md:grid-cols-[2fr_1fr_1fr] md:gap-12",
+          )}
+        >
           <div>
-            <p className="text-[15px] font-semibold">{t("brand.acaIsippe")}</p>
-            <p className="mt-2 text-xs leading-relaxed text-[#cbd5df]">{t("event.fullName")}</p>
+            <p className="text-[15px] font-semibold">
+              {t("brand.acaIsippe")}
+            </p>
+
+            <p className="mt-2 text-xs leading-relaxed text-[#cbd5df]">
+              {t("event.fullName", { number: "3rd" })}
+            </p>
+
             <p className="mt-1 text-xs text-[#cbd5df]">
               {t("event.dates")} · {t("event.venueShort")}
             </p>
           </div>
-          <nav className="grid gap-1 text-xs text-[#cbd5df]" aria-label={t("nav.footer")}>
+
+          <nav
+            className="grid grid-cols-1 content-start gap-1 text-xs text-[#cbd5df] sm:grid-cols-2 sm:gap-x-8"
+            aria-label={t("nav.footer")}
+          >
             {navLinks.map((item) => (
-              <Link key={item.to} to={item.to} className="hover:text-white">
+              <Link
+                key={item.to}
+                to={item.to}
+                className="text-left hover:text-white"
+              >
                 {t(item.labelKey)}
               </Link>
             ))}
           </nav>
-          <nav className="grid gap-1 text-xs text-[#cbd5df]" aria-label={t("nav.footer")}>
+
+          <nav
+            className="flex flex-col gap-1 text-xs text-[#cbd5df] md:items-end"
+            aria-label={t("nav.footer")}
+          >
             <Link to="/participant-login" className="hover:text-white">
               {t("nav.participantLogin")}
             </Link>
+
             <Link to="/admin-login" className="hover:text-white">
               {t("nav.adminLogin")}
             </Link>
           </nav>
+
           <p className="border-t border-[#2a3743] pt-4 text-[11px] text-[#9eabb8] md:col-span-3">
             {t("brand.orsCopyright", { year: 2026 })}
           </p>

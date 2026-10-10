@@ -112,18 +112,19 @@ const aboutP =
 export function VenuePage() {
   return (
     <div className="bg-white text-[#101620]">
+
       <PageHero
         eyebrow="Venue"
         title={
           <>
-            Kenyatta International
+            PrideInn Flamingo
             <br />
-            Convention Centre (KICC)
+            Mombasa, Kenya
           </>
         }
-        description="ISIPPE-3 will be held at the iconic Kenyatta International Convention Centre (KICC), a world-class venue in the heart of Nairobi, Kenya."
+        description="ISIPPE 2026 will be held at PrideInn Flamingo Beach Resort & Spa in Mombasa, Kenya, offering a scenic beachfront setting for the International Symposium on Intellectual Property Protection and Enforcement."
         image="/assets/venue-hero.jpg"
-        imageAlt="Kenyatta International Convention Centre in Nairobi"
+        imageAlt="PrideInn Flamingo Beach Resort & Spa in Mombasa, Kenya"
         combinedLocation
       />
 
@@ -166,27 +167,30 @@ export function VenuePage() {
             "grid grid-cols-[35%_65%] items-start gap-0 max-[960px]:grid-cols-1 max-[960px]:gap-[15px]",
           )}
         >
+
           <div className="pr-[30px] max-[960px]:pr-0">
             <h2 className="mb-[7px] text-[22px] font-black leading-none tracking-[-0.7px] text-[#101620] max-[640px]:text-[23px]">
-              About KICC
+              About PrideInn Flamingo
             </h2>
             <p className={aboutP}>
-              The Kenyatta International Convention Centre (KICC) is Kenya&apos;s premier conference
-              and exhibition venue, known for its state-of-the-art facilities, accessibility and
-              iconic status.
+              PrideInn Flamingo Beach Resort & Spa, located along the beautiful
+              shores of Shanzu in Mombasa, Kenya, offers a scenic coastal setting
+              for conferences, professional gatherings and international delegates.
             </p>
             <p className={cn(aboutP, "mt-[7px]")}>
-              KICC provides a professional and inspiring environment for global conferences,
-              exhibitions and high-level meetings, making it the perfect venue for ISIPPE-3.
+              With its beachfront location, resort facilities and welcoming
+              atmosphere, PrideInn Flamingo provides an inspiring venue for ISIPPE
+              2026 — the International Symposium on Intellectual Property Protection
+              and Enforcement.
             </p>
             <a
               className={cn(btn, "mt-3")}
-              href="https://www.kicc.co.ke"
+              href="https://www.prideinn.co.ke/"
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
             >
               <Globe2 size={18} strokeWidth={2} />
-              Visit KICC Website{" "}
+              Visit PrideInn Website{" "}
               <span className={arrow} aria-hidden>
                 →
               </span>
@@ -197,7 +201,7 @@ export function VenuePage() {
             <img className="block h-full w-full object-cover" src="/assets/venue-map.jpg" alt="Map showing KICC in Nairobi" />
             <a
               className="absolute right-[11px] top-[9px] z-[3] inline-flex h-[34px] items-center gap-2.5 rounded-md border border-[#075fd8] bg-white px-3 text-[11px] font-bold text-[#075fd8]"
-              href="https://maps.google.com/?q=Kenyatta+International+Convention+Centre"
+              href="https://maps.google.com/?q=PrideInn+Flamingo+Beach+Resort+%26+Spa+Mombasa+Kenya" 
               target="_blank"
               rel="noreferrer"
             >

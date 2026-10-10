@@ -27,12 +27,12 @@
     "closeMenu": "Close menu"
   },
   "event": {
-    "fullName": "International Symposium on Intellectual Property Protection and Enforcement",
+    "fullName": "{{number}} International Symposium on Intellectual Property Protection and Enforcement",
     "edition": "3rd International Symposium on Intellectual Property Protection and Enforcement",
-    "dates": "12 – 14 November 2026",
-    "datesShort": "12 – 14 November 2026",
+    "dates": "18th – 19th November 2026",
+    "datesShort": "18th – 19th November 2026",
     "city": "Nairobi, Kenya",
-    "venue": "Kenyatta International Convention Centre (KICC)",
+    "venue": "Pride Inn Flamingo, Mombasa, Kenya",
     "venueShort": "KICC, Nairobi",
     "tagline": "Strengthening Intellectual Property Protection across Africa and Beyond"
   },
