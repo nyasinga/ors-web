@@ -124,6 +124,7 @@ export function PageHero({
                 "mt-2 max-w-[38rem] text-[clamp(1rem,1.6vw,1.45rem)] font-extrabold leading-[1.15]",
                 "max-[640px]:mt-2 max-[640px]:text-base max-[640px]:leading-[1.2]",
                 dark ? "text-white" : "text-[#101827]",
+                "max-[380px]:font-normal max-[380px]:text-[14px]"
               )}
             >
               {subtitle}
@@ -133,9 +134,9 @@ export function PageHero({
           {description ? (
             <p
               className={cn(
-                "mt-3 max-w-[36rem] text-[clamp(0.875rem,1.2vw,1.125rem)] leading-[1.35]",
+                "mt-3 max-w-[36rem] text-[clamp(0.64rem,1.2vw,0.8rem)] leading-[1.35]",
                 "max-[640px]:mt-2.5 max-[640px]:text-[13px] max-[640px]:leading-[1.4]",
-                dark ? "text-white/90" : "text-[#344256]",
+                dark ? "text-white/90" : "text-[#83888d]",
               )}
             >
               {description}

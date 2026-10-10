@@ -85,7 +85,7 @@ export function RegisterPaymentPage() {
                 className={r.btnPrimary}
                 onClick={() => navigate("/register/confirmation")}
               >
-                Proceed to eCitizen Payment{" "}
+                Proceed to eCitizen {" "}
                 <span className={r.arrow} aria-hidden>
                   →
                 </span>

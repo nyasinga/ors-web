@@ -236,7 +236,7 @@ export function HomePage() {
               "max-[960px]:px-4 max-[960px]:pb-4 max-[960px]:pt-5",
               "max-[640px]:mt-4 max-[640px]:mb-6 max-[640px]:rounded-lg max-[640px]:px-3.5 max-[640px]:pb-4 max-[640px]:pt-4",
               "max-[380px]:px-3",
-              "text-[#3F5BA9]"
+              "max-[380px]:text-[#3F5BA9]"
             )}
           >
             <div className="min-w-0 shrink-0">
