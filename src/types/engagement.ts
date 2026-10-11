@@ -100,6 +100,10 @@ export type EngagementSponsor = {
   active?: boolean;
   tone?: string;
   tier?: string;
+  /** Optional CRM-style fields stored on the engagement JSON */
+  category?: string;
+  contact?: string;
+  status?: "Confirmed" | "Pending" | "Declined" | string;
 };
 
 export type EngagementTicket = {

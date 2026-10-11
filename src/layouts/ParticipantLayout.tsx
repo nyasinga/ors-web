@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   CalendarDays,
   ClipboardCheck,
@@ -11,8 +11,14 @@ import {
   Megaphone,
   Users,
 } from "lucide-react";
-import { participantPass } from "../data/dashboards";
+import { useParticipantSession } from "../hooks/useParticipantSession";
 import { cn } from "../lib/cn";
+import {
+  clearParticipantSession,
+  hasParticipantSession,
+  participantDisplayName,
+  participantInitials,
+} from "../lib/participantAuth";
 
 const sideLinks = [
   { to: "/me", label: "Dashboard", icon: Home, end: true },
@@ -63,12 +69,30 @@ const mobileLink = "block border-b border-[#e8eef5] px-5 py-[14px] text-[13px] f
 /** Participant shell — Tailwind port of the former participant-dashboard.css (pd-* / participant-dash) */
 export function ParticipantLayout() {
   const [mobileNav, setMobileNav] = useState(false);
-  const initials = participantPass.name
-    .split(" ")
-    .map((p) => p[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const session = useParticipantSession();
+  const name = participantDisplayName(session);
+  const initials = participantInitials(session);
+
+  useEffect(() => {
+    if (hasParticipantSession()) return;
+    clearParticipantSession();
+    navigate("/participant-login", { replace: true, state: { from: pathname } });
+  }, [navigate, pathname, session]);
+
+  const signOut = () => {
+    clearParticipantSession();
+    navigate("/participant-login", { replace: true });
+  };
+
+  if (!session) {
+    return (
+      <div className="grid min-h-dvh place-items-center bg-white text-sm text-[#647596]">
+        Redirecting to participant login…
+      </div>
+    );
+  }
 
   return (
     <div className="box-border min-h-dvh overflow-x-hidden bg-white p-0 text-[#07164d] antialiased [font-family:Inter,Arial,sans-serif]">
@@ -92,12 +116,16 @@ export function ParticipantLayout() {
                 {initials}
               </div>
               <div>
-                <strong className="block text-[12px]">{participantPass.name}</strong>
+                <strong className="block text-[12px]">{name}</strong>
                 <small className="mt-[2px] block text-[10px] text-[#647596]">Participant</small>
               </div>
-              <span className="ml-auto text-[20px] text-[#647596]" aria-hidden>
-                ⌄
-              </span>
+              <button
+                type="button"
+                className="ml-auto cursor-pointer border-0 bg-transparent p-0 text-[11px] font-semibold text-[#075fe5]"
+                onClick={signOut}
+              >
+                Sign out
+              </button>
             </div>
             <button
               type="button"
@@ -126,9 +154,16 @@ export function ParticipantLayout() {
                 {l.label}
               </Link>
             ))}
-            <Link to="/" className={mobileLink} onClick={() => setMobileNav(false)}>
+            <button
+              type="button"
+              className={cn(mobileLink, "w-full cursor-pointer border-0 bg-transparent text-left [font:inherit]")}
+              onClick={() => {
+                setMobileNav(false);
+                signOut();
+              }}
+            >
               Sign out
-            </Link>
+            </button>
           </nav>
         </header>
 
@@ -165,12 +200,20 @@ export function ParticipantLayout() {
                 </NavLink>
               );
             })}
-            <Link to="/" className={cn(sideLinkBase, sideLinkIdle, "mt-auto")}>
+            <button
+              type="button"
+              onClick={signOut}
+              className={cn(
+                sideLinkBase,
+                sideLinkIdle,
+                "mt-auto w-full cursor-pointer border-0 bg-transparent text-left [font:inherit]",
+              )}
+            >
               <span className="grid h-[22px] w-[22px] flex-none place-items-center">
                 <LogOut className="block h-[21px] w-[21px]" size={21} strokeWidth={1.8} />
               </span>
               Sign out
-            </Link>
+            </button>
           </aside>
 
           <main className="min-w-0">

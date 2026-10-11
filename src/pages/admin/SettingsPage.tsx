@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Bell,
-  Building2,
   CalendarDays,
   Check,
   Clock,
@@ -12,10 +11,8 @@ import {
   Eye,
   EyeOff,
   FileText,
-  Globe,
   Info,
   KeyRound,
-  Languages,
   LayoutTemplate,
   Link2,
   Lock,
@@ -23,10 +20,8 @@ import {
   MessageSquare,
   Monitor,
   Moon,
-  MoreVertical,
   Paintbrush,
   Phone,
-  Plus,
   Save,
   Settings as SettingsIcon,
   Shield,
@@ -47,28 +42,40 @@ import { Select } from "../../components/ui/Select";
 import { Table } from "../../components/ui/Table";
 import { Toggle } from "../../components/ui/Toggle";
 import {
-  accountInfo,
   activeSessions,
-  integrations,
   loginActivity,
-  rolePermissions,
   securityPanels,
   sessionDeviceMix,
   sessionSummary,
   settingsTabs,
-  settingsUsers,
 } from "../../data/adminOps";
 import { useAuthUser } from "../../hooks/useAuthUser";
+import { ApiError } from "../../lib/api";
 import {
   displayName,
   formatAccountDate,
   initialsFrom,
   isAccountActive,
   roleLabel,
+  type AuthUser,
   userEmail,
   userPhone,
 } from "../../lib/auth";
 import { cn } from "../../lib/cn";
+import { changePassword, listUsers } from "../../lib/users";
+import {
+  loadWorkspaceSettings,
+  saveWorkspaceSettings,
+  type WorkspaceSettings,
+} from "../../lib/workspaceSettings";
+
+const INTEGRATION_CATALOG = [
+  { id: "mpesa", name: "M-Pesa", category: "Payments" },
+  { id: "ecitizen", name: "eCitizen", category: "Payments" },
+  { id: "smtp", name: "SMTP Email", category: "Communications" },
+  { id: "sms", name: "SMS Gateway", category: "Communications" },
+  { id: "analytics", name: "Analytics", category: "Insights" },
+] as const;
 
 const tabIcons: Record<string, typeof SettingsIcon> = {
   general: SettingsIcon,
@@ -95,6 +102,14 @@ export function SettingsPage() {
   const navigate = useNavigate();
   const active = settingsTabs.some((t) => t.id === section) ? section : "general";
   const [securityPanel, setSecurityPanel] = useState("access");
+  const [workspace, setWorkspace] = useState<WorkspaceSettings>(() => loadWorkspaceSettings());
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
+
+  const persistWorkspace = () => {
+    saveWorkspaceSettings(workspace);
+    setSaveNotice("Workspace preferences saved on this device.");
+    window.setTimeout(() => setSaveNotice(null), 2500);
+  };
 
   return (
     <div className="grid w-full gap-4">
@@ -104,9 +119,10 @@ export function SettingsPage() {
             <SettingsIcon size={24} className="text-blue" /> Settings
           </h1>
           <p className="mt-1 text-sm text-mute">Manage your account, preferences and system settings.</p>
+          {saveNotice ? <p className="mt-1 text-sm font-semibold text-green">{saveNotice}</p> : null}
         </div>
-        {(active === "system" || active === "integrations" || active === "account") && (
-          <Button>
+        {(active === "general" || active === "system" || active === "integrations") && (
+          <Button onClick={persistWorkspace}>
             <Save size={16} /> Save Changes
           </Button>
         )}
@@ -139,13 +155,17 @@ export function SettingsPage() {
         })}
       </div>
 
-      {active === "general" ? <GeneralSection /> : null}
+      {active === "general" ? (
+        <GeneralSection workspace={workspace} onChange={setWorkspace} />
+      ) : null}
       {active === "account" ? <AccountSection /> : null}
       {active === "notifications" ? <NotificationsSection /> : null}
       {active === "security" ? (
         <SecuritySection panel={securityPanel} onPanelChange={setSecurityPanel} />
       ) : null}
-      {active === "integrations" ? <IntegrationsSection /> : null}
+      {active === "integrations" ? (
+        <IntegrationsSection workspace={workspace} onChange={setWorkspace} />
+      ) : null}
       {active === "appearance" ? <AppearanceSection /> : null}
       {active === "system" ? <SystemSection /> : null}
     </div>
@@ -201,7 +221,13 @@ function SectionHead({
   );
 }
 
-function GeneralSection() {
+function GeneralSection({
+  workspace,
+  onChange,
+}: {
+  workspace: WorkspaceSettings;
+  onChange: (next: WorkspaceSettings) => void;
+}) {
   const user = useAuthUser();
   const fullName = displayName(user);
   const email = userEmail(user);
@@ -210,37 +236,71 @@ function GeneralSection() {
   const created = formatAccountDate(user?.dateCreated);
   const statusBadge = user ? (isAccountActive(user) ? "Active" : "Inactive") : undefined;
 
+  const setField = <K extends keyof WorkspaceSettings>(key: K, value: WorkspaceSettings[K]) => {
+    onChange({ ...workspace, [key]: value });
+  };
+
   return (
     <div className="grid gap-4">
       <Card>
         <h2 className="font-bold text-navy">Account Information</h2>
-        <p className="text-sm text-mute">Your personal account details and access information.</p>
+        <p className="text-sm text-mute">Live profile from your signed-in session.</p>
         <div className="mt-2 grid gap-x-8 sm:grid-cols-2">
           <InfoRow icon={User} label="Full Name" value={fullName} badge={statusBadge} />
           <InfoRow icon={Mail} label="Email Address" value={email} />
           <InfoRow icon={Phone} label="Phone Number" value={phone} />
           <InfoRow icon={ShieldCheck} label="Role" value={role} />
           <InfoRow icon={CalendarDays} label="Account Created" value={created} />
-          <InfoRow icon={Clock} label="Last Login" value="—" />
+          <InfoRow icon={Clock} label="Username" value={user?.username?.trim() || "—"} />
         </div>
       </Card>
       <Card>
         <h2 className="font-bold text-navy">Organization & System</h2>
-        <p className="text-sm text-mute">Your organization and system preferences.</p>
-        <div className="mt-2 grid gap-x-8 sm:grid-cols-2">
-          <InfoRow icon={Building2} label="Organization Name" value={accountInfo.organization} />
-          <InfoRow icon={Globe} label="Time Zone" value={accountInfo.timezone} />
-          <InfoRow icon={Languages} label="Language" value={accountInfo.language} />
-          <InfoRow icon={Database} label="Currency" value={accountInfo.currency} />
+        <p className="text-sm text-mute">
+          Workspace preferences saved on this device (no org settings API yet).
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <Input
+            label="Organization Name"
+            value={workspace.organization}
+            onChange={(e) => setField("organization", e.target.value)}
+          />
+          <Input
+            label="Time Zone"
+            value={workspace.timezone}
+            onChange={(e) => setField("timezone", e.target.value)}
+          />
+          <Input
+            label="Language"
+            value={workspace.language}
+            onChange={(e) => setField("language", e.target.value)}
+          />
+          <Input
+            label="Currency"
+            value={workspace.currency}
+            onChange={(e) => setField("currency", e.target.value)}
+          />
         </div>
       </Card>
       <Card>
         <h2 className="font-bold text-navy">System Preferences</h2>
         <p className="text-sm text-mute">Date, time and display preferences.</p>
-        <div className="mt-2 grid gap-x-8 sm:grid-cols-3">
-          <InfoRow icon={CalendarDays} label="Date Format" value={accountInfo.dateFormat} />
-          <InfoRow icon={Clock} label="Time Format" value={accountInfo.timeFormat} />
-          <InfoRow icon={CalendarDays} label="First Day of Week" value={accountInfo.firstDay} />
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <Input
+            label="Date Format"
+            value={workspace.dateFormat}
+            onChange={(e) => setField("dateFormat", e.target.value)}
+          />
+          <Input
+            label="Time Format"
+            value={workspace.timeFormat}
+            onChange={(e) => setField("timeFormat", e.target.value)}
+          />
+          <Input
+            label="First Day of Week"
+            value={workspace.firstDay}
+            onChange={(e) => setField("firstDay", e.target.value)}
+          />
         </div>
       </Card>
     </div>
@@ -432,8 +492,44 @@ function SecuritySection({
 
 function PasswordPanel() {
   const [show, setShow] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const strength = Math.min(4, Math.floor(newPassword.length / 3));
+
+  const onUpdate = async () => {
+    setMessage(null);
+    setError(null);
+    if (newPassword.length < 8) {
+      setError("New password must be at least 8 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("New password and confirmation do not match.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await changePassword({ oldPassword: currentPassword, newPassword });
+      setMessage("Password updated.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.status === 404
+            ? "Password change is not available on this API yet."
+            : err.message
+          : "Failed to update password.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="grid gap-4">
@@ -449,6 +545,8 @@ function PasswordPanel() {
             type={show ? "text" : "password"}
             placeholder="Enter your current password"
             autoComplete="current-password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
           />
           <div>
             <Input
@@ -485,6 +583,8 @@ function PasswordPanel() {
             type={show ? "text" : "password"}
             placeholder="Confirm new password"
             autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
           />
           <button
             type="button"
@@ -493,8 +593,12 @@ function PasswordPanel() {
           >
             {show ? <EyeOff size={14} /> : <Eye size={14} />} {show ? "Hide" : "Show"} passwords
           </button>
+          {error ? <p className="text-sm font-semibold text-red">{error}</p> : null}
+          {message ? <p className="text-sm font-semibold text-green">{message}</p> : null}
           <div className="flex justify-end">
-            <Button>Update Password</Button>
+            <Button onClick={() => void onUpdate()} disabled={busy}>
+              {busy ? "Updating…" : "Update Password"}
+            </Button>
           </div>
         </div>
       </Card>
@@ -624,6 +728,52 @@ function TwoFactorPanel() {
 }
 
 function AccessControlPanel() {
+  const sessionUser = useAuthUser();
+  const [users, setUsers] = useState<AuthUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const rows = await listUsers();
+        if (!cancelled) setUsers(Array.isArray(rows) ? rows : []);
+      } catch (err) {
+        if (!cancelled) {
+          setUsers(sessionUser ? [sessionUser] : []);
+          setError(
+            err instanceof ApiError
+              ? err.message
+              : "Could not load users from API; showing your session only.",
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionUser]);
+
+  const rows = (users.length ? users : sessionUser ? [sessionUser] : []).map((u) => ({
+    id: u.id,
+    name: displayName(u),
+    initials: initialsFrom(u),
+    email: userEmail(u),
+    role: roleLabel(u),
+    status: isAccountActive(u) ? "Active" : "Inactive",
+    created: formatAccountDate(u.dateCreated),
+  }));
+
+  const roleCounts = rows.reduce<Record<string, number>>((acc, row) => {
+    acc[row.role] = (acc[row.role] || 0) + 1;
+    return acc;
+  }, {});
+
   return (
     <div className="grid gap-4">
       <div className="grid gap-3 sm:grid-cols-3">
@@ -634,11 +784,10 @@ function AccessControlPanel() {
             </span>
             <div>
               <p className="font-semibold text-navy">User Management</p>
-              <p className="mt-0.5 text-xs text-mute">Add, remove and manage user accounts.</p>
-              <p className="mt-2 text-xl font-extrabold text-navy">12 Total Users</p>
-              <button type="button" className="mt-2 text-sm font-semibold text-blue">
-                Manage Users →
-              </button>
+              <p className="mt-0.5 text-xs text-mute">Live users from GET /users.</p>
+              <p className="mt-2 text-xl font-extrabold text-navy">
+                {loading ? "…" : `${rows.length} Total Users`}
+              </p>
             </div>
           </div>
         </Card>
@@ -648,12 +797,11 @@ function AccessControlPanel() {
               <ShieldCheck size={16} />
             </span>
             <div>
-              <p className="font-semibold text-navy">Roles & Permissions</p>
-              <p className="mt-0.5 text-xs text-mute">Configure roles and permissions.</p>
-              <p className="mt-2 text-xl font-extrabold text-navy">5 Roles</p>
-              <button type="button" className="mt-2 text-sm font-semibold text-blue">
-                Manage Roles →
-              </button>
+              <p className="font-semibold text-navy">Roles in use</p>
+              <p className="mt-0.5 text-xs text-mute">Derived from live userType values.</p>
+              <p className="mt-2 text-xl font-extrabold text-navy">
+                {loading ? "…" : `${Object.keys(roleCounts).length} Roles`}
+              </p>
             </div>
           </div>
         </Card>
@@ -663,13 +811,10 @@ function AccessControlPanel() {
               <Lock size={16} />
             </span>
             <div>
-              <p className="font-semibold text-navy">Login Restrictions</p>
-              <p className="mt-0.5 text-xs text-mute">Restrict access by IP, location or device.</p>
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <Pill tone="green">Enabled</Pill>
-                <button type="button" className="text-sm font-semibold text-blue">
-                  Configure →
-                </button>
+              <p className="font-semibold text-navy">Roles API</p>
+              <p className="mt-0.5 text-xs text-mute">No /roles endpoint on this backend yet.</p>
+              <div className="mt-2">
+                <Pill tone="neutral">Unavailable</Pill>
               </div>
             </div>
           </div>
@@ -683,92 +828,74 @@ function AccessControlPanel() {
             </span>
             <div>
               <h2 className="font-bold text-navy">Users</h2>
-              <p className="text-sm text-mute">Manage user accounts and their access levels.</p>
+              <p className="text-sm text-mute">Accounts returned by the API for this tenant.</p>
             </div>
           </div>
-          <Button size="sm">
-            <Plus size={14} /> Add User
-          </Button>
         </div>
-        <Table
-          rowKey={(r) => r.email}
-          columns={[
-            {
-              key: "name",
-              header: "Name",
-              render: (r) => (
-                <span className="inline-flex items-center gap-2 font-semibold text-navy">
-                  <span className="grid h-8 w-8 place-items-center rounded-full bg-soft text-xs font-bold text-blue">
-                    {r.initials}
+        {error ? <p className="mb-3 text-sm font-semibold text-amber-700">{error}</p> : null}
+        {loading ? (
+          <p className="text-sm text-mute">Loading users…</p>
+        ) : (
+          <Table
+            rowKey={(r) => r.id || r.email}
+            columns={[
+              {
+                key: "name",
+                header: "Name",
+                render: (r) => (
+                  <span className="inline-flex items-center gap-2 font-semibold text-navy">
+                    <span className="grid h-8 w-8 place-items-center rounded-full bg-soft text-xs font-bold text-blue">
+                      {r.initials}
+                    </span>
+                    {r.name}
                   </span>
-                  {r.name}
-                </span>
-              ),
-            },
-            { key: "email", header: "Email", render: (r) => r.email },
-            {
-              key: "role",
-              header: "Role",
-              render: (r) => <Pill tone={r.roleTone}>{r.role}</Pill>,
-            },
-            {
-              key: "status",
-              header: "Status",
-              render: (r) => (
-                <Pill tone={r.status === "Active" ? "green" : "red"}>{r.status}</Pill>
-              ),
-            },
-            { key: "last", header: "Last Login", render: (r) => r.lastLogin },
-            {
-              key: "actions",
-              header: "",
-              render: () => (
-                <button type="button" className="text-mute" aria-label="Actions">
-                  <MoreVertical size={16} />
-                </button>
-              ),
-            },
-          ]}
-          rows={settingsUsers}
-        />
+                ),
+              },
+              { key: "email", header: "Email", render: (r) => r.email },
+              {
+                key: "role",
+                header: "Role",
+                render: (r) => <Pill tone="blue">{r.role}</Pill>,
+              },
+              {
+                key: "status",
+                header: "Status",
+                render: (r) => (
+                  <Pill tone={r.status === "Active" ? "green" : "red"}>{r.status}</Pill>
+                ),
+              },
+              { key: "created", header: "Created", render: (r) => r.created },
+            ]}
+            rows={rows}
+            empty="No users returned by the API."
+          />
+        )}
       </Card>
       <Card>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-start gap-3">
-            <span className="grid h-9 w-9 place-items-center rounded-lg bg-soft text-blue">
-              <Shield size={16} />
-            </span>
-            <div>
-              <h2 className="font-bold text-navy">Role Permissions</h2>
-              <p className="text-sm text-mute">Define what each role can access and manage.</p>
-            </div>
+        <div className="mb-4 flex items-start gap-3">
+          <span className="grid h-9 w-9 place-items-center rounded-lg bg-soft text-blue">
+            <Shield size={16} />
+          </span>
+          <div>
+            <h2 className="font-bold text-navy">Role distribution</h2>
+            <p className="text-sm text-mute">Counted from live users (not a separate roles catalog).</p>
           </div>
-          <Button variant="outline" size="sm">
-            Manage Permissions
-          </Button>
         </div>
-        <Table
-          rowKey={(r) => r.role}
-          columns={[
-            {
-              key: "role",
-              header: "Role",
-              render: (r) => <Pill tone={r.tone}>{r.role}</Pill>,
-            },
-            { key: "desc", header: "Description", render: (r) => r.description },
-            {
-              key: "users",
-              header: "Users",
-              render: (r) => (
-                <button type="button" className="font-semibold text-blue underline">
-                  {r.users}
-                </button>
-              ),
-            },
-            { key: "perms", header: "Key Permissions", render: (r) => r.permissions },
-          ]}
-          rows={rolePermissions}
-        />
+        {Object.keys(roleCounts).length === 0 ? (
+          <p className="text-sm text-mute">No role data yet.</p>
+        ) : (
+          <ul className="grid gap-2">
+            {Object.entries(roleCounts).map(([role, count]) => (
+              <li
+                key={role}
+                className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              >
+                <span className="font-semibold text-navy">{role}</span>
+                <span className="text-mute">{count} user{count === 1 ? "" : "s"}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
     </div>
   );
@@ -1110,130 +1237,51 @@ function DataSecurityPanel() {
   );
 }
 
-function IntegrationsSection() {
-  const [items, setItems] = useState(integrations);
+function IntegrationsSection({
+  workspace,
+  onChange,
+}: {
+  workspace: WorkspaceSettings;
+  onChange: (next: WorkspaceSettings) => void;
+}) {
   return (
     <div className="grid gap-4">
       <p className="text-sm text-mute">
-        Connect with external tools and services to enhance your event management experience.
+        Mark which integrations this workspace intends to use. Secrets are not stored here — there is
+        no integrations API yet, so toggles save to this browser only.
       </p>
       <div className="grid gap-4 lg:grid-cols-2">
-        {items.map((item) => (
-          <Card key={item.id}>
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-mute">{item.category}</p>
-                <h3 className="font-bold text-navy">{item.name}</h3>
-              </div>
-              <div className="flex items-center gap-2">
-                <Pill tone={item.connected ? "green" : "neutral"}>
-                  {item.connected ? "Connected" : "Not Connected"}
+        {INTEGRATION_CATALOG.map((item) => {
+          const connected = Boolean(workspace.integrations[item.id]);
+          return (
+            <Card key={item.id}>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-mute">
+                    {item.category}
+                  </p>
+                  <h3 className="font-bold text-navy">{item.name}</h3>
+                </div>
+                <Pill tone={connected ? "green" : "neutral"}>
+                  {connected ? "Enabled" : "Not enabled"}
                 </Pill>
-                <button type="button" className="text-mute" aria-label="More">
-                  <MoreVertical size={16} />
-                </button>
               </div>
-            </div>
-
-            {item.id === "mpesa" || item.id === "ecitizen" ? (
-              <div className="mt-4 grid gap-3">
-                <Input label="Consumer Key" type="password" defaultValue="••••••••9182" />
-                <Input label="Consumer Secret" type="password" defaultValue="••••••••4410" />
-                {item.id === "ecitizen" ? (
-                  <Select
-                    label="Environment"
-                    defaultValue="production"
-                    options={[
-                      { value: "production", label: "Production" },
-                      { value: "sandbox", label: "Sandbox" },
-                    ]}
-                  />
-                ) : null}
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm">
-                    Test Connection
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    Edit
-                  </Button>
-                </div>
-              </div>
-            ) : item.id === "smtp" ? (
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <Input label="SMTP Host" defaultValue="smtp.office365.com" className="sm:col-span-2" />
-                <Input label="Port" defaultValue="587" />
-                <Select
-                  label="TLS"
-                  defaultValue="on"
-                  options={[
-                    { value: "on", label: "ON" },
-                    { value: "off", label: "OFF" },
-                  ]}
-                />
-                <Input label="Username" defaultValue="noreply@aca.go.ke" />
-                <Input label="Password" type="password" defaultValue="••••••••" />
-                <div className="flex flex-wrap gap-2 sm:col-span-2">
-                  <Button variant="outline" size="sm">
-                    Test Connection
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    Edit
-                  </Button>
-                </div>
-              </div>
-            ) : item.connected ? (
-              <>
-                <div className="mt-3">
-                  <Input label="Account" defaultValue={item.account} />
-                </div>
-                {item.sync.length > 0 ? (
-                  <ul className="mt-3 grid gap-2 text-sm text-ink">
-                    {item.sync.map((s) => (
-                      <li key={s} className="flex items-center gap-2">
-                        <input type="checkbox" defaultChecked className="rounded border-slate-300 accent-blue" />
-                        {s}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-                <div className="mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setItems((prev) =>
-                        prev.map((x) => (x.id === item.id ? { ...x, connected: false, account: "" } : x)),
-                      )
-                    }
-                  >
-                    Disconnect
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <div className="mt-4 flex flex-wrap items-end gap-2">
-                <Input
-                  label="Account"
-                  placeholder={`Enter your ${item.name} email.`}
-                  className="min-w-[200px] flex-1"
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    setItems((prev) =>
-                      prev.map((x) =>
-                        x.id === item.id ? { ...x, connected: true, account: "connected@aca.go.ke" } : x,
-                      ),
-                    )
+              <div className="mt-4">
+                <Toggle
+                  checked={connected}
+                  onChange={(next) =>
+                    onChange({
+                      ...workspace,
+                      integrations: { ...workspace.integrations, [item.id]: next },
+                    })
                   }
-                >
-                  Connect
-                </Button>
+                  label={connected ? "Enabled for this workspace" : "Enable for this workspace"}
+                  description="Preference only — wire credentials when the integrations API is available."
+                />
               </div>
-            )}
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

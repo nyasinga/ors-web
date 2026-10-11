@@ -58,8 +58,6 @@ export function RegisterHero({
   title = "Register for ISIPPE-3",
   subtitle = "Join global experts, policymakers and industry leaders to advance intellectual property protection and enforcement.",
   crumb = "Register",
-  onNext,
-  onPrevious,
   onStepChange,
   onInitialSelection,
 }: HeroProps) {
@@ -75,8 +73,7 @@ export function RegisterHero({
   const initialized = useRef(false);
   const startedFromUrl = useRef(false);
 
-  const [internalStep, setInternalStep] =
-    useState<RegistrationStep>(() => {
+  const [internalStep] = useState<RegistrationStep>(() => {
       const type = searchParams.get("type");
       const packageName = searchParams.get("package");
 
@@ -100,12 +97,6 @@ export function RegisterHero({
     : current ?? internalStep;
 
   const progress = (activeStep / TOTAL_STEPS) * 100;
-
-  const isFirstStep =
-    activeStep === RegistrationStep.PARTICIPATION;
-
-  const isLastStep =
-    activeStep === RegistrationStep.CONFIRMATION;
 
   useEffect(() => {
     if (initialized.current) return;

@@ -41,14 +41,7 @@ import { Select } from "../../components/ui/Select";
 import { Stepper } from "../../components/ui/Stepper";
 import { Tabs } from "../../components/ui/Tabs";
 import { Toggle } from "../../components/ui/Toggle";
-import {
-  createWizardSteps,
-  draftProgrammeSessions,
-  draftSpeakers,
-  draftSponsorshipPackages,
-  draftTickets,
-  eventTypeOptions,
-} from "../../data/adminEvents";
+import { createWizardSteps, eventTypeOptions } from "../../data/adminEvents";
 import { ApiError } from "../../lib/api";
 import {
   buildEngagementPayload,
@@ -90,44 +83,78 @@ export function CreateEventPage() {
   const [loadingEdit, setLoadingEdit] = useState(isEdit);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [eventType, setEventType] = useState("Conference");
-  const [title, setTitle] = useState(
-    "3rd International Symposium on Intellectual Property Protection and Enforcement",
-  );
-  const [description, setDescription] = useState(
-    "A premier forum bringing together regulators, industry and academia to strengthen IP protection and enforcement across Africa.",
-  );
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [category, setCategory] = useState("legal");
-  const [audience, setAudience] = useState("government");
+  const [audience, setAudience] = useState("mixed");
   const [tone, setTone] = useState("professional");
   const [language, setLanguage] = useState("en");
-  const [tags, setTags] = useState([
-    "Intellectual Property",
-    "Enforcement",
-    "Policy",
-    "Innovation",
-    "Regional Collaboration",
-  ]);
+  const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
-  const [startDate, setStartDate] = useState("2026-11-15");
-  const [endDate, setEndDate] = useState("2026-11-17");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [allDay, setAllDay] = useState(false);
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("17:00");
   const [venueMode, setVenueMode] = useState<"in-person" | "virtual" | "hybrid">("in-person");
-  const [venueName, setVenueName] = useState("Kenyatta International Convention Centre (KICC)");
-  const [address, setAddress] = useState("Harambee Ave, Nairobi, Kenya");
-  const [city, setCity] = useState("Nairobi");
+  const [venueName, setVenueName] = useState("");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
   const [country, setCountry] = useState("KE");
-  const [capacity, setCapacity] = useState("500");
-  const [virtualLink, setVirtualLink] = useState("https://meet.google.com/xxx-xxxx-xxx");
+  const [capacity, setCapacity] = useState("");
+  const [virtualLink, setVirtualLink] = useState("");
   const [programTab, setProgramTab] = useState("schedule");
   const [day, setDay] = useState("1");
-  const [sessions, setSessions] = useState(draftProgrammeSessions);
-  const [speakers, setSpeakers] = useState(draftSpeakers);
-  const [packages, setPackages] = useState(
-    draftSponsorshipPackages.map((p) => ({ ...p, benefits: [...p.benefits] })),
-  );
-  const [tickets, setTickets] = useState(draftTickets);
+  const [sessions, setSessions] = useState<
+    Array<{
+      id: string;
+      time: string;
+      title: string;
+      description: string;
+      speakers: number;
+      place: string;
+      badge: string;
+      tone: "green" | "purple" | "orange" | "blue";
+    }>
+  >([]);
+  const [speakers, setSpeakers] = useState<
+    Array<{
+      id: string;
+      name: string;
+      role: string;
+      org: string;
+      roleLines: string[];
+      topic: string;
+      country: string;
+      flag: string;
+      category: string;
+      badge: string;
+      photo: string;
+      bio: string;
+    }>
+  >([]);
+  const [packages, setPackages] = useState<
+    Array<{
+      id: string;
+      name: string;
+      subtitle: string;
+      price: number;
+      availability: string;
+      benefits: string[];
+      active: boolean;
+      tone: "amber" | "yellow" | "slate" | "orange";
+    }>
+  >([]);
+  const [tickets, setTickets] = useState<
+    Array<{
+      id: string;
+      name: string;
+      price: string;
+      capacity: number;
+      period: string;
+      tone: "green" | "blue" | "orange";
+    }>
+  >([]);
   const [requireApproval, setRequireApproval] = useState(false);
   const [deadlineOn, setDeadlineOn] = useState(true);
   const [limitOn, setLimitOn] = useState(true);
@@ -152,8 +179,8 @@ export function CreateEventPage() {
   const [newSessionType, setNewSessionType] = useState("Session");
   const [newSessionStart, setNewSessionStart] = useState("14:00");
   const [newSessionEnd, setNewSessionEnd] = useState("15:00");
-  const [newSessionVenue, setNewSessionVenue] = useState("Tsavo Ballroom");
-  const [newSessionCapacity, setNewSessionCapacity] = useState("200");
+  const [newSessionVenue, setNewSessionVenue] = useState("");
+  const [newSessionCapacity, setNewSessionCapacity] = useState("");
   const [newSpeakerName, setNewSpeakerName] = useState("");
   const [newSpeakerRole, setNewSpeakerRole] = useState("");
   const [newSpeakerOrg, setNewSpeakerOrg] = useState("");
@@ -1073,7 +1100,14 @@ export function CreateEventPage() {
                     </div>
                   ) : null}
                   <Toggle checked={limitOn} onChange={setLimitOn} label="Limit total registrations" />
-                  {limitOn ? <Input label="Capacity" type="number" defaultValue="500" /> : null}
+                  {limitOn ? (
+                    <Input
+                      label="Capacity"
+                      type="number"
+                      value={capacity}
+                      onChange={(e) => setCapacity(e.target.value)}
+                    />
+                  ) : null}
                   <Toggle checked={waitlist} onChange={setWaitlist} label="Enable waitlist when full" />
                   <Toggle checked={confirmEmail} onChange={setConfirmEmail} label="Send confirmation email" />
                   <Toggle
@@ -1505,10 +1539,10 @@ export function CreateEventPage() {
                     topic: newSpeakerTopic.trim() || "To be announced",
                     category,
                     badge: badgeMap[category] || "Speaker",
-                    country: newSpeakerCountry.trim() || undefined,
-                    flag: undefined,
-                    photo: undefined,
-                    bio: undefined,
+                    country: newSpeakerCountry.trim() || "",
+                    flag: "",
+                    photo: "",
+                    bio: "",
                   },
                 ]);
                 setNewSpeakerName("");

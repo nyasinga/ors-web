@@ -296,6 +296,9 @@ export function asSponsors(value: unknown): EngagementSponsor[] {
         active: typeof row.active === "boolean" ? row.active : undefined,
         tone: row.tone != null ? String(row.tone) : undefined,
         tier: row.tier != null ? String(row.tier) : undefined,
+        category: row.category != null ? String(row.category) : undefined,
+        contact: row.contact != null ? String(row.contact) : undefined,
+        status: row.status != null ? String(row.status) : undefined,
       } satisfies EngagementSponsor;
     })
     .filter(Boolean) as EngagementSponsor[];
@@ -933,7 +936,9 @@ export function engagementToWizardState(engagement: Engagement) {
             role: s.role || "",
             org: s.org || "",
             topic: s.topic || "",
-            roleLines: s.roleLines,
+            roleLines: s.roleLines?.length
+              ? s.roleLines
+              : [s.role, s.org].filter((v): v is string => Boolean(v)),
             country: s.country || "",
             flag: s.flag || "",
             category: s.category || "panelist",

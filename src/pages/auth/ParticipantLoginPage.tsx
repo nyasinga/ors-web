@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   CalendarDays,
   Headphones,
@@ -13,6 +13,10 @@ import { useEventCopy } from "../../i18n/useEventCopy";
 import { useTranslation } from "react-i18next";
 import { cn } from "../../lib/cn";
 import { pageContainer } from "../../lib/pageContainer";
+import {
+  hasParticipantSession,
+  participantLogin,
+} from "../../lib/participantAuth";
 
 /* ── Shared Tailwind class groups (values ported 1:1 from the former participant-login.css) ── */
 
@@ -78,18 +82,35 @@ export function ParticipantLoginPage() {
   const { t } = useTranslation("common");
   const event = useEventCopy();
   const navigate = useNavigate();
+  const location = useLocation();
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [scanned, setScanned] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const returnTo =
+    (location.state as { from?: string } | null)?.from &&
+    String((location.state as { from?: string }).from).startsWith("/me")
+      ? String((location.state as { from?: string }).from)
+      : "/me";
 
-  const login = (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (code.trim().length < 6 && !scanned) {
-      setError("Enter the 6-digit pass code from your email");
-      return;
+  useEffect(() => {
+    if (hasParticipantSession()) {
+      navigate(returnTo, { replace: true });
     }
+  }, [navigate, returnTo]);
+
+  const login = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     setError("");
-    navigate("/me");
+    setBusy(true);
+    try {
+      await participantLogin({ passCode: code, viaQr: scanned, remember: true });
+      navigate(returnTo, { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to sign in. Try again.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const focusPass = () => {
@@ -177,8 +198,13 @@ export function ParticipantLoginPage() {
                 </div>
                 <button
                   type="button"
-                  className="mb-[17px] flex h-[76px] w-full cursor-pointer items-center justify-center gap-[15px] rounded-[7px] border border-[#cfe0f3] bg-[#f1f8ff] px-3 text-inherit [font:inherit] max-[600px]:h-[62px]"
+                  disabled={busy}
+                  className="mb-[17px] flex h-[76px] w-full cursor-pointer items-center justify-center gap-[15px] rounded-[7px] border border-[#cfe0f3] bg-[#f1f8ff] px-3 text-inherit [font:inherit] disabled:opacity-60 max-[600px]:h-[62px]"
                   onClick={() => {
+                    if (scanned) {
+                      void login();
+                      return;
+                    }
                     setScanned(true);
                     setError("");
                   }}
@@ -186,7 +212,11 @@ export function ParticipantLoginPage() {
                   <ScanLine className="h-[31px] w-[31px] flex-none text-[#075fe5]" size={31} strokeWidth={1.8} />
                   <div>
                     <strong className="block text-left text-[13px] text-[#082da0] max-[600px]:text-[11px]">
-                      {scanned ? "QR image ready — click Login" : "Click to scan QR code"}
+                      {scanned
+                        ? busy
+                          ? "Signing in…"
+                          : "QR ready — click to continue"
+                        : "Click to scan QR code"}
                     </strong>
                     <span className="mt-1 block text-left text-[11px] text-[#637397] max-[600px]:text-[9px]">
                       {scanned ? "Pass code optional when QR is ready" : "or drag and drop an image"}
@@ -224,7 +254,12 @@ export function ParticipantLoginPage() {
                   </p>
                 </div>
               </div>
-              <form className="pt-8 max-[600px]:pt-[19px]" onSubmit={login}>
+              <form
+                className="pt-8 max-[600px]:pt-[19px]"
+                onSubmit={(e) => {
+                  void login(e);
+                }}
+              >
                 <div>
                   <label
                     className="mb-[7px] block text-[13px] font-semibold text-[#08164d] max-[600px]:text-[10px]"
@@ -241,6 +276,7 @@ export function ParticipantLoginPage() {
                     inputMode="numeric"
                     placeholder="Enter 6-digit pass code"
                     required={!scanned}
+                    disabled={busy}
                     aria-invalid={Boolean(error) || undefined}
                   />
                   {error ? (
@@ -250,10 +286,11 @@ export function ParticipantLoginPage() {
                   ) : null}
                 </div>
                 <button
-                  className="mt-4 h-[47px] w-full cursor-pointer rounded-[7px] bg-[#064fe0] text-[15px] font-bold text-white max-[600px]:mt-[11px] max-[600px]:h-[43px] max-[600px]:text-[12px]"
+                  className="mt-4 h-[47px] w-full cursor-pointer rounded-[7px] bg-[#064fe0] text-[15px] font-bold text-white disabled:opacity-60 max-[600px]:mt-[11px] max-[600px]:h-[43px] max-[600px]:text-[12px]"
                   type="submit"
+                  disabled={busy}
                 >
-                  Login &nbsp; →
+                  {busy ? "Signing in…" : "Login  →"}
                 </button>
               </form>
               <div className="mt-5 flex gap-3 rounded-lg bg-[#edf6ff] px-[17px] py-[14px] max-[600px]:mt-[13px] max-[600px]:p-[11px]">

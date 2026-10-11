@@ -72,6 +72,7 @@ import {
   formatModeLabel,
   getEngagement,
   toUiEventType,
+  updateEngagement,
 } from "../../lib/engagements";
 import { cn } from "../../lib/cn";
 import type {
@@ -713,7 +714,16 @@ export function EventDetailsPage() {
       {validTab === "overview" ? <OverviewTab id={id} detail={detail} fromApi={fromApi} /> : null}
       {validTab === "tickets" ? (
         <div className="mt-1">
-          <TicketsTab tickets={tickets} fromApi={fromApi} loading={loading} />
+          <TicketsTab
+            eventId={id}
+            tickets={tickets}
+            fromApi={fromApi}
+            loading={loading}
+            onChanged={async () => {
+              const row = await getEngagement(id);
+              setEngagement(row);
+            }}
+          />
         </div>
       ) : null}
       {validTab === "participants" ? (
@@ -740,10 +750,15 @@ export function EventDetailsPage() {
       {validTab === "sponsors" || validTab === "exhibitors" ? (
         <div className="mt-1">
           <SponsorsTab
+            eventId={id}
             sponsors={sponsors}
             fromApi={fromApi}
             loading={loading}
             mode={validTab === "exhibitors" ? "exhibitors" : "sponsors"}
+            onChanged={async () => {
+              const row = await getEngagement(id);
+              setEngagement(row);
+            }}
           />
         </div>
       ) : null}
@@ -1253,16 +1268,73 @@ function toTicketRows(tickets: EngagementTicket[], fromApi: boolean): TicketRow[
 }
 
 function TicketsTab({
+  eventId,
   tickets,
   fromApi,
   loading,
+  onChanged,
 }: {
+  eventId: string;
   tickets: EngagementTicket[];
   fromApi: boolean;
   loading: boolean;
+  onChanged: () => Promise<void>;
 }) {
   const live = fromApi || loading;
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<EngagementTicket | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const rows = toTicketRows(tickets, live);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    window.setTimeout(() => setToast(null), 2200);
+  };
+
+  const persistTickets = async (next: EngagementTicket[], message: string) => {
+    if (!fromApi) {
+      showToast("Sign in and open a live event to save tickets.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await updateEngagement(eventId, { tickets: next });
+      await onChanged();
+      setModalOpen(false);
+      setEditing(null);
+      showToast(message);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : "Failed to save tickets");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openCreate = () => {
+    setEditing(null);
+    setModalOpen(true);
+  };
+
+  const openEdit = (row: TicketRow) => {
+    const match = tickets.find((t) => (t.id || "") === row.id) || {
+      id: row.id,
+      name: row.name,
+      price: `KES ${row.priceKes.toLocaleString()}`,
+      capacity: row.capacity,
+      period: row.blurb,
+      tone: "blue",
+    };
+    setEditing(match);
+    setModalOpen(true);
+  };
+
+  const removeTicket = async (row: TicketRow) => {
+    if (!fromApi) return;
+    if (!window.confirm(`Remove ticket type “${row.name}”?`)) return;
+    const next = tickets.filter((t, i) => (t.id || `tk-${i + 1}`) !== row.id);
+    await persistTickets(next, "Ticket type removed");
+  };
   const capacity = rows.reduce((s, t) => s + t.capacity, 0);
   const sold = rows.reduce((s, t) => s + t.sold, 0);
   const remaining = Math.max(capacity - sold, 0);
@@ -1321,6 +1393,11 @@ function TicketsTab({
 
   return (
     <div>
+      {toast ? (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-[#07145c] px-4 py-2 text-sm font-semibold text-white shadow-lg">
+          {toast}
+        </div>
+      ) : null}
       <section className="mb-3 grid grid-cols-5 gap-2.5 max-[900px]:grid-cols-2 max-[560px]:gap-[7px]">
         {kpis.map((kpi, kpiIdx) => {
           const muted = live;
@@ -1392,7 +1469,9 @@ function TicketsTab({
               <span className="flex-1" />
               <button
                 type="button"
-                className="inline-flex h-[33px] cursor-pointer items-center gap-2 whitespace-nowrap rounded-md border-0 bg-[#0757f5] px-3.5 font-[inherit] text-xs font-semibold text-white shadow-[0_2px_4px_rgba(7,87,245,.1)] hover:bg-[#064adb]"
+                onClick={openCreate}
+                disabled={saving}
+                className="inline-flex h-[33px] cursor-pointer items-center gap-2 whitespace-nowrap rounded-md border-0 bg-[#0757f5] px-3.5 font-[inherit] text-xs font-semibold text-white shadow-[0_2px_4px_rgba(7,87,245,.1)] hover:bg-[#064adb] disabled:opacity-60"
               >
                 <Plus size={14} strokeWidth={3} /> Add Ticket Type
               </button>
@@ -1447,11 +1526,23 @@ function TicketsTab({
                           </td>
                           <td className={tmTd()}>
                             <div className="flex justify-center gap-[7px]">
-                              <button type="button" className={tmMini} aria-label={`Edit ${t.name}`}>
+                              <button
+                                type="button"
+                                className={tmMini}
+                                aria-label={`Edit ${t.name}`}
+                                onClick={() => openEdit(t)}
+                                disabled={saving}
+                              >
                                 <Pencil size={14} />
                               </button>
-                              <button type="button" className={tmMini} aria-label={`More for ${t.name}`}>
-                                <MoreHorizontal size={14} />
+                              <button
+                                type="button"
+                                className={tmMini}
+                                aria-label={`Delete ${t.name}`}
+                                onClick={() => void removeTicket(t)}
+                                disabled={saving}
+                              >
+                                <Trash2 size={14} />
                               </button>
                             </div>
                           </td>
@@ -1572,15 +1663,37 @@ function TicketsTab({
             </div>
             <div className="grid gap-1.5 px-[17px] pb-[13px]">
               {[
-                { label: "Add Ticket Type", Icon: Plus, strokeWidth: 2.5, tone: "text-[#009c51]" },
+                { label: "Add Ticket Type", Icon: Plus, strokeWidth: 2.5, tone: "text-[#009c51]", action: openCreate },
                 { label: "View Orders", Icon: LayoutGrid, strokeWidth: 2, tone: "text-[#0757ff]" },
                 { label: "Manage Discount Codes", Icon: Ticket, strokeWidth: 2, tone: "text-[#009c51]" },
-                { label: "Export Ticket Data", Icon: Download, strokeWidth: 2, tone: "text-[#009c51]" },
+                {
+                  label: "Export Ticket Data",
+                  Icon: Download,
+                  strokeWidth: 2,
+                  tone: "text-[#009c51]",
+                  action: () => {
+                    const header = ["Name", "Price", "Capacity", "Period"];
+                    const lines = tickets.map((t) =>
+                      [t.name, t.price || "", t.capacity ?? "", t.period || ""]
+                        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+                        .join(","),
+                    );
+                    const blob = new Blob([[header.join(","), ...lines].join("\n")], {
+                      type: "text/csv;charset=utf-8;",
+                    });
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(blob);
+                    a.download = "event-tickets.csv";
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                  },
+                },
                 { label: "Configure Ticket Settings", Icon: Settings, strokeWidth: 2, tone: "text-[#009c51]" },
-              ].map(({ label, Icon, strokeWidth, tone }) => (
+              ].map(({ label, Icon, strokeWidth, tone, action }) => (
                 <button
                   key={label}
                   type="button"
+                  onClick={action}
                   className="flex h-[38px] w-full cursor-pointer items-center gap-[15px] rounded-lg border border-[#dceafe] bg-[linear-gradient(90deg,#f0f7ff,#fbfdff)] px-[13px] text-left font-[inherit] text-xs text-[#23429b] hover:bg-none hover:bg-[#e8f2ff]"
                 >
                   <span className={cn("grid w-[22px] place-items-center", tone)}>
@@ -1711,6 +1824,123 @@ function TicketsTab({
           </section>
         </div>
       </section>
+
+      {modalOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !saving) setModalOpen(false);
+          }}
+        >
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-extrabold text-[#07145c]">
+                {editing ? "Edit Ticket Type" : "Add Ticket Type"}
+              </h2>
+              <button
+                type="button"
+                className="rounded-lg px-3 py-1 text-xl text-slate-500 hover:bg-slate-100"
+                aria-label="Close"
+                disabled={saving}
+                onClick={() => setModalOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+            <form
+              className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const data = new FormData(e.currentTarget);
+                const name = String(data.get("name") || "").trim();
+                const priceRaw = String(data.get("price") || "").trim();
+                const capacity = Number(data.get("capacity") || 0);
+                const period = String(data.get("period") || "").trim();
+                if (!name) return;
+                const priceKes = Number(priceRaw.replace(/[^\d.]/g, "")) || 0;
+                const price = priceRaw.toUpperCase().includes("KES")
+                  ? priceRaw
+                  : `KES ${priceKes.toLocaleString("en-KE")}`;
+                const entry: EngagementTicket = {
+                  id: editing?.id || `t-${Date.now()}`,
+                  name,
+                  price,
+                  capacity,
+                  period: period || "Event access",
+                  tone: editing?.tone || "blue",
+                };
+                const next = editing
+                  ? tickets.map((t, i) => {
+                      const key = t.id || `tk-${i + 1}`;
+                      if (editing.id && key === editing.id) return entry;
+                      if (!editing.id && t.name === editing.name) return entry;
+                      return t;
+                    })
+                  : [...tickets, entry];
+                void persistTickets(next, editing ? "Ticket type updated" : "Ticket type added");
+              }}
+            >
+              <label className="text-sm font-semibold text-[#07145c] sm:col-span-2">
+                Ticket name *
+                <input
+                  name="name"
+                  required
+                  defaultValue={editing?.name || ""}
+                  className="mt-1 w-full rounded-lg border border-blue-200 px-3 py-2 font-normal outline-none focus:border-blue-500"
+                  placeholder="e.g. Early Bird"
+                />
+              </label>
+              <label className="text-sm font-semibold text-[#07145c]">
+                Price (KES) *
+                <input
+                  name="price"
+                  required
+                  defaultValue={editing ? String(parseKes(editing.price) || "") : ""}
+                  className="mt-1 w-full rounded-lg border border-blue-200 px-3 py-2 font-normal outline-none focus:border-blue-500"
+                  placeholder="60000"
+                />
+              </label>
+              <label className="text-sm font-semibold text-[#07145c]">
+                Capacity *
+                <input
+                  name="capacity"
+                  type="number"
+                  min={0}
+                  required
+                  defaultValue={editing?.capacity ?? 100}
+                  className="mt-1 w-full rounded-lg border border-blue-200 px-3 py-2 font-normal outline-none focus:border-blue-500"
+                />
+              </label>
+              <label className="text-sm font-semibold text-[#07145c] sm:col-span-2">
+                Period / note
+                <input
+                  name="period"
+                  defaultValue={editing?.period || ""}
+                  className="mt-1 w-full rounded-lg border border-blue-200 px-3 py-2 font-normal outline-none focus:border-blue-500"
+                  placeholder="Up to 31 October 2026"
+                />
+              </label>
+              <div className="flex justify-end gap-2 sm:col-span-2">
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => setModalOpen(false)}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  {saving ? "Saving…" : editing ? "Save changes" : "Add ticket"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1733,7 +1963,7 @@ function statusPillClass(status: string) {
 
 function checkInPillClass(checkIn: string) {
   if (checkIn === "Checked In") return "rounded-md bg-emerald-100 px-2 py-1 text-[10px] text-emerald-700";
-  if (checkIn === "—" || checkIn === "-") return "";
+  if (checkIn === "—") return "";
   return "rounded-md bg-slate-100 px-2 py-1 text-[10px] text-slate-600";
 }
 
@@ -2037,7 +2267,7 @@ function ParticipantsTab({ fromApi, loading }: { fromApi: boolean; loading: bool
                         {p.time}
                       </td>
                       <td className="border-b border-blue-100 px-2 py-2">
-                        {p.checkIn === "—" || p.checkIn === "-" ? (
+                        {p.checkIn === "—" ? (
                           "–"
                         ) : (
                           <span className={checkInPillClass(p.checkIn)}>{p.checkIn}</span>
@@ -2324,18 +2554,38 @@ function mapApiSponsors(list: EngagementSponsor[]): SponsorRow[] {
         .join("")
         .slice(0, 3)
         .toUpperCase() || "SP";
-    const status: SponsorRowStatus = s.active === false ? "Pending" : "Confirmed";
+    const rawStatus = String(s.status || "").trim();
+    const status: SponsorRowStatus =
+      rawStatus === "Pending" || rawStatus === "Declined"
+        ? rawStatus
+        : s.active === false
+          ? "Pending"
+          : "Confirmed";
     return {
       id: s.id || `api-spn-${i}`,
       name,
-      category: s.subtitle || "—",
-      type: s.tier || s.name || "Package",
+      category: s.category || s.subtitle || "—",
+      type: s.tier || "Package",
       status,
       value: parseSponsorValue(s.price),
-      contact: "—",
+      contact: s.contact || "—",
       logo,
     };
   });
+}
+
+function sponsorRowsToApi(rows: SponsorRow[]): EngagementSponsor[] {
+  return rows.map((s) => ({
+    id: s.id,
+    name: s.name,
+    subtitle: s.category,
+    category: s.category,
+    tier: s.type,
+    price: s.value,
+    contact: s.contact,
+    status: s.status,
+    active: s.status === "Confirmed",
+  }));
 }
 
 function sponsorStatusClass(status: SponsorRowStatus) {
@@ -2360,15 +2610,19 @@ function EventPaymentsTab({ fromApi, loading }: { fromApi: boolean; loading: boo
 }
 
 function SponsorsTab({
+  eventId,
   sponsors,
   fromApi,
   loading,
   mode = "sponsors",
+  onChanged,
 }: {
+  eventId: string;
   sponsors: EngagementSponsor[];
   fromApi: boolean;
   loading: boolean;
   mode?: "sponsors" | "exhibitors";
+  onChanged: () => Promise<void>;
 }) {
   const live = fromApi || loading;
   const noun = mode === "exhibitors" ? "exhibitor" : "sponsor";
@@ -2384,8 +2638,29 @@ function SponsorsTab({
   const [selectAll, setSelectAll] = useState(false);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<SponsorRow | null>(null);
+  const [saving, setSaving] = useState(false);
   const [localExtra, setLocalExtra] = useState<SponsorRow[]>([]);
   const [toast, setToast] = useState<string | null>(null);
+
+  const persistSponsors = async (rows: SponsorRow[], message: string) => {
+    if (!fromApi) {
+      showToast("Sign in and open a live event to save.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await updateEngagement(eventId, { sponsors: sponsorRowsToApi(rows) });
+      await onChanged();
+      setModalOpen(false);
+      setEditing(null);
+      showToast(message);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : `Failed to save ${noun}`);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const apiRows = useMemo(() => (live ? mapApiSponsors(sponsors) : []), [live, sponsors]);
   const source: SponsorRow[] = live
@@ -2751,8 +3026,12 @@ function SponsorsTab({
             </button>
             <button
               type="button"
-              onClick={() => (live ? showToast(`${Noun} create will connect to the API.`) : setModalOpen(true))}
-              className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+              onClick={() => {
+                setEditing(null);
+                setModalOpen(true);
+              }}
+              disabled={saving}
+              className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
             >
               <span className="inline-flex items-center gap-2">
                 <Plus size={14} strokeWidth={3} /> Add {Noun}
@@ -2867,18 +3146,34 @@ function SponsorsTab({
                         <button
                           type="button"
                           title={`Edit ${s.name}`}
-                          onClick={() => showToast(`Edit ${noun}: ${s.name}`)}
-                          className="inline-flex h-[30px] w-8 items-center justify-center rounded-[7px] border border-[#d6e6ff] bg-white text-[#075bff] hover:bg-[#eff6ff]"
+                          disabled={saving}
+                          onClick={() => {
+                            setEditing(s);
+                            setModalOpen(true);
+                          }}
+                          className="inline-flex h-[30px] w-8 items-center justify-center rounded-[7px] border border-[#d6e6ff] bg-white text-[#075bff] hover:bg-[#eff6ff] disabled:opacity-50"
                         >
                           <Pencil size={14} />
                         </button>
                         <button
                           type="button"
-                          title="More actions"
-                          onClick={() => showToast(`More actions for ${s.name}`)}
-                          className="inline-flex h-[30px] w-8 items-center justify-center rounded-[7px] border border-[#d6e6ff] bg-white text-[#075bff] hover:bg-[#eff6ff]"
+                          title={`Delete ${s.name}`}
+                          disabled={saving}
+                          onClick={() => {
+                            if (!window.confirm(`Remove ${noun} “${s.name}”?`)) return;
+                            if (live) {
+                              void persistSponsors(
+                                source.filter((row) => row.id !== s.id),
+                                `${Noun} removed`,
+                              );
+                            } else {
+                              setLocalExtra((prev) => prev.filter((row) => row.id !== s.id));
+                              showToast(`${Noun} removed`);
+                            }
+                          }}
+                          className="inline-flex h-[30px] w-8 items-center justify-center rounded-[7px] border border-[#d6e6ff] bg-white text-[#075bff] hover:bg-[#eff6ff] disabled:opacity-50"
                         >
-                          <MoreHorizontal size={14} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>
@@ -3059,12 +3354,18 @@ function SponsorsTab({
         >
           <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-extrabold">Add {Noun}</h2>
+              <h2 className="text-xl font-extrabold">
+                {editing ? `Edit ${Noun}` : `Add ${Noun}`}
+              </h2>
               <button
                 type="button"
                 className="rounded-lg px-3 py-1 text-xl text-slate-500 hover:bg-slate-100"
                 aria-label="Close"
-                onClick={() => setModalOpen(false)}
+                disabled={saving}
+                onClick={() => {
+                  setModalOpen(false);
+                  setEditing(null);
+                }}
               >
                 ×
               </button>
@@ -3081,27 +3382,38 @@ function SponsorsTab({
                 const value = Number(data.get("value") || 0);
                 const contact = String(data.get("contact") || "").trim();
                 if (!name || !category || !contact) return;
-                setLocalExtra((prev) => [
-                  {
-                    id: `local-${Date.now()}`,
-                    name,
-                    category,
-                    type,
-                    status,
-                    value,
-                    contact,
-                    logo: name
-                      .split(/\s+/)
-                      .map((x) => x[0])
-                      .join("")
-                      .slice(0, 3)
-                      .toUpperCase(),
-                  },
-                  ...prev,
-                ]);
+                const entry: SponsorRow = {
+                  id: editing?.id || `spn-${Date.now()}`,
+                  name,
+                  category,
+                  type,
+                  status,
+                  value,
+                  contact,
+                  logo: name
+                    .split(/\s+/)
+                    .map((x) => x[0])
+                    .join("")
+                    .slice(0, 3)
+                    .toUpperCase(),
+                };
+                if (live) {
+                  const next = editing
+                    ? source.map((row) => (row.id === editing.id ? entry : row))
+                    : [...source, entry];
+                  void persistSponsors(next, editing ? `${Noun} updated` : `${Noun} added`);
+                  setPage(1);
+                  return;
+                }
+                if (editing) {
+                  setLocalExtra((prev) => prev.map((row) => (row.id === editing.id ? entry : row)));
+                } else {
+                  setLocalExtra((prev) => [entry, ...prev]);
+                }
                 setModalOpen(false);
+                setEditing(null);
                 setPage(1);
-                showToast(`${Noun} added`);
+                showToast(editing ? `${Noun} updated` : `${Noun} added`);
               }}
             >
               <label className="text-sm font-semibold">
@@ -3109,6 +3421,7 @@ function SponsorsTab({
                 <input
                   name="name"
                   required
+                  defaultValue={editing?.name || ""}
                   className="mt-1 w-full rounded-lg border border-blue-200 px-3 py-2 font-normal outline-none focus:border-blue-500"
                   placeholder="Organisation name"
                 />
@@ -3118,6 +3431,7 @@ function SponsorsTab({
                 <input
                   name="category"
                   required
+                  defaultValue={editing?.category || ""}
                   className="mt-1 w-full rounded-lg border border-blue-200 px-3 py-2 font-normal outline-none focus:border-blue-500"
                   placeholder="e.g. Telecommunications"
                 />
