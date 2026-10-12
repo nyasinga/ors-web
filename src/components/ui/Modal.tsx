@@ -42,7 +42,7 @@ export function Modal({
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center md:p-4" role="presentation">
       <button
         type="button"
-        className="absolute inset-0 bg-ink/50"
+        className="absolute inset-0 bg-ink/50 create-wizard-modal-backdrop"
         aria-label="Close dialog"
         onClick={onClose}
       />
@@ -51,7 +51,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby="modal-title"
         className={cn(
-          "relative z-10 flex max-h-[90dvh] w-full flex-col bg-white shadow-card",
+          "relative z-10 flex max-h-[90dvh] w-full flex-col bg-white shadow-card create-wizard-modal-panel",
           bottomSheetOnMobile
             ? "rounded-t-2xl md:max-w-lg md:rounded-lg"
             : "mx-4 max-w-lg rounded-lg",

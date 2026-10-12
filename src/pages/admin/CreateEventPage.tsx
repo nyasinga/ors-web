@@ -23,6 +23,7 @@ import {
   Mountain,
   Pencil,
   Plus,
+  Save,
   Send,
   Sparkles,
   Store,
@@ -40,6 +41,7 @@ import { Pill } from "../../components/ui/Pill";
 import { Select } from "../../components/ui/Select";
 import { Stepper } from "../../components/ui/Stepper";
 import { Tabs } from "../../components/ui/Tabs";
+import { useToast } from "../../components/ui/Toast";
 import { Toggle } from "../../components/ui/Toggle";
 import { createWizardSteps, eventTypeOptions } from "../../data/adminEvents";
 import { ApiError } from "../../lib/api";
@@ -47,6 +49,10 @@ import {
   buildEngagementPayload,
   createEngagement,
   engagementToWizardState,
+  EVENT_AUDIENCE_OPTIONS,
+  EVENT_CATEGORY_OPTIONS,
+  EVENT_LANGUAGE_OPTIONS,
+  EVENT_TONE_OPTIONS,
   getEngagement,
   updateEngagement,
 } from "../../lib/engagements";
@@ -71,6 +77,54 @@ const typeToneClass = {
   yellow: "bg-amber-50 text-amber-700",
 };
 
+/** Parse `YYYY-MM-DD` as a local calendar date (avoids UTC off-by-one). */
+function parseDateInput(value: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatDayLabel(d: Date) {
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function formatPreviewDateRange(start: string, end: string) {
+  const a = parseDateInput(start);
+  const b = parseDateInput(end) || a;
+  if (!a) return "Date not set";
+  if (!b || a.toDateString() === b.toDateString()) return formatDayLabel(a);
+  const sameMonth = a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+  if (sameMonth) {
+    return `${a.getDate()} – ${b.getDate()} ${a.toLocaleDateString("en-GB", {
+      month: "short",
+      year: "numeric",
+    })}`;
+  }
+  return `${formatDayLabel(a)} – ${formatDayLabel(b)}`;
+}
+
+function enumerateEventDays(start: string, end: string, extraDays = 0) {
+  const first = parseDateInput(start);
+  if (!first) return [] as Array<{ index: number; label: string }>;
+  const last = parseDateInput(end) || first;
+  const days: Array<{ index: number; label: string }> = [];
+  const cur = new Date(first.getFullYear(), first.getMonth(), first.getDate());
+  const endMs = last.getTime();
+  for (let i = 0; i < 31 && cur.getTime() <= endMs; i += 1) {
+    days.push({ index: days.length + 1, label: formatDayLabel(cur) });
+    cur.setDate(cur.getDate() + 1);
+  }
+  if (!days.length) {
+    days.push({ index: 1, label: formatDayLabel(first) });
+  }
+  for (let i = 0; i < extraDays; i += 1) {
+    days.push({ index: days.length + 1, label: formatDayLabel(cur) });
+    cur.setDate(cur.getDate() + 1);
+  }
+  return days;
+}
+
 /** Screen E Create / Edit Event 1–6 */
 export function CreateEventPage() {
   const navigate = useNavigate();
@@ -80,17 +134,21 @@ export function CreateEventPage() {
   const isEdit = Boolean(editId);
 
   const [step, setStep] = useState(1);
+  const [stepAnim, setStepAnim] = useState<"forward" | "back">("forward");
+  const [previewPulse, setPreviewPulse] = useState(0);
   const [loadingEdit, setLoadingEdit] = useState(isEdit);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [eventType, setEventType] = useState("Conference");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("legal");
-  const [audience, setAudience] = useState("mixed");
+  const [audience, setAudience] = useState("government");
   const [tone, setTone] = useState("professional");
   const [language, setLanguage] = useState("en");
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
+  const audienceLabel =
+    EVENT_AUDIENCE_OPTIONS.find((o) => o.value === audience)?.label || audience;
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [allDay, setAllDay] = useState(false);
@@ -105,9 +163,11 @@ export function CreateEventPage() {
   const [virtualLink, setVirtualLink] = useState("");
   const [programTab, setProgramTab] = useState("schedule");
   const [day, setDay] = useState("1");
+  const [extraProgramDays, setExtraProgramDays] = useState(0);
   const [sessions, setSessions] = useState<
     Array<{
       id: string;
+      day: string;
       time: string;
       title: string;
       description: string;
@@ -172,6 +232,7 @@ export function CreateEventPage() {
   const [twitterUrl, setTwitterUrl] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [sessionModal, setSessionModal] = useState(false);
+  const [agendaPreviewOpen, setAgendaPreviewOpen] = useState(false);
   const [speakerModal, setSpeakerModal] = useState(false);
   const [packageModal, setPackageModal] = useState(false);
   const [newSessionTitle, setNewSessionTitle] = useState("");
@@ -193,7 +254,7 @@ export function CreateEventPage() {
   const [pkgAvail, setPkgAvail] = useState("1");
   const [pkgBenefits, setPkgBenefits] = useState(["Logo on main stage backdrop"]);
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     if (!editId) {
@@ -228,7 +289,17 @@ export function CreateEventPage() {
         setCountry(state.country);
         setCapacity(state.capacity || "500");
         setVirtualLink(state.virtualLink);
-        if (state.sessions.length) setSessions(state.sessions);
+        if (state.sessions.length) {
+          const normalized = state.sessions.map((s) => ({
+            ...s,
+            day: String(s.day || "1"),
+          }));
+          setSessions(normalized);
+          const maxDay = Math.max(1, ...normalized.map((s) => Number(s.day) || 1));
+          const rangeLen =
+            enumerateEventDays(state.startDate, state.endDate || state.startDate).length || 1;
+          setExtraProgramDays(Math.max(0, maxDay - rangeLen));
+        }
         if (state.speakers.length) setSpeakers(state.speakers);
         if (state.packages.length) setPackages(state.packages);
         if (state.tickets.length) setTickets(state.tickets);
@@ -269,10 +340,43 @@ export function CreateEventPage() {
     if (Number.isInteger(raw) && raw >= 1 && raw <= 6) setStep(raw);
   }, [searchParams]);
 
+  useEffect(() => {
+    setPreviewPulse((n) => n + 1);
+  }, [startDate, endDate, venueName, eventType, venueMode]);
+
   const previewDate =
-    startDate && endDate
-      ? `${startDate.slice(8)} – ${endDate.slice(8)} Nov 2026`
-      : "Date not set";
+    startDate ? formatPreviewDateRange(startDate, endDate || startDate) : "Date not set";
+
+  const programDays = useMemo(
+    () => enumerateEventDays(startDate, endDate || startDate, extraProgramDays),
+    [startDate, endDate, extraProgramDays],
+  );
+
+  useEffect(() => {
+    if (!programDays.length) {
+      if (day !== "1") setDay("1");
+      return;
+    }
+    if (!programDays.some((d) => String(d.index) === day)) {
+      setDay(String(programDays[0].index));
+    }
+  }, [programDays, day]);
+
+  const daySessions = useMemo(
+    () => sessions.filter((s) => String(s.day || "1") === day),
+    [sessions, day],
+  );
+
+  const agendaByDay = useMemo(() => {
+    const days =
+      programDays.length > 0
+        ? programDays
+        : [{ index: 1, label: previewDate === "Date not set" ? "Day 1" : previewDate }];
+    return days.map((d) => ({
+      ...d,
+      sessions: sessions.filter((s) => String(s.day || "1") === String(d.index)),
+    }));
+  }, [programDays, sessions, previewDate]);
 
   const tips = useMemo(() => {
     if (step === 1) {
@@ -316,14 +420,22 @@ export function CreateEventPage() {
     ];
   }, [step]);
 
-  const goNext = async () => {
-    if (step < 6) {
-      setStep(step + 1);
+  const submitEvent = async (asDraft: boolean) => {
+    if (!title.trim()) {
+      toast.error(asDraft ? "Add an event title before saving a draft." : "Add an event title before publishing.");
+      setStepAnim("back");
+      setStep(2);
+      return;
+    }
+    if (!asDraft && (!startDate || !endDate)) {
+      toast.error("Set the event start and end dates before publishing.");
+      setStepAnim("back");
+      setStep(3);
       return;
     }
 
+    setSaveDraft(asDraft);
     setSubmitting(true);
-    setSubmitError(null);
     try {
       const payload = buildEngagementPayload({
         eventType,
@@ -359,7 +471,7 @@ export function CreateEventPage() {
         payBank,
         payFree,
         visibility,
-        saveDraft,
+        saveDraft: asDraft,
         websiteUrl,
         facebookUrl,
         twitterUrl,
@@ -367,15 +479,18 @@ export function CreateEventPage() {
       });
       if (isEdit && editId) {
         await updateEngagement(editId, payload);
+        toast.success(asDraft ? "Draft saved" : "Event updated");
         navigate(`/admin/events/${editId}/overview`);
       } else {
         const created = await createEngagement(payload);
         const id = created.engagementID;
         if (!id) throw new Error("Event created but no engagementID was returned.");
+        toast.success(asDraft ? "Draft saved" : "Event published");
         navigate(`/admin/events/${id}/overview`);
       }
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
+        toast.error("Your session has expired. Please sign in again.");
         navigate("/admin-login", {
           replace: true,
           state: { from: isEdit && editId ? `/admin/events/${editId}/edit` : "/admin/events/new" },
@@ -387,18 +502,41 @@ export function CreateEventPage() {
           ? err.message
           : err instanceof Error
             ? err.message
-            : isEdit
-              ? "Failed to update event"
-              : "Failed to create event";
-      setSubmitError(message);
+            : asDraft
+              ? "Failed to save draft"
+              : isEdit
+                ? "Failed to update event"
+                : "Failed to create event";
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const goPrev = () => {
-    if (step > 1) setStep(step - 1);
+  const goNext = async () => {
+    if (step < 6) {
+      setStepAnim("forward");
+      setStep(step + 1);
+      return;
+    }
+    await submitEvent(false);
   };
+
+  const goPrev = () => {
+    if (step > 1) {
+      setStepAnim("back");
+      setStep(step - 1);
+    }
+  };
+
+  const jumpToStep = (n: number) => {
+    if (n < 1 || n > 6 || n === step) return;
+    setStepAnim(n < step ? "back" : "forward");
+    setStep(n);
+  };
+
+  const stepPanelClass =
+    stepAnim === "forward" ? "create-wizard-step-forward" : "create-wizard-step-back";
 
   return (
     <div className="grid w-full gap-4 pb-24">
@@ -436,18 +574,19 @@ export function CreateEventPage() {
         steps={createWizardSteps}
         current={step}
         doneTone="blue"
+        onStepClick={jumpToStep}
         className="rounded-xl border border-slate-200 bg-white px-3 py-4 shadow-card"
       />
 
       {step === 1 ? (
-        <div className="grid gap-4 lg:grid-cols-[1.6fr_0.9fr]">
+        <div key={`step-${step}`} className={cn("grid gap-4 lg:grid-cols-[1.6fr_0.9fr]", stepPanelClass)}>
           <Card>
             <h2 className="text-lg font-bold text-navy">Select Event Type</h2>
             <p className="mt-1 text-sm text-mute">
               Choose the type of event you want to create. This helps us tailor the right features, templates and
               settings for your event.
             </p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 create-wizard-stagger">
               {eventTypeOptions.map((opt) => {
                 const Icon = typeIcons[opt.id as keyof typeof typeIcons] ?? Sparkles;
                 const selected = eventType === opt.id;
@@ -457,7 +596,7 @@ export function CreateEventPage() {
                     type="button"
                     onClick={() => setEventType(opt.id)}
                     className={cn(
-                      "relative rounded-lg border p-4 text-left transition",
+                      "create-wizard-choice relative rounded-lg border p-4 text-left",
                       selected ? "border-blue bg-soft/40 ring-2 ring-blue/20" : "border-slate-200 hover:border-blue/40",
                       opt.id === "Others" && "sm:col-span-2",
                     )}
@@ -500,7 +639,7 @@ export function CreateEventPage() {
       ) : null}
 
       {step === 2 ? (
-        <div className="grid gap-4 lg:grid-cols-[1.6fr_0.9fr]">
+        <div key={`step-${step}`} className={cn("grid gap-4 lg:grid-cols-[1.6fr_0.9fr]", stepPanelClass)}>
           <Card>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <div>
@@ -543,41 +682,25 @@ export function CreateEventPage() {
                   label="Category"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  options={[
-                    { value: "legal", label: "Legal & Policy" },
-                    { value: "tech", label: "Technology" },
-                    { value: "trade", label: "Trade & Commerce" },
-                  ]}
+                  options={[...EVENT_CATEGORY_OPTIONS]}
                 />
                 <Select
                   label="Target Audience"
                   value={audience}
                   onChange={(e) => setAudience(e.target.value)}
-                  options={[
-                    { value: "government", label: "Government" },
-                    { value: "industry", label: "Industry" },
-                    { value: "academia", label: "Academia" },
-                  ]}
+                  options={[...EVENT_AUDIENCE_OPTIONS]}
                 />
                 <Select
                   label="Tone"
                   value={tone}
                   onChange={(e) => setTone(e.target.value)}
-                  options={[
-                    { value: "professional", label: "Professional and engaging" },
-                    { value: "formal", label: "Formal" },
-                    { value: "conversational", label: "Conversational" },
-                  ]}
+                  options={[...EVENT_TONE_OPTIONS]}
                 />
                 <Select
                   label="Language"
                   value={language}
                   onChange={(e) => setLanguage(e.target.value)}
-                  options={[
-                    { value: "en", label: "English" },
-                    { value: "sw", label: "Kiswahili" },
-                    { value: "fr", label: "French" },
-                  ]}
+                  options={[...EVENT_LANGUAGE_OPTIONS]}
                 />
               </div>
               <div>
@@ -588,7 +711,7 @@ export function CreateEventPage() {
                       key={tag}
                       type="button"
                       onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}
-                      className="inline-flex items-center gap-1 rounded-full bg-soft px-2.5 py-1 text-xs font-semibold text-blue"
+                      className="create-wizard-chip-in inline-flex items-center gap-1 rounded-full bg-soft px-2.5 py-1 text-xs font-semibold text-blue transition hover:bg-blue/10"
                     >
                       {tag} <X size={12} />
                     </button>
@@ -599,7 +722,8 @@ export function CreateEventPage() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && tagDraft.trim()) {
                         e.preventDefault();
-                        setTags((prev) => [...prev, tagDraft.trim()]);
+                        const next = tagDraft.trim();
+                        setTags((prev) => (prev.includes(next) ? prev : [...prev, next]));
                         setTagDraft("");
                       }
                     }}
@@ -607,11 +731,16 @@ export function CreateEventPage() {
                     className="min-w-[100px] flex-1 bg-transparent text-sm outline-none"
                   />
                 </div>
+                <p className="mt-1 text-xs text-mute">Press Enter to add. Tags are saved with the event.</p>
               </div>
             </div>
           </Card>
           <aside className="grid gap-4 self-start">
-            <Card padded={false} className="overflow-hidden">
+            <Card
+              padded={false}
+              key={`preview-${previewPulse}`}
+              className="overflow-hidden create-wizard-preview-pulse"
+            >
               <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
                 <p className="text-sm font-bold text-ink">Event Preview</p>
                 <button type="button" className="text-xs font-semibold text-blue">
@@ -630,7 +759,7 @@ export function CreateEventPage() {
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Pill tone="green">{eventType}</Pill>
-                  <Pill tone="blue">Government</Pill>
+                  <Pill tone="blue">{audienceLabel}</Pill>
                 </div>
               </div>
             </Card>
@@ -640,7 +769,7 @@ export function CreateEventPage() {
       ) : null}
 
       {step === 3 ? (
-        <div className="grid gap-4 lg:grid-cols-[1.6fr_0.9fr]">
+        <div key={`step-${step}`} className={cn("grid gap-4 lg:grid-cols-[1.6fr_0.9fr]", stepPanelClass)}>
           <Card className="grid gap-6">
             <section>
               <h2 className="mb-3 flex items-center gap-2 font-bold text-ink">
@@ -680,7 +809,7 @@ export function CreateEventPage() {
                     type="button"
                     onClick={() => setVenueMode(m.id)}
                     className={cn(
-                      "rounded-lg border p-3 text-left",
+                      "create-wizard-choice rounded-lg border p-3 text-left",
                       venueMode === m.id ? "border-blue bg-soft/50 ring-2 ring-blue/20" : "border-slate-200",
                     )}
                   >
@@ -720,7 +849,7 @@ export function CreateEventPage() {
               </div>
             </section>
             {venueMode !== "in-person" ? (
-              <section>
+              <section key={venueMode} className="create-wizard-step-forward">
                 <h2 className="mb-3 flex items-center gap-2 font-bold text-ink">
                   <Video size={18} className="text-blue" /> Virtual Event Link
                 </h2>
@@ -729,7 +858,11 @@ export function CreateEventPage() {
             ) : null}
           </Card>
           <aside className="grid gap-4 self-start">
-            <Card padded={false} className="overflow-hidden">
+            <Card
+              padded={false}
+              key={`preview-venue-${previewPulse}`}
+              className="overflow-hidden create-wizard-preview-pulse"
+            >
               <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
                 <p className="text-sm font-bold text-ink">Event Preview</p>
                 <button type="button" className="text-xs font-semibold text-blue">
@@ -762,7 +895,7 @@ export function CreateEventPage() {
       ) : null}
 
       {step === 4 ? (
-        <div className="grid gap-4 lg:grid-cols-[1.6fr_0.9fr]">
+        <div key={`step-${step}`} className={cn("grid gap-4 lg:grid-cols-[1.6fr_0.9fr]", stepPanelClass)}>
           <Card>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <div>
@@ -789,87 +922,130 @@ export function CreateEventPage() {
             />
             {programTab === "schedule" ? (
               <div className="mt-4">
+                {!startDate ? (
+                  <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    Set the event start and end dates in Date & Venue first. Program days are generated from that range.
+                  </p>
+                ) : null}
                 <div className="mb-4 flex flex-wrap items-center gap-2">
-                  {["1", "2", "3"].map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => setDay(d)}
-                      className={cn(
-                        "rounded-lg border px-3 py-2 text-left text-sm font-semibold transition",
-                        day === d
-                          ? "border-blue bg-soft text-blue"
-                          : "border-slate-200 bg-white text-mute hover:border-blue/40",
-                      )}
-                    >
-                      Day {d}
-                      <span className="mt-0.5 block text-xs font-normal text-mute">
-                        {d === "1" ? "15 Nov 2026" : d === "2" ? "16 Nov 2026" : "17 Nov 2026"}
-                      </span>
-                    </button>
-                  ))}
-                  <Button variant="ghost" size="sm">
+                  {programDays.length ? (
+                    programDays.map((d) => (
+                      <button
+                        key={d.index}
+                        type="button"
+                        onClick={() => setDay(String(d.index))}
+                        className={cn(
+                          "create-wizard-choice rounded-lg border px-3 py-2 text-left text-sm font-semibold",
+                          day === String(d.index)
+                            ? "border-blue bg-soft text-blue"
+                            : "border-slate-200 bg-white text-mute hover:border-blue/40",
+                        )}
+                      >
+                        Day {d.index}
+                        <span className="mt-0.5 block text-xs font-normal text-mute">{d.label}</span>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="text-sm text-mute">No program days yet.</p>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={!startDate}
+                    onClick={() => setExtraProgramDays((n) => n + 1)}
+                  >
                     <Plus size={14} /> Add Day
                   </Button>
-                  <Button variant="outline" size="sm" className="ml-auto">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="ml-auto"
+                    onClick={() => setAgendaPreviewOpen(true)}
+                  >
                     <Eye size={14} /> Preview Agenda
                   </Button>
                 </div>
-                <ul className="relative grid gap-0 before:absolute before:top-3 before:bottom-3 before:left-[7px] before:w-px before:bg-slate-200">
-                  {sessions.map((s) => (
-                    <li key={s.id} className="relative flex gap-3 border-b border-slate-100 py-3 last:border-b-0">
-                      <span
-                        className={cn(
-                          "relative z-10 mt-1.5 h-3.5 w-3.5 shrink-0 rounded-full border-2 border-white",
-                          s.tone === "green"
-                            ? "bg-green"
-                            : s.tone === "purple"
-                              ? "bg-purple-600"
-                              : "bg-orange-500",
-                        )}
-                        aria-hidden
-                      />
-                      <div className="w-36 shrink-0 text-xs text-mute">{s.time}</div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-semibold text-ink">{s.title}</p>
-                          <Pill tone={s.tone === "green" ? "green" : s.tone === "purple" ? "purple" : "orange"}>
-                            {s.badge}
-                          </Pill>
+                {daySessions.length ? (
+                  <ul className="relative grid gap-0 before:absolute before:top-3 before:bottom-3 before:left-[7px] before:w-px before:bg-slate-200">
+                    {daySessions.map((s) => (
+                      <li key={s.id} className="relative flex gap-3 border-b border-slate-100 py-3 last:border-b-0">
+                        <span
+                          className={cn(
+                            "relative z-10 mt-1.5 h-3.5 w-3.5 shrink-0 rounded-full border-2 border-white",
+                            s.tone === "green"
+                              ? "bg-green"
+                              : s.tone === "purple"
+                                ? "bg-purple-600"
+                                : "bg-orange-500",
+                          )}
+                          aria-hidden
+                        />
+                        <div className="w-36 shrink-0 text-xs text-mute">{s.time}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-semibold text-ink">{s.title}</p>
+                            <Pill tone={s.tone === "green" ? "green" : s.tone === "purple" ? "purple" : "orange"}>
+                              {s.badge}
+                            </Pill>
+                          </div>
+                          <p className="mt-1 text-sm text-mute">{s.description}</p>
+                          <p className="mt-2 flex flex-wrap items-center gap-3 text-xs text-mute">
+                            <span className="inline-flex items-center gap-1">
+                              <Users size={12} /> {s.speakers} speakers
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <MapPin size={12} /> {s.place}
+                            </span>
+                          </p>
                         </div>
-                        <p className="mt-1 text-sm text-mute">{s.description}</p>
-                        <p className="mt-2 flex flex-wrap items-center gap-3 text-xs text-mute">
-                          <span className="inline-flex items-center gap-1">
-                            <Users size={12} /> {s.speakers} speakers
+                        <div className="flex shrink-0 gap-1">
+                          <button
+                            type="button"
+                            className="grid h-8 w-8 place-items-center rounded-lg text-mute hover:bg-slate-100"
+                            aria-label="Duplicate"
+                            onClick={() =>
+                              setSessions((prev) => [
+                                ...prev,
+                                {
+                                  ...s,
+                                  id: `s${Date.now()}`,
+                                  title: `${s.title} (copy)`,
+                                },
+                              ])
+                            }
+                          >
+                            <Copy size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            className="grid h-8 w-8 place-items-center rounded-lg text-red hover:bg-red-50"
+                            aria-label="Delete"
+                            onClick={() => setSessions((prev) => prev.filter((x) => x.id !== s.id))}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                          <span className="grid h-8 w-8 place-items-center text-mute" aria-hidden>
+                            <GripVertical size={14} />
                           </span>
-                          <span className="inline-flex items-center gap-1">
-                            <MapPin size={12} /> {s.place}
-                          </span>
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 gap-1">
-                        <button type="button" className="grid h-8 w-8 place-items-center rounded-lg text-mute hover:bg-slate-100" aria-label="Edit">
-                          <Pencil size={14} />
-                        </button>
-                        <button type="button" className="grid h-8 w-8 place-items-center rounded-lg text-mute hover:bg-slate-100" aria-label="Duplicate">
-                          <Copy size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          className="grid h-8 w-8 place-items-center rounded-lg text-red hover:bg-red-50"
-                          aria-label="Delete"
-                          onClick={() => setSessions((prev) => prev.filter((x) => x.id !== s.id))}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                        <span className="grid h-8 w-8 place-items-center text-mute" aria-hidden>
-                          <GripVertical size={14} />
-                        </span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-                <Button variant="outline" className="mt-4" onClick={() => setSessionModal(true)}>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="rounded-lg border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-mute">
+                    No sessions for Day {day}
+                    {programDays.find((d) => String(d.index) === day)
+                      ? ` (${programDays.find((d) => String(d.index) === day)?.label})`
+                      : ""}
+                    . Add one below.
+                  </p>
+                )}
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  disabled={!startDate}
+                  onClick={() => setSessionModal(true)}
+                >
                   <Plus size={16} /> Add Session
                 </Button>
               </div>
@@ -984,12 +1160,17 @@ export function CreateEventPage() {
               <div className="mt-4 grid gap-3">
                 <Select
                   label="Program length"
-                  defaultValue="3"
-                  options={[
-                    { value: "1", label: "1 Day" },
-                    { value: "2", label: "2 Days" },
-                    { value: "3", label: "3 Days" },
-                  ]}
+                  value={String(Math.max(1, programDays.length || 1))}
+                  onChange={(e) => {
+                    const next = Math.max(1, Number(e.target.value) || 1);
+                    const rangeLen =
+                      enumerateEventDays(startDate, endDate || startDate).length || 1;
+                    setExtraProgramDays(Math.max(0, next - rangeLen));
+                  }}
+                  options={Array.from({ length: 7 }, (_, i) => {
+                    const n = i + 1;
+                    return { value: String(n), label: n === 1 ? "1 Day" : `${n} Days` };
+                  })}
                 />
                 <fieldset className="grid gap-2 text-sm">
                   <legend className="font-medium text-ink">Include session types</legend>
@@ -1028,7 +1209,7 @@ export function CreateEventPage() {
       ) : null}
 
       {step === 5 ? (
-        <div className="grid gap-4 lg:grid-cols-[1.6fr_0.9fr]">
+        <div key={`step-${step}`} className={cn("grid gap-4 lg:grid-cols-[1.6fr_0.9fr]", stepPanelClass)}>
           <div className="grid gap-4">
             <Card>
               <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -1078,7 +1259,7 @@ export function CreateEventPage() {
                       name: "Student",
                       price: "KES 3,000",
                       capacity: 80,
-                      period: "01 Nov 2026 – 14 Nov 2026",
+                      period: previewDate === "Date not set" ? "Registration open" : previewDate,
                       tone: "blue",
                     },
                   ])
@@ -1151,7 +1332,11 @@ export function CreateEventPage() {
             </div>
           </div>
           <aside className="grid gap-4 self-start">
-            <Card padded={false} className="overflow-hidden">
+            <Card
+              padded={false}
+              key={`preview-reg-${previewPulse}`}
+              className="overflow-hidden create-wizard-preview-pulse"
+            >
               <img src="/assets/admin-banner.jpg" alt="" className="h-28 w-full object-cover" />
               <div className="p-4">
                 <p className="font-semibold text-ink line-clamp-2">{title}</p>
@@ -1168,7 +1353,7 @@ export function CreateEventPage() {
       ) : null}
 
       {step === 6 ? (
-        <div className="grid gap-4 lg:grid-cols-[1.6fr_0.9fr]">
+        <div key={`step-${step}`} className={cn("grid gap-4 lg:grid-cols-[1.6fr_0.9fr]", stepPanelClass)}>
           <Card className="grid gap-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-lg font-bold text-ink">Media & Publish</h2>
@@ -1304,7 +1489,7 @@ export function CreateEventPage() {
                     type="button"
                     onClick={() => setVisibility(v.id)}
                     className={cn(
-                      "flex items-start gap-3 rounded-lg border p-3 text-left",
+                      "create-wizard-choice flex items-start gap-3 rounded-lg border p-3 text-left",
                       visibility === v.id ? "border-blue bg-soft/40" : "border-slate-200",
                     )}
                   >
@@ -1321,13 +1506,17 @@ export function CreateEventPage() {
                   checked={saveDraft}
                   onChange={setSaveDraft}
                   label="Save as Draft"
-                  description="Save your event as a draft. You can review and publish later."
+                  description="Keeps the event unpublished. Use Save as Draft in the footer anytime, or Publish Event when ready."
                 />
               </div>
             </section>
           </Card>
           <aside className="self-start">
-            <Card padded={false} className="overflow-hidden">
+            <Card
+              padded={false}
+              key={`preview-publish-${previewPulse}`}
+              className="overflow-hidden create-wizard-preview-pulse"
+            >
               <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
                 <p className="text-sm font-bold text-ink">Event Preview</p>
                 <button type="button" className="text-xs font-semibold text-blue">
@@ -1365,56 +1554,154 @@ export function CreateEventPage() {
         </div>
       ) : null}
 
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 backdrop-blur md:left-[220px] lg:left-[240px]">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 backdrop-blur transition-[box-shadow] duration-200 md:left-[220px] lg:left-[240px] shadow-[0_-8px_24px_rgba(15,40,90,0.06)]">
         <div className="flex w-full flex-col gap-2 px-4 py-3 md:px-6 lg:px-6">
-          {submitError ? (
-            <p className="text-sm text-red-600" role="alert">
-              {submitError}
-            </p>
-          ) : null}
           <div className="flex items-center justify-between gap-3">
             <Link to="/admin/events">
               <Button variant="outline" disabled={submitting}>
                 Cancel
               </Button>
             </Link>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <Button variant="outline" disabled={step <= 1 || submitting} onClick={goPrev}>
                 <ArrowLeft size={16} /> Previous
               </Button>
-              <Button onClick={() => void goNext()} disabled={submitting || loadingEdit || Boolean(loadError)}>
-                {step === 6 ? (
-                  <>
-                    <Send size={16} />{" "}
-                    {submitting
-                      ? isEdit
-                        ? "Saving…"
-                        : saveDraft
-                          ? "Saving…"
-                          : "Publishing…"
-                      : isEdit
-                        ? saveDraft
-                          ? "Save Draft"
-                          : "Save Changes"
-                        : saveDraft
-                          ? "Save Draft"
-                          : "Publish Event"}
-                  </>
-                ) : (
-                  <>
-                    Next <ArrowRight size={16} />
-                  </>
-                )}
+              <Button
+                variant="outline"
+                disabled={submitting || loadingEdit || Boolean(loadError)}
+                onClick={() => void submitEvent(true)}
+              >
+                <Save size={16} />
+                {submitting && saveDraft ? "Saving draft…" : "Save as Draft"}
               </Button>
+              {step === 6 ? (
+                <Button
+                  disabled={submitting || loadingEdit || Boolean(loadError)}
+                  onClick={() => void submitEvent(false)}
+                >
+                  <Send size={16} />
+                  {submitting && !saveDraft
+                    ? isEdit
+                      ? "Saving…"
+                      : "Publishing…"
+                    : isEdit
+                      ? "Save & Publish"
+                      : "Publish Event"}
+                </Button>
+              ) : (
+                <Button onClick={() => void goNext()} disabled={submitting || loadingEdit || Boolean(loadError)}>
+                  Next <ArrowRight size={16} />
+                </Button>
+              )}
             </div>
           </div>
         </div>
       </div>
 
       <Modal
+        open={agendaPreviewOpen}
+        onClose={() => setAgendaPreviewOpen(false)}
+        title="Agenda preview"
+        className="md:max-w-2xl"
+        footer={
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => setAgendaPreviewOpen(false)}>
+              Close
+            </Button>
+          </div>
+        }
+      >
+        <div className="grid gap-4">
+          <div className="rounded-lg border border-slate-100 bg-soft/60 px-3 py-2 text-sm text-mute">
+            <p className="font-semibold text-ink">{title.trim() || "Untitled event"}</p>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+              <span className="inline-flex items-center gap-1">
+                <CalendarDays size={12} /> {previewDate}
+              </span>
+              {venueName ? (
+                <span className="inline-flex items-center gap-1">
+                  <MapPin size={12} /> {venueName}
+                </span>
+              ) : null}
+              <span>
+                {sessions.length} session{sessions.length === 1 ? "" : "s"} ·{" "}
+                {agendaByDay.length} day{agendaByDay.length === 1 ? "" : "s"}
+              </span>
+            </p>
+          </div>
+
+          {sessions.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-mute">
+              No sessions added yet. Use Add Session on each day to build the agenda.
+            </p>
+          ) : (
+            agendaByDay.map((d) => (
+              <section key={d.index} className="rounded-lg border border-slate-200 overflow-hidden">
+                <header className="flex items-center justify-between gap-2 border-b border-slate-100 bg-slate-50 px-3 py-2">
+                  <div>
+                    <p className="text-sm font-bold text-ink">Day {d.index}</p>
+                    <p className="text-xs text-mute">{d.label}</p>
+                  </div>
+                  <span className="text-xs font-semibold text-mute">
+                    {d.sessions.length} session{d.sessions.length === 1 ? "" : "s"}
+                  </span>
+                </header>
+                {d.sessions.length ? (
+                  <ul className="divide-y divide-slate-100">
+                    {d.sessions.map((s) => (
+                      <li key={s.id} className="flex gap-3 px-3 py-3">
+                        <div className="w-28 shrink-0 text-xs font-semibold text-blue">{s.time}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-semibold text-ink">{s.title}</p>
+                            <Pill
+                              tone={
+                                s.tone === "green"
+                                  ? "green"
+                                  : s.tone === "purple"
+                                    ? "purple"
+                                    : s.tone === "blue"
+                                      ? "blue"
+                                      : "orange"
+                              }
+                            >
+                              {s.badge}
+                            </Pill>
+                          </div>
+                          {s.description ? (
+                            <p className="mt-1 text-sm text-mute">{s.description}</p>
+                          ) : null}
+                          <p className="mt-1.5 flex flex-wrap gap-3 text-xs text-mute">
+                            <span className="inline-flex items-center gap-1">
+                              <Users size={12} /> {s.speakers} speakers
+                            </span>
+                            {s.place ? (
+                              <span className="inline-flex items-center gap-1">
+                                <MapPin size={12} /> {s.place}
+                              </span>
+                            ) : null}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="px-3 py-4 text-sm text-mute">No sessions scheduled for this day.</p>
+                )}
+              </section>
+            ))
+          )}
+        </div>
+      </Modal>
+
+      <Modal
         open={sessionModal}
         onClose={() => setSessionModal(false)}
-        title="Add Session"
+        title={`Add Session — Day ${day}${
+          programDays.find((d) => String(d.index) === day)
+            ? ` (${programDays.find((d) => String(d.index) === day)?.label})`
+            : ""
+        }`}
         className="md:max-w-lg"
         footer={
           <div className="flex justify-end gap-2">
@@ -1423,16 +1710,20 @@ export function CreateEventPage() {
             </Button>
             <Button
               onClick={() => {
-                if (!newSessionTitle.trim()) return;
+                if (!newSessionTitle.trim()) {
+                  toast.error("Enter a session title.");
+                  return;
+                }
                 setSessions((prev) => [
                   ...prev,
                   {
-                    id: `s${prev.length + 1}`,
+                    id: `s${Date.now()}`,
+                    day,
                     time: `${newSessionStart} – ${newSessionEnd}`,
                     title: newSessionTitle.trim(),
                     description: newSessionDesc.trim() || "New session added to the programme.",
                     speakers: 1,
-                    place: newSessionVenue,
+                    place: newSessionVenue.trim() || venueName || "Main hall",
                     badge: newSessionType,
                     tone: "orange" as const,
                   },
@@ -1440,7 +1731,10 @@ export function CreateEventPage() {
                 setNewSessionTitle("");
                 setNewSessionDesc("");
                 setNewSessionType("Session");
+                setNewSessionVenue("");
+                setNewSessionCapacity("");
                 setSessionModal(false);
+                toast.success(`Session added to Day ${day}`);
               }}
             >
               Save Session
@@ -1518,7 +1812,10 @@ export function CreateEventPage() {
             </Button>
             <Button
               onClick={() => {
-                if (!newSpeakerName.trim()) return;
+                if (!newSpeakerName.trim()) {
+                  toast.error("Enter the speaker’s name.");
+                  return;
+                }
                 const role = newSpeakerRole.trim() || "Speaker";
                 const org = newSpeakerOrg.trim() || "TBD";
                 const category = newSpeakerCategory || "panelist";
@@ -1528,11 +1825,12 @@ export function CreateEventPage() {
                   moderator: "Moderator",
                   government: "Government Representative",
                 };
+                const name = newSpeakerName.trim();
                 setSpeakers((prev) => [
                   ...prev,
                   {
                     id: `sp${prev.length + 1}`,
-                    name: newSpeakerName.trim(),
+                    name,
                     role,
                     org,
                     roleLines: [role, org],
@@ -1552,6 +1850,7 @@ export function CreateEventPage() {
                 setNewSpeakerCategory("keynote");
                 setNewSpeakerCountry("");
                 setSpeakerModal(false);
+                toast.success(`${name} added as speaker`);
               }}
             >
               Save Speaker
@@ -1619,12 +1918,16 @@ export function CreateEventPage() {
             </Button>
             <Button
               onClick={() => {
-                if (!pkgName.trim() || !pkgPrice.trim()) return;
+                if (!pkgName.trim() || !pkgPrice.trim()) {
+                  toast.error("Enter package name and price.");
+                  return;
+                }
+                const name = pkgName.trim();
                 setPackages((prev) => [
                   ...prev,
                   {
                     id: `pkg${prev.length + 1}`,
-                    name: pkgName.trim(),
+                    name,
                     subtitle: pkgDesc.trim() || "Custom sponsorship package",
                     price: Number(pkgPrice) || 0,
                     availability: `${pkgAvail} Available`,
@@ -1640,6 +1943,7 @@ export function CreateEventPage() {
                 setPkgBenefits(["Logo on main stage backdrop"]);
                 setPackageModal(false);
                 setProgramTab("sponsorship");
+                toast.success(`${name} package added`);
               }}
             >
               Save Package
@@ -1720,7 +2024,7 @@ function TipsCard({ title, tips }: { title: string; tips: string[] }) {
       <p className="flex items-center gap-2 font-bold text-blue">
         <Lightbulb size={18} /> {title}
       </p>
-      <ul className="mt-3 grid gap-2">
+      <ul className="mt-3 grid gap-2 create-wizard-stagger">
         {tips.map((t) => (
           <li key={t} className="flex gap-2 text-sm text-ink">
             <Check size={14} className="mt-0.5 shrink-0 text-blue" /> {t}

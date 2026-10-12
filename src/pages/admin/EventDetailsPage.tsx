@@ -36,6 +36,9 @@ import { EventProgrammeSchedule } from "../../components/admin/EventProgrammeSch
 import { PaymentsDashboard } from "../../components/admin/PaymentsDashboard";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
+import { Modal } from "../../components/ui/Modal";
+import { Select } from "../../components/ui/Select";
+import { useToast } from "../../components/ui/Toast";
 import {
   communicationCampaigns,
   communicationChannelCounts,
@@ -66,8 +69,13 @@ import {
   asSponsors,
   asStringList,
   asTickets,
+  classificationLabel,
   deleteEngagement,
   duplicateEngagement,
+  EVENT_AUDIENCE_OPTIONS,
+  EVENT_CATEGORY_OPTIONS,
+  EVENT_LANGUAGE_OPTIONS,
+  EVENT_TONE_OPTIONS,
   formatEngagementStatusLabel,
   formatModeLabel,
   getEngagement,
@@ -77,9 +85,12 @@ import {
 import { cn } from "../../lib/cn";
 import type {
   Engagement,
+  EngagementAudience,
+  EngagementLanguage,
   EngagementSpeaker,
   EngagementSponsor,
   EngagementTicket,
+  EngagementTone,
 } from "../../types/engagement";
 
 const kpiIcon = {
@@ -250,6 +261,14 @@ type DetailView = {
   theme: string;
   type: string;
   category: string;
+  audience: string;
+  tone: string;
+  language: string;
+  tags: string[];
+  categoryValue: string;
+  audienceValue: string;
+  toneValue: string;
+  languageValue: string;
   dates: string;
   time: string;
   mode: string;
@@ -284,6 +303,14 @@ function toDetailView(engagement: Engagement | null): DetailView {
       theme: eventDetail.theme.replace(/\.$/, ""),
       type: eventDetail.type,
       category: eventDetail.category,
+      audience: "—",
+      tone: "—",
+      language: "—",
+      tags: [],
+      categoryValue: "legal",
+      audienceValue: "government",
+      toneValue: "professional",
+      languageValue: "en",
       dates: eventDetail.dates.replace("–", "-"),
       time: eventDetail.time.replace("–", "-"),
       mode: eventDetail.mode,
@@ -314,6 +341,10 @@ function toDetailView(engagement: Engagement | null): DetailView {
   const themes = asStringList(engagement.themes);
   const objectives = asStringList(engagement.objectives);
   const cityLine = [engagement.city, engagement.country].filter(Boolean).join(", ");
+  const tags =
+    Array.isArray(engagement.tags) && engagement.tags.length
+      ? engagement.tags.map(String).filter(Boolean)
+      : themes;
 
   const theme =
     engagement.shortDescription?.trim() ||
@@ -325,9 +356,15 @@ function toDetailView(engagement: Engagement | null): DetailView {
     statusLabel: formatEngagementStatusLabel(engagement.status),
     theme,
     type: toUiEventType(engagement.engagementType),
-    category: engagement.category
-      ? engagement.category.replace(/[_-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-      : "—",
+    category: classificationLabel(EVENT_CATEGORY_OPTIONS, engagement.category),
+    audience: classificationLabel(EVENT_AUDIENCE_OPTIONS, engagement.audience),
+    tone: classificationLabel(EVENT_TONE_OPTIONS, engagement.tone),
+    language: classificationLabel(EVENT_LANGUAGE_OPTIONS, engagement.language),
+    tags,
+    categoryValue: engagement.category || "legal",
+    audienceValue: engagement.audience || "government",
+    toneValue: engagement.tone || "professional",
+    languageValue: engagement.language || "en",
     dates: formatRange(engagement.startDate, engagement.endDate),
     time: formatTimeRange(engagement.startDate, engagement.endDate, engagement.timezone),
     mode: formatModeLabel(engagement.mode),
@@ -406,6 +443,10 @@ export function EventDetailsPage() {
         theme: "",
         description: "",
         descriptionExtra: "",
+        audience: "—",
+        tone: "—",
+        language: "—",
+        tags: [],
         website: "",
         facebook: "",
         twitter: "",
@@ -711,7 +752,17 @@ export function EventDetailsPage() {
         ))}
       </nav>
 
-      {validTab === "overview" ? <OverviewTab id={id} detail={detail} fromApi={fromApi} /> : null}
+      {validTab === "overview" ? (
+        <OverviewTab
+          id={id}
+          detail={detail}
+          fromApi={fromApi}
+          onChanged={async () => {
+            const row = await getEngagement(id);
+            setEngagement(row);
+          }}
+        />
+      ) : null}
       {validTab === "tickets" ? (
         <div className="mt-1">
           <TicketsTab
@@ -774,32 +825,209 @@ export function EventDetailsPage() {
       ) : null}
       {validTab === "settings" ? (
         <div className="mt-1">
-          <Card>
-            <h2 className="mb-4 text-lg font-bold text-ink">Event Settings</h2>
-            <dl className="grid gap-3 text-sm sm:grid-cols-2">
-              {[
-                ["Visibility", detail.visibility],
-                ["Registration", detail.registration],
-                ["Payment", detail.payment],
-                ["Mode", detail.mode],
-                ["Category", detail.category],
-                ["Organizer", detail.organizer],
-              ].map(([k, v]) => (
-                <div key={k} className="flex justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2">
-                  <dt className="text-mute">{k}</dt>
-                  <dd className="font-medium text-ink">{v}</dd>
-                </div>
-              ))}
-            </dl>
-            <Link to={`/admin/events/${id}/edit`} className="mt-4 inline-block">
-              <Button variant="outline" size="sm">
-                Edit Event <ArrowRight size={14} />
-              </Button>
-            </Link>
-          </Card>
+          <EventClassificationSettings
+            eventId={id}
+            detail={detail}
+            fromApi={fromApi}
+            onChanged={async () => {
+              const row = await getEngagement(id);
+              setEngagement(row);
+            }}
+          />
         </div>
       ) : null}
     </div>
+  );
+}
+
+function ClassificationEditModal({
+  open,
+  onClose,
+  eventId,
+  detail,
+  onSaved,
+}: {
+  open: boolean;
+  onClose: () => void;
+  eventId: string;
+  detail: DetailView;
+  onSaved: () => Promise<void>;
+}) {
+  const [category, setCategory] = useState(detail.categoryValue);
+  const [audience, setAudience] = useState(detail.audienceValue);
+  const [tone, setTone] = useState(detail.toneValue);
+  const [language, setLanguage] = useState(detail.languageValue);
+  const [tags, setTags] = useState<string[]>(detail.tags);
+  const [tagDraft, setTagDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const toast = useToast();
+
+  useEffect(() => {
+    if (!open) return;
+    setCategory(detail.categoryValue);
+    setAudience(detail.audienceValue);
+    setTone(detail.toneValue);
+    setLanguage(detail.languageValue);
+    setTags(detail.tags);
+    setTagDraft("");
+  }, [open, detail]);
+
+  const save = async () => {
+    setSaving(true);
+    const nextTags = tags.map((t) => t.trim()).filter(Boolean);
+    try {
+      await updateEngagement(eventId, {
+        category,
+        audience: audience as EngagementAudience,
+        tone: tone as EngagementTone,
+        language: language as EngagementLanguage,
+        tags: nextTags,
+        themes: nextTags,
+      });
+      toast.success("Classification updated");
+      await onSaved();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to save classification");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Edit classification"
+      className="md:max-w-xl"
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button size="sm" onClick={() => void save()} disabled={saving}>
+            {saving ? "Saving…" : "Save changes"}
+          </Button>
+        </div>
+      }
+    >
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Select
+          label="Category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          options={[...EVENT_CATEGORY_OPTIONS]}
+        />
+        <Select
+          label="Target Audience"
+          value={audience}
+          onChange={(e) => setAudience(e.target.value)}
+          options={[...EVENT_AUDIENCE_OPTIONS]}
+        />
+        <Select
+          label="Tone"
+          value={tone}
+          onChange={(e) => setTone(e.target.value)}
+          options={[...EVENT_TONE_OPTIONS]}
+        />
+        <Select
+          label="Language"
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          options={[...EVENT_LANGUAGE_OPTIONS]}
+        />
+      </div>
+      <div className="mt-3">
+        <p className="mb-1.5 text-sm font-medium text-ink">Event Tags</p>
+        <div className="flex flex-wrap gap-2 rounded-lg border border-slate-200 p-3">
+          {tags.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}
+              className="inline-flex items-center gap-1 rounded-full bg-soft px-2.5 py-1 text-xs font-semibold text-blue"
+            >
+              {tag} <X size={12} />
+            </button>
+          ))}
+          <input
+            value={tagDraft}
+            onChange={(e) => setTagDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && tagDraft.trim()) {
+                e.preventDefault();
+                const next = tagDraft.trim();
+                setTags((prev) => (prev.includes(next) ? prev : [...prev, next]));
+                setTagDraft("");
+              }
+            }}
+            placeholder="Add tag…"
+            className="min-w-[100px] flex-1 bg-transparent text-sm outline-none"
+          />
+        </div>
+        <p className="mt-1 text-xs text-mute">Press Enter to add a tag.</p>
+      </div>
+    </Modal>
+  );
+}
+
+function EventClassificationSettings({
+  eventId,
+  detail,
+  fromApi,
+  onChanged,
+}: {
+  eventId: string;
+  detail: DetailView;
+  fromApi: boolean;
+  onChanged: () => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Card>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-bold text-ink">Event Settings</h2>
+        {fromApi ? (
+          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+            <Pencil size={14} /> Edit classification
+          </Button>
+        ) : null}
+      </div>
+      <dl className="grid gap-3 text-sm sm:grid-cols-2">
+        {[
+          ["Visibility", detail.visibility],
+          ["Registration", detail.registration],
+          ["Payment", detail.payment],
+          ["Mode", detail.mode],
+          ["Category", detail.category],
+          ["Target Audience", detail.audience],
+          ["Tone", detail.tone],
+          ["Language", detail.language],
+          ["Event Tags", detail.tags.length ? detail.tags.join(", ") : "—"],
+          ["Organizer", detail.organizer],
+        ].map(([k, v]) => (
+          <div key={k} className="flex justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2">
+            <dt className="text-mute">{k}</dt>
+            <dd className="max-w-[60%] text-right font-medium text-ink">{v}</dd>
+          </div>
+        ))}
+      </dl>
+      <Link to={`/admin/events/${eventId}/edit`} className="mt-4 inline-block">
+        <Button variant="outline" size="sm">
+          Edit Event <ArrowRight size={14} />
+        </Button>
+      </Link>
+      <ClassificationEditModal
+        open={open}
+        onClose={() => setOpen(false)}
+        eventId={eventId}
+        detail={detail}
+        onSaved={async () => {
+          await onChanged();
+          setOpen(false);
+        }}
+      />
+    </Card>
   );
 }
 
@@ -807,11 +1035,14 @@ function OverviewTab({
   id,
   detail,
   fromApi,
+  onChanged,
 }: {
   id: string;
   detail: DetailView;
   fromApi: boolean;
+  onChanged: () => Promise<void>;
 }) {
+  const [classifyOpen, setClassifyOpen] = useState(false);
   const schedule =
     detail.programme.length > 0
       ? detail.programme.map((s, i) => {
@@ -883,9 +1114,20 @@ function OverviewTab({
               <LayoutGrid size={18} />
             </span>
             <h2>Event Information</h2>
-            <Link to={`/admin/events/${id}/edit?step=2`} className={edEdit}>
-              <Pencil size={12} /> Edit
-            </Link>
+            <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+              {fromApi ? (
+                <button
+                  type="button"
+                  className={cn(edEdit, "ml-0")}
+                  onClick={() => setClassifyOpen(true)}
+                >
+                  <Pencil size={12} /> Edit classification
+                </button>
+              ) : null}
+              <Link to={`/admin/events/${id}/edit?step=2`} className={cn(edEdit, "ml-0")}>
+                <Pencil size={12} /> Edit
+              </Link>
+            </div>
           </div>
           <div className="grid grid-cols-[1.25fr_.85fr] gap-x-[35px] gap-y-2.5 text-[10px] max-[820px]:grid-cols-1">
             <div className={edRow}>
@@ -903,6 +1145,22 @@ function OverviewTab({
             <div className={edRow}>
               <b>Category</b>
               <span>{detail.category}</span>
+            </div>
+            <div className={edRow}>
+              <b>Target Audience</b>
+              <span>{detail.audience}</span>
+            </div>
+            <div className={edRow}>
+              <b>Tone</b>
+              <span>{detail.tone}</span>
+            </div>
+            <div className={edRow}>
+              <b>Language</b>
+              <span>{detail.language}</span>
+            </div>
+            <div className={edRow}>
+              <b>Event Tags</b>
+              <span>{detail.tags.length ? detail.tags.join(", ") : "—"}</span>
             </div>
             <div className={edRow}>
               <b>Dates</b>
@@ -925,22 +1183,24 @@ function OverviewTab({
               <span>{detail.organizer}</span>
             </div>
             <div className={edRow}>
-              <b />
-              <span />
-            </div>
-            <div className={edRow}>
               <b>Contact Email</b>
               <span>{detail.email}</span>
-            </div>
-            <div className={edRow}>
-              <b />
-              <span />
             </div>
             <div className={edRow}>
               <b>Contact Phone</b>
               <span>{detail.phone}</span>
             </div>
           </div>
+          <ClassificationEditModal
+            open={classifyOpen}
+            onClose={() => setClassifyOpen(false)}
+            eventId={id}
+            detail={detail}
+            onSaved={async () => {
+              await onChanged();
+              setClassifyOpen(false);
+            }}
+          />
         </article>
 
         <article className={cn(edCardBase, "bg-[linear-gradient(135deg,#fff,#effcf5)]")}>
@@ -1284,17 +1544,12 @@ function TicketsTab({
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<EngagementTicket | null>(null);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const toast = useToast();
   const rows = toTicketRows(tickets, live);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    window.setTimeout(() => setToast(null), 2200);
-  };
 
   const persistTickets = async (next: EngagementTicket[], message: string) => {
     if (!fromApi) {
-      showToast("Sign in and open a live event to save tickets.");
+      toast.info("Sign in and open a live event to save tickets.");
       return;
     }
     setSaving(true);
@@ -1303,9 +1558,9 @@ function TicketsTab({
       await onChanged();
       setModalOpen(false);
       setEditing(null);
-      showToast(message);
+      toast.success(message);
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : "Failed to save tickets");
+      toast.error(err instanceof ApiError ? err.message : "Failed to save tickets");
     } finally {
       setSaving(false);
     }
@@ -1393,11 +1648,6 @@ function TicketsTab({
 
   return (
     <div>
-      {toast ? (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-[#07145c] px-4 py-2 text-sm font-semibold text-white shadow-lg">
-          {toast}
-        </div>
-      ) : null}
       <section className="mb-3 grid grid-cols-5 gap-2.5 max-[900px]:grid-cols-2 max-[560px]:gap-[7px]">
         {kpis.map((kpi, kpiIdx) => {
           const muted = live;
@@ -2641,11 +2891,11 @@ function SponsorsTab({
   const [editing, setEditing] = useState<SponsorRow | null>(null);
   const [saving, setSaving] = useState(false);
   const [localExtra, setLocalExtra] = useState<SponsorRow[]>([]);
-  const [toast, setToast] = useState<string | null>(null);
+  const toast = useToast();
 
   const persistSponsors = async (rows: SponsorRow[], message: string) => {
     if (!fromApi) {
-      showToast("Sign in and open a live event to save.");
+      toast.info("Sign in and open a live event to save.");
       return;
     }
     setSaving(true);
@@ -2654,9 +2904,9 @@ function SponsorsTab({
       await onChanged();
       setModalOpen(false);
       setEditing(null);
-      showToast(message);
+      toast.success(message);
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : `Failed to save ${noun}`);
+      toast.error(err instanceof ApiError ? err.message : `Failed to save ${noun}`);
     } finally {
       setSaving(false);
     }
@@ -2936,22 +3186,11 @@ function SponsorsTab({
     URL.revokeObjectURL(a.href);
   };
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    window.setTimeout(() => setToast(null), 2200);
-  };
-
   const glass =
     "rounded-xl border border-[#dcecff] bg-[rgba(255,255,255,.92)] shadow-[0_5px_18px_rgba(30,93,160,.055)]";
 
   return (
     <div className="text-[#07145c]">
-      {toast ? (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-[#07145c] px-4 py-2 text-sm font-semibold text-white shadow-lg">
-          {toast}
-        </div>
-      ) : null}
-
       <section className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-5">
         {kpis.map((kpi) => (
           <article
@@ -3168,7 +3407,7 @@ function SponsorsTab({
                               );
                             } else {
                               setLocalExtra((prev) => prev.filter((row) => row.id !== s.id));
-                              showToast(`${Noun} removed`);
+                              toast.success(`${Noun} removed`);
                             }
                           }}
                           className="inline-flex h-[30px] w-8 items-center justify-center rounded-[7px] border border-[#d6e6ff] bg-white text-[#075bff] hover:bg-[#eff6ff] disabled:opacity-50"
@@ -3413,7 +3652,7 @@ function SponsorsTab({
                 setModalOpen(false);
                 setEditing(null);
                 setPage(1);
-                showToast(editing ? `${Noun} updated` : `${Noun} added`);
+                toast.success(editing ? `${Noun} updated` : `${Noun} added`);
               }}
             >
               <label className="text-sm font-semibold">
@@ -3552,7 +3791,7 @@ function CommunicationsTab({
   const [channel, setChannel] = useState<CommChannel>("All");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [toast, setToast] = useState<string | null>(null);
+  const toast = useToast();
 
   const source = live ? [] : communicationCampaigns;
 
@@ -3565,11 +3804,6 @@ function CommunicationsTab({
       return true;
     });
   }, [source, channel, query, statusFilter]);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    window.setTimeout(() => setToast(null), 2600);
-  };
 
   const kpis = live
     ? [
@@ -3679,7 +3913,7 @@ function CommunicationsTab({
               <span className="flex-1" />
               <button
                 type="button"
-                onClick={() => showToast("Connect this button to your campaign creation form or API.")}
+                onClick={() => toast.info("Connect this button to your campaign creation form or API.")}
                 className="h-[30px] rounded-md bg-blue-600 px-3 text-xs font-semibold text-white hover:bg-blue-700"
               >
                 <span className="inline-flex items-center gap-1">
@@ -3910,7 +4144,7 @@ function CommunicationsTab({
                   key={action.label}
                   type="button"
                   onClick={() =>
-                    showToast(`${action.label} — connect this action to your communications workflow.`)
+                    toast.info(`${action.label} — connect this action to your communications workflow.`)
                   }
                   className="flex h-[40px] w-full items-center gap-3 rounded-lg border border-blue-100 bg-blue-50/50 px-3 text-left text-[11px] hover:bg-blue-50"
                 >
@@ -3979,11 +4213,6 @@ function CommunicationsTab({
         </aside>
       </section>
 
-      {toast ? (
-        <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-slate-900 px-4 py-3 text-sm text-white shadow-xl">
-          {toast}
-        </div>
-      ) : null}
     </div>
   );
 }

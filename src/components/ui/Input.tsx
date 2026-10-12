@@ -21,6 +21,7 @@ export function Input({ label, error, hint, id, className, ...rest }: Props) {
         id={inputId}
         className={cn(
           "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-ink placeholder:text-mute/70",
+          "transition-[border-color,box-shadow] duration-200",
           "focus:border-blue focus:outline-none focus:ring-2 focus:ring-blue/20",
           error && "border-red focus:border-red focus:ring-red/20",
           className,

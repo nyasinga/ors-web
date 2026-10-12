@@ -693,6 +693,7 @@ export type WizardEngagementInput = {
   virtualLink: string;
   sessions: Array<{
     id: string;
+    day?: string | number;
     time: string;
     title: string;
     description: string;
@@ -760,15 +761,19 @@ export function buildEngagementPayload(input: WizardEngagementInput): NewEngagem
   const isDraft = input.saveDraft;
   const status: EngagementStatus = isDraft ? "draft" : "published";
 
-  const programme: EngagementProgrammeSession[] = input.sessions.map((s) => ({
-    id: s.id,
-    title: s.title,
-    description: s.description,
-    time: s.time,
-    venue: s.place,
-    badge: s.badge,
-    speakers: s.speakers,
-  }));
+  const programme: EngagementProgrammeSession[] = input.sessions.map((s) => {
+    const dayNum = Number(s.day);
+    return {
+      id: s.id,
+      day: Number.isFinite(dayNum) && dayNum > 0 ? dayNum : s.day || 1,
+      title: s.title,
+      description: s.description,
+      time: s.time,
+      venue: s.place,
+      badge: s.badge,
+      speakers: s.speakers,
+    };
+  });
 
   const speakers: EngagementSpeaker[] = input.speakers.map((s) => ({
     id: s.id,
@@ -812,9 +817,10 @@ export function buildEngagementPayload(input: WizardEngagementInput): NewEngagem
     casual: "conversational",
     conversational: "conversational",
   };
-  const audience = (input.audience || "mixed") as Engagement["audience"];
+  const audience = (input.audience || "government") as Engagement["audience"];
   const tone = toneMap[input.tone] ?? "professional";
   const language = (input.language || "en") as Engagement["language"];
+  const tags = input.tags.map((t) => t.trim()).filter(Boolean);
 
   return {
     engagementType: toEngagementType(input.eventType),
@@ -825,7 +831,7 @@ export function buildEngagementPayload(input: WizardEngagementInput): NewEngagem
     audience,
     tone,
     language,
-    tags: input.tags,
+    tags,
     startDate: combineDateTime(input.startDate, input.startTime, input.allDay),
     endDate: combineDateTime(input.endDate, input.endTime, input.allDay),
     allDay: input.allDay,
@@ -851,7 +857,7 @@ export function buildEngagementPayload(input: WizardEngagementInput): NewEngagem
     paymentEnabled: paymentMethods.some((m) => m !== "free"),
     paymentMethods,
     currency: "KES",
-    themes: input.tags,
+    themes: tags,
     objectives: [],
     programme,
     speakers,
@@ -886,6 +892,45 @@ function toTimeInput(iso?: string) {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+export const EVENT_CATEGORY_OPTIONS = [
+  { value: "legal", label: "Legal & Policy" },
+  { value: "tech", label: "Technology" },
+  { value: "trade", label: "Trade & Commerce" },
+] as const;
+
+export const EVENT_AUDIENCE_OPTIONS = [
+  { value: "government", label: "Government" },
+  { value: "industry", label: "Industry" },
+  { value: "academia", label: "Academia" },
+  { value: "mixed", label: "Mixed" },
+  { value: "general_public", label: "General Public" },
+  { value: "professionals", label: "Professionals" },
+] as const;
+
+export const EVENT_TONE_OPTIONS = [
+  { value: "professional", label: "Professional and engaging" },
+  { value: "formal", label: "Formal" },
+  { value: "conversational", label: "Conversational" },
+] as const;
+
+export const EVENT_LANGUAGE_OPTIONS = [
+  { value: "en", label: "English" },
+  { value: "sw", label: "Kiswahili" },
+  { value: "fr", label: "French" },
+] as const;
+
+export function classificationLabel(
+  options: readonly { value: string; label: string }[],
+  value?: string | null,
+  fallback = "—",
+) {
+  if (!value) return fallback;
+  return (
+    options.find((o) => o.value === value)?.label ??
+    value.replace(/[_-]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+  );
+}
+
 /** Hydrate create/edit wizard state from an Engagement record */
 export function engagementToWizardState(engagement: Engagement) {
   const programme = asProgramme(engagement.programme);
@@ -893,6 +938,11 @@ export function engagementToWizardState(engagement: Engagement) {
   const sponsors = asSponsors(engagement.sponsors);
   const tickets = asTickets(engagement.tickets);
   const methods = new Set((engagement.paymentMethods || []).map(String));
+  const tagsFromRecord = Array.isArray(engagement.tags)
+    ? engagement.tags.map(String).filter(Boolean)
+    : [];
+  const tags =
+    tagsFromRecord.length > 0 ? tagsFromRecord : asStringList(engagement.themes);
 
   return {
     eventType: toUiEventType(engagement.engagementType),
@@ -902,7 +952,7 @@ export function engagementToWizardState(engagement: Engagement) {
     audience: engagement.audience || "government",
     tone: engagement.tone || "professional",
     language: engagement.language || "en",
-    tags: Array.isArray(engagement.tags) ? engagement.tags.map(String) : [],
+    tags,
     startDate: toDateInput(engagement.startDate),
     endDate: toDateInput(engagement.endDate),
     allDay: Boolean(engagement.allDay),
@@ -919,6 +969,7 @@ export function engagementToWizardState(engagement: Engagement) {
       programme.length > 0
         ? programme.map((s, i) => ({
             id: s.id || `s${i + 1}`,
+            day: String(s.day ?? 1),
             time: s.time || [s.startTime, s.endTime].filter(Boolean).join(" – ") || "—",
             title: s.title,
             description: s.description || "",
