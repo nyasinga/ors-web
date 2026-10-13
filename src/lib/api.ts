@@ -23,6 +23,11 @@ type RequestOptions = Omit<RequestInit, "body"> & {
   token?: string | null;
 };
 
+type UploadOptions = Omit<RequestInit, "body" | "method"> & {
+  formData: FormData;
+  token?: string | null;
+};
+
 function messageFromBody(body: unknown, fallback: string): string {
   if (!body || typeof body !== "object") return fallback;
   const record = body as Record<string, unknown>;
@@ -34,6 +39,33 @@ function messageFromBody(body: unknown, fallback: string): string {
   }
   if (typeof record.message === "string" && record.message.trim()) return record.message;
   return fallback;
+}
+
+async function parseResponse(res: Response): Promise<unknown> {
+  const text = await res.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+function throwIfFailed(status: number, parsed: unknown): never {
+  if (status === 401 && typeof window !== "undefined") {
+    // Avoid importing auth.ts here (circular with login()); wipe session keys directly.
+    localStorage.removeItem("ors_auth_token");
+    localStorage.removeItem("ors_auth_user");
+    sessionStorage.removeItem("ors_auth_token");
+    sessionStorage.removeItem("ors_auth_user");
+    window.dispatchEvent(new Event("ors-auth-change"));
+    throw new ApiError("Your session has expired. Please sign in again.", 401, parsed);
+  }
+  throw new ApiError(
+    messageFromBody(parsed, `Request failed (${status})`),
+    status,
+    parsed,
+  );
 }
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -52,32 +84,29 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
-  const text = await res.text();
-  let parsed: unknown = null;
-  if (text) {
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      parsed = text;
-    }
-  }
+  const parsed = await parseResponse(res);
+  if (!res.ok) throwIfFailed(res.status, parsed);
+  return parsed as T;
+}
 
-  if (!res.ok) {
-    if (res.status === 401 && typeof window !== "undefined") {
-      // Avoid importing auth.ts here (circular with login()); wipe session keys directly.
-      localStorage.removeItem("ors_auth_token");
-      localStorage.removeItem("ors_auth_user");
-      sessionStorage.removeItem("ors_auth_token");
-      sessionStorage.removeItem("ors_auth_user");
-      window.dispatchEvent(new Event("ors-auth-change"));
-      throw new ApiError("Your session has expired. Please sign in again.", 401, parsed);
-    }
-    throw new ApiError(
-      messageFromBody(parsed, `Request failed (${res.status})`),
-      res.status,
-      parsed,
-    );
-  }
+/** Multipart upload — do not set Content-Type; the browser adds the boundary. */
+export async function apiUpload<T>(path: string, options: UploadOptions): Promise<T> {
+  const { formData, token, headers, ...rest } = options;
+  const url = `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 
+  const res = await fetch(url, {
+    method: "POST",
+    ...rest,
+    headers: {
+      Accept: "application/json",
+      "x-tenant-id": TENANT_ID,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...headers,
+    },
+    body: formData,
+  });
+
+  const parsed = await parseResponse(res);
+  if (!res.ok) throwIfFailed(res.status, parsed);
   return parsed as T;
 }

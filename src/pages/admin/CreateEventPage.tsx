@@ -45,6 +45,7 @@ import { useToast } from "../../components/ui/Toast";
 import { Toggle } from "../../components/ui/Toggle";
 import { createWizardSteps, eventTypeOptions } from "../../data/adminEvents";
 import { ApiError } from "../../lib/api";
+import { resourcePublicUrl, uploadResource } from "../../lib/resources";
 import {
   buildEngagementPayload,
   createEngagement,
@@ -255,6 +256,10 @@ export function CreateEventPage() {
   const [newSpeakerTopic, setNewSpeakerTopic] = useState("");
   const [newSpeakerCategory, setNewSpeakerCategory] = useState("keynote");
   const [newSpeakerCountry, setNewSpeakerCountry] = useState("");
+  const [newSpeakerPhotoFile, setNewSpeakerPhotoFile] = useState<File | null>(null);
+  const [newSpeakerPhotoPreview, setNewSpeakerPhotoPreview] = useState("");
+  const [newSpeakerPhotoName, setNewSpeakerPhotoName] = useState("");
+  const [uploadingSpeakerPhoto, setUploadingSpeakerPhoto] = useState(false);
   const [pkgName, setPkgName] = useState("");
   const [pkgPrice, setPkgPrice] = useState("");
   const [pkgDesc, setPkgDesc] = useState("");
@@ -263,6 +268,15 @@ export function CreateEventPage() {
   const [submitting, setSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<EventFieldErrors>({});
   const toast = useToast();
+
+  const clearSpeakerPhoto = () => {
+    setNewSpeakerPhotoPreview((prev) => {
+      if (prev.startsWith("blob:")) URL.revokeObjectURL(prev);
+      return "";
+    });
+    setNewSpeakerPhotoFile(null);
+    setNewSpeakerPhotoName("");
+  };
 
   const wizardValues = (): EventWizardValues => ({
     eventType,
@@ -1262,13 +1276,21 @@ export function CreateEventPage() {
                 <ul className="grid gap-3">
                   {speakers.map((sp) => (
                     <li key={sp.id} className="flex items-center gap-3 rounded-lg border border-slate-200 p-3">
-                      <span className="grid h-10 w-10 place-items-center rounded-full bg-soft text-sm font-bold text-blue">
-                        {sp.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")
-                          .slice(0, 2)}
-                      </span>
+                      {sp.photo ? (
+                        <img
+                          src={resourcePublicUrl(sp.photo)}
+                          alt=""
+                          className="h-12 w-10 shrink-0 rounded-md border border-slate-200 object-cover object-top"
+                        />
+                      ) : (
+                        <span className="grid h-12 w-10 shrink-0 place-items-center rounded-md bg-soft text-sm font-bold text-blue">
+                          {sp.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .slice(0, 2)}
+                        </span>
+                      )}
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-ink">{sp.name}</p>
                         <p className="text-xs text-mute">
@@ -1287,7 +1309,15 @@ export function CreateEventPage() {
                     </li>
                   ))}
                 </ul>
-                <Button variant="outline" className="mt-4" onClick={() => setSpeakerModal(true)}>
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => {
+                    setNewSpeakerPhoto("");
+                    setNewSpeakerPhotoName("");
+                    setSpeakerModal(true);
+                  }}
+                >
                   <Plus size={16} /> Add Speaker
                 </Button>
               </div>
@@ -2044,18 +2074,34 @@ export function CreateEventPage() {
 
       <Modal
         open={speakerModal}
-        onClose={() => setSpeakerModal(false)}
+        onClose={() => {
+          if (uploadingSpeakerPhoto) return;
+          setSpeakerModal(false);
+          clearSpeakerPhoto();
+        }}
         title="Add Speaker"
         className="md:max-w-lg"
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setSpeakerModal(false)}>
+            <Button
+              variant="outline"
+              disabled={uploadingSpeakerPhoto}
+              onClick={() => {
+                setSpeakerModal(false);
+                clearSpeakerPhoto();
+              }}
+            >
               Cancel
             </Button>
             <Button
-              onClick={() => {
+              disabled={uploadingSpeakerPhoto}
+              onClick={async () => {
                 if (!newSpeakerName.trim()) {
                   toast.error("Enter the speaker’s name.");
+                  return;
+                }
+                if (!newSpeakerPhotoFile) {
+                  toast.error("Upload a passport photo for the speaker.");
                   return;
                 }
                 const role = newSpeakerRole.trim() || "Speaker";
@@ -2068,39 +2114,128 @@ export function CreateEventPage() {
                   government: "Government Representative",
                 };
                 const name = newSpeakerName.trim();
-                setSpeakers((prev) => [
-                  ...prev,
-                  {
-                    id: `sp${prev.length + 1}`,
-                    name,
-                    role,
-                    org,
-                    roleLines: [role, org],
-                    topic: newSpeakerTopic.trim() || "To be announced",
-                    category,
-                    badge: badgeMap[category] || "Speaker",
-                    country: newSpeakerCountry.trim() || "",
-                    flag: "",
-                    photo: "",
-                    bio: "",
-                  },
-                ]);
-                setNewSpeakerName("");
-                setNewSpeakerRole("");
-                setNewSpeakerOrg("");
-                setNewSpeakerTopic("");
-                setNewSpeakerCategory("keynote");
-                setNewSpeakerCountry("");
-                setSpeakerModal(false);
-                toast.success(`${name} added as speaker`);
+                setUploadingSpeakerPhoto(true);
+                try {
+                  const uploaded = await uploadResource(newSpeakerPhotoFile);
+                  const photoUrl = resourcePublicUrl(uploaded);
+                  if (!photoUrl) {
+                    toast.error("Upload succeeded but no photo URL was returned.");
+                    return;
+                  }
+                  setSpeakers((prev) => [
+                    ...prev,
+                    {
+                      id: `sp${Date.now()}`,
+                      name,
+                      role,
+                      org,
+                      roleLines: [role, org],
+                      topic: newSpeakerTopic.trim() || "To be announced",
+                      category,
+                      badge: badgeMap[category] || "Speaker",
+                      country: newSpeakerCountry.trim() || "",
+                      flag: "",
+                      photo: photoUrl,
+                      bio: "",
+                    },
+                  ]);
+                  setNewSpeakerName("");
+                  setNewSpeakerRole("");
+                  setNewSpeakerOrg("");
+                  setNewSpeakerTopic("");
+                  setNewSpeakerCategory("keynote");
+                  setNewSpeakerCountry("");
+                  clearSpeakerPhoto();
+                  setSpeakerModal(false);
+                  toast.success(`${name} added as speaker`);
+                } catch (err) {
+                  const message =
+                    err instanceof ApiError
+                      ? err.message
+                      : err instanceof Error
+                        ? err.message
+                        : "Could not upload the passport photo.";
+                  toast.error(message);
+                } finally {
+                  setUploadingSpeakerPhoto(false);
+                }
               }}
             >
-              Save Speaker
+              {uploadingSpeakerPhoto ? "Uploading…" : "Save Speaker"}
             </Button>
           </div>
         }
       >
         <div className="grid gap-3">
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-ink">
+              Passport photo <span className="text-red">*</span>
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+              <div className="grid h-[120px] w-[90px] shrink-0 place-items-center overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50">
+                {newSpeakerPhotoPreview ? (
+                  <img
+                    src={newSpeakerPhotoPreview}
+                    alt="Passport preview"
+                    className="h-full w-full object-cover object-top"
+                  />
+                ) : (
+                  <span className="px-2 text-center text-[10px] font-medium leading-snug text-mute">
+                    3 × 4 cm
+                    <br />
+                    portrait
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-ink hover:border-blue/40 hover:bg-soft/40">
+                  <Upload size={14} className="text-blue" />
+                  {newSpeakerPhotoFile ? "Change photo" : "Choose photo"}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    disabled={uploadingSpeakerPhoto}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      if (!file) return;
+                      if (!file.type.startsWith("image/")) {
+                        toast.error("Choose a JPG, PNG, or WebP image.");
+                        return;
+                      }
+                      if (file.size > 2 * 1024 * 1024) {
+                        toast.error("Passport photo must be 2 MB or smaller.");
+                        return;
+                      }
+                      setNewSpeakerPhotoFile(file);
+                      setNewSpeakerPhotoName(file.name);
+                      setNewSpeakerPhotoPreview((prev) => {
+                        if (prev.startsWith("blob:")) URL.revokeObjectURL(prev);
+                        return URL.createObjectURL(file);
+                      });
+                    }}
+                  />
+                </label>
+                <p className="mt-2 text-xs text-mute">
+                  Clear front-facing passport-style photo. JPG or PNG, max 2 MB.
+                </p>
+                {newSpeakerPhotoName ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-mute">
+                    <span className="truncate font-medium text-ink">{newSpeakerPhotoName}</span>
+                    <button
+                      type="button"
+                      className="font-semibold text-red hover:underline"
+                      disabled={uploadingSpeakerPhoto}
+                      onClick={() => clearSpeakerPhoto()}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
           <Input
             label="Full name"
             required

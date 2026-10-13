@@ -1,4 +1,5 @@
 import { cn } from "../../lib/cn";
+import { resourcePublicUrl } from "../../lib/resources";
 import type { SpeakerCategory } from "../../data/publicContent";
 
 export type SpeakerCardData = {
@@ -76,7 +77,7 @@ export function SpeakerCard({ speaker, onViewProfile }: SpeakerCardProps) {
       {speaker.photo ? (
         <img
           className={cn(photoBase, "block bg-[#e8edf2] object-cover object-top")}
-          src={speaker.photo}
+          src={resourcePublicUrl(speaker.photo)}
           alt={speaker.name}
         />
       ) : (
