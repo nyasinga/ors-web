@@ -56,6 +56,13 @@ import {
   getEngagement,
   updateEngagement,
 } from "../../lib/engagements";
+import {
+  firstErrorMessage,
+  firstErrorStep,
+  validateEventWizard,
+  type EventFieldErrors,
+  type EventWizardValues,
+} from "../../lib/eventValidation";
 import { cn } from "../../lib/cn";
 
 const typeIcons = {
@@ -254,7 +261,63 @@ export function CreateEventPage() {
   const [pkgAvail, setPkgAvail] = useState("1");
   const [pkgBenefits, setPkgBenefits] = useState(["Logo on main stage backdrop"]);
   const [submitting, setSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<EventFieldErrors>({});
   const toast = useToast();
+
+  const wizardValues = (): EventWizardValues => ({
+    eventType,
+    title,
+    description,
+    category,
+    audience,
+    tone,
+    language,
+    startDate,
+    endDate,
+    allDay,
+    startTime,
+    endTime,
+    venueMode,
+    venueName,
+    address,
+    city,
+    country,
+    capacity,
+    virtualLink,
+    payMpesa,
+    payCard,
+    payBank,
+    payFree,
+    websiteUrl,
+    facebookUrl,
+    twitterUrl,
+    linkedinUrl,
+  });
+
+  const clearFieldError = (field: keyof EventFieldErrors) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const applyValidation = (mode: "step" | "draft" | "publish", currentStep?: number) => {
+    const errors = validateEventWizard(wizardValues(), mode, currentStep);
+    setFieldErrors(errors);
+    const message = firstErrorMessage(errors);
+    if (message) {
+      toast.error(message);
+      const target = firstErrorStep(errors);
+      if (target != null && target !== step) {
+        setStepAnim(target < step ? "back" : "forward");
+        setStep(target);
+      }
+      return false;
+    }
+    return true;
+  };
 
   useEffect(() => {
     if (!editId) {
@@ -421,18 +484,7 @@ export function CreateEventPage() {
   }, [step]);
 
   const submitEvent = async (asDraft: boolean) => {
-    if (!title.trim()) {
-      toast.error(asDraft ? "Add an event title before saving a draft." : "Add an event title before publishing.");
-      setStepAnim("back");
-      setStep(2);
-      return;
-    }
-    if (!asDraft && (!startDate || !endDate)) {
-      toast.error("Set the event start and end dates before publishing.");
-      setStepAnim("back");
-      setStep(3);
-      return;
-    }
+    if (!applyValidation(asDraft ? "draft" : "publish")) return;
 
     setSaveDraft(asDraft);
     setSubmitting(true);
@@ -515,6 +567,8 @@ export function CreateEventPage() {
 
   const goNext = async () => {
     if (step < 6) {
+      if (!applyValidation("step", step)) return;
+      setFieldErrors({});
       setStepAnim("forward");
       setStep(step + 1);
       return;
@@ -586,6 +640,11 @@ export function CreateEventPage() {
               Choose the type of event you want to create. This helps us tailor the right features, templates and
               settings for your event.
             </p>
+            {fieldErrors.eventType ? (
+              <p className="mt-3 text-sm text-red" role="alert">
+                {fieldErrors.eventType}
+              </p>
+            ) : null}
             <div className="mt-4 grid gap-3 sm:grid-cols-2 create-wizard-stagger">
               {eventTypeOptions.map((opt) => {
                 const Icon = typeIcons[opt.id as keyof typeof typeIcons] ?? Sparkles;
@@ -594,10 +653,14 @@ export function CreateEventPage() {
                   <button
                     key={opt.id}
                     type="button"
-                    onClick={() => setEventType(opt.id)}
+                    onClick={() => {
+                      setEventType(opt.id);
+                      clearFieldError("eventType");
+                    }}
                     className={cn(
                       "create-wizard-choice relative rounded-lg border p-4 text-left",
                       selected ? "border-blue bg-soft/40 ring-2 ring-blue/20" : "border-slate-200 hover:border-blue/40",
+                      fieldErrors.eventType && !selected && "border-red/50",
                       opt.id === "Others" && "sm:col-span-2",
                     )}
                   >
@@ -651,7 +714,16 @@ export function CreateEventPage() {
               </Button>
             </div>
             <div className="grid gap-4">
-              <Input label="Event Title" required value={title} onChange={(e) => setTitle(e.target.value)} />
+              <Input
+                label="Event Title"
+                required
+                value={title}
+                error={fieldErrors.title}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  clearFieldError("title");
+                }}
+              />
               <div>
                 <p className="mb-1.5 text-sm font-medium text-ink">Event Logo</p>
                 <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 sm:flex-row">
@@ -671,35 +743,73 @@ export function CreateEventPage() {
                 </span>
                 <textarea
                   value={description}
-                  onChange={(e) => setDescription(e.target.value.slice(0, 300))}
+                  onChange={(e) => {
+                    setDescription(e.target.value.slice(0, 300));
+                    clearFieldError("description");
+                  }}
                   rows={4}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-ink focus:border-blue focus:outline-none focus:ring-2 focus:ring-blue/20"
+                  aria-invalid={Boolean(fieldErrors.description) || undefined}
+                  className={cn(
+                    "w-full rounded-lg border px-3 py-2.5 text-ink focus:outline-none focus:ring-2",
+                    fieldErrors.description
+                      ? "border-red focus:border-red focus:ring-red/20"
+                      : "border-slate-200 focus:border-blue focus:ring-blue/20",
+                  )}
                 />
-                <span className="text-right text-xs text-mute">{description.length}/300</span>
+                <div className="flex items-center justify-between gap-2">
+                  {fieldErrors.description ? (
+                    <span className="text-xs text-red" role="alert">
+                      {fieldErrors.description}
+                    </span>
+                  ) : (
+                    <span />
+                  )}
+                  <span className="text-right text-xs text-mute">{description.length}/300</span>
+                </div>
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Select
                   label="Category"
+                  required
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  error={fieldErrors.category}
+                  onChange={(e) => {
+                    setCategory(e.target.value);
+                    clearFieldError("category");
+                  }}
                   options={[...EVENT_CATEGORY_OPTIONS]}
                 />
                 <Select
                   label="Target Audience"
+                  required
                   value={audience}
-                  onChange={(e) => setAudience(e.target.value)}
+                  error={fieldErrors.audience}
+                  onChange={(e) => {
+                    setAudience(e.target.value);
+                    clearFieldError("audience");
+                  }}
                   options={[...EVENT_AUDIENCE_OPTIONS]}
                 />
                 <Select
                   label="Tone"
+                  required
                   value={tone}
-                  onChange={(e) => setTone(e.target.value)}
+                  error={fieldErrors.tone}
+                  onChange={(e) => {
+                    setTone(e.target.value);
+                    clearFieldError("tone");
+                  }}
                   options={[...EVENT_TONE_OPTIONS]}
                 />
                 <Select
                   label="Language"
+                  required
                   value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
+                  error={fieldErrors.language}
+                  onChange={(e) => {
+                    setLanguage(e.target.value);
+                    clearFieldError("language");
+                  }}
                   options={[...EVENT_LANGUAGE_OPTIONS]}
                 />
               </div>
@@ -776,11 +886,39 @@ export function CreateEventPage() {
                 <CalendarDays size={18} className="text-blue" /> Event Dates
               </h2>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Input label="Start Date" type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-                <Input label="End Date" type="date" required value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                <Input
+                  label="Start Date"
+                  type="date"
+                  required
+                  value={startDate}
+                  error={fieldErrors.startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    clearFieldError("startDate");
+                  }}
+                />
+                <Input
+                  label="End Date"
+                  type="date"
+                  required
+                  value={endDate}
+                  error={fieldErrors.endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    clearFieldError("endDate");
+                  }}
+                />
               </div>
               <div className="mt-3">
-                <Toggle checked={allDay} onChange={setAllDay} label="All day event" />
+                <Toggle
+                  checked={allDay}
+                  onChange={(next) => {
+                    setAllDay(next);
+                    clearFieldError("startTime");
+                    clearFieldError("endTime");
+                  }}
+                  label="All day event"
+                />
               </div>
             </section>
             <section>
@@ -788,8 +926,30 @@ export function CreateEventPage() {
                 <Clock size={18} className="text-blue" /> Event Time
               </h2>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Input label="Start Time" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} disabled={allDay} />
-                <Input label="End Time" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} disabled={allDay} />
+                <Input
+                  label="Start Time"
+                  type="time"
+                  required={!allDay}
+                  value={startTime}
+                  error={fieldErrors.startTime}
+                  onChange={(e) => {
+                    setStartTime(e.target.value);
+                    clearFieldError("startTime");
+                  }}
+                  disabled={allDay}
+                />
+                <Input
+                  label="End Time"
+                  type="time"
+                  required={!allDay}
+                  value={endTime}
+                  error={fieldErrors.endTime}
+                  onChange={(e) => {
+                    setEndTime(e.target.value);
+                    clearFieldError("endTime");
+                  }}
+                  disabled={allDay}
+                />
               </div>
             </section>
             <section>
@@ -807,7 +967,12 @@ export function CreateEventPage() {
                   <button
                     key={m.id}
                     type="button"
-                    onClick={() => setVenueMode(m.id)}
+                    onClick={() => {
+                      setVenueMode(m.id);
+                      clearFieldError("venueName");
+                      clearFieldError("virtualLink");
+                      clearFieldError("city");
+                    }}
                     className={cn(
                       "create-wizard-choice rounded-lg border p-3 text-left",
                       venueMode === m.id ? "border-blue bg-soft/50 ring-2 ring-blue/20" : "border-slate-200",
@@ -830,21 +995,54 @@ export function CreateEventPage() {
                 </Button>
               </div>
               <div className="grid gap-3">
-                <Input label="Venue Name" value={venueName} onChange={(e) => setVenueName(e.target.value)} />
+                <Input
+                  label="Venue Name"
+                  required={venueMode === "in-person" || venueMode === "hybrid"}
+                  value={venueName}
+                  error={fieldErrors.venueName}
+                  onChange={(e) => {
+                    setVenueName(e.target.value);
+                    clearFieldError("venueName");
+                  }}
+                />
                 <Input label="Address" value={address} onChange={(e) => setAddress(e.target.value)} />
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <Input label="City" value={city} onChange={(e) => setCity(e.target.value)} />
+                  <Input
+                    label="City"
+                    required={venueMode === "in-person" || venueMode === "hybrid"}
+                    value={city}
+                    error={fieldErrors.city}
+                    onChange={(e) => {
+                      setCity(e.target.value);
+                      clearFieldError("city");
+                    }}
+                  />
                   <Select
                     label="Country"
+                    required={venueMode === "in-person" || venueMode === "hybrid"}
                     value={country}
-                    onChange={(e) => setCountry(e.target.value)}
+                    error={fieldErrors.country}
+                    onChange={(e) => {
+                      setCountry(e.target.value);
+                      clearFieldError("country");
+                    }}
                     options={[
                       { value: "KE", label: "Kenya" },
                       { value: "UG", label: "Uganda" },
                       { value: "TZ", label: "Tanzania" },
                     ]}
                   />
-                  <Input label="Capacity" type="number" value={capacity} onChange={(e) => setCapacity(e.target.value)} />
+                  <Input
+                    label="Capacity"
+                    type="number"
+                    min={1}
+                    value={capacity}
+                    error={fieldErrors.capacity}
+                    onChange={(e) => {
+                      setCapacity(e.target.value);
+                      clearFieldError("capacity");
+                    }}
+                  />
                 </div>
               </div>
             </section>
@@ -853,7 +1051,17 @@ export function CreateEventPage() {
                 <h2 className="mb-3 flex items-center gap-2 font-bold text-ink">
                   <Video size={18} className="text-blue" /> Virtual Event Link
                 </h2>
-                <Input label="Meeting URL" value={virtualLink} onChange={(e) => setVirtualLink(e.target.value)} />
+                <Input
+                  label="Meeting URL"
+                  type="url"
+                  required
+                  value={virtualLink}
+                  error={fieldErrors.virtualLink}
+                  onChange={(e) => {
+                    setVirtualLink(e.target.value);
+                    clearFieldError("virtualLink");
+                  }}
+                />
               </section>
             ) : null}
           </Card>
@@ -1285,8 +1493,13 @@ export function CreateEventPage() {
                     <Input
                       label="Capacity"
                       type="number"
+                      min={1}
                       value={capacity}
-                      onChange={(e) => setCapacity(e.target.value)}
+                      error={fieldErrors.capacity}
+                      onChange={(e) => {
+                        setCapacity(e.target.value);
+                        clearFieldError("capacity");
+                      }}
                     />
                   ) : null}
                   <Toggle checked={waitlist} onChange={setWaitlist} label="Enable waitlist when full" />
@@ -1301,7 +1514,12 @@ export function CreateEventPage() {
               </Card>
               <Card>
                 <h3 className="font-bold text-ink">Payment Options</h3>
-                <ul className="mt-4 grid gap-3 text-sm">
+                <ul
+                  className={cn(
+                    "mt-4 grid gap-3 text-sm",
+                    fieldErrors.payFree && "rounded-lg ring-2 ring-red/30",
+                  )}
+                >
                   {(
                     [
                       { label: "M-Pesa", checked: payMpesa, set: setPayMpesa },
@@ -1315,7 +1533,10 @@ export function CreateEventPage() {
                         <input
                           type="checkbox"
                           checked={p.checked}
-                          onChange={(e) => p.set(e.target.checked)}
+                          onChange={(e) => {
+                            p.set(e.target.checked);
+                            clearFieldError("payFree");
+                          }}
                           className="rounded border-slate-300"
                         />
                         {p.label}
@@ -1328,6 +1549,11 @@ export function CreateEventPage() {
                     </li>
                   ))}
                 </ul>
+                {fieldErrors.payFree ? (
+                  <p className="mt-2 text-xs text-red" role="alert">
+                    {fieldErrors.payFree}
+                  </p>
+                ) : null}
               </Card>
             </div>
           </div>
@@ -1449,28 +1675,44 @@ export function CreateEventPage() {
                   type="url"
                   placeholder="https://"
                   value={websiteUrl}
-                  onChange={(e) => setWebsiteUrl(e.target.value)}
+                  error={fieldErrors.websiteUrl}
+                  onChange={(e) => {
+                    setWebsiteUrl(e.target.value);
+                    clearFieldError("websiteUrl");
+                  }}
                 />
                 <Input
                   label="Facebook"
                   type="url"
                   placeholder="https://facebook.com/…"
                   value={facebookUrl}
-                  onChange={(e) => setFacebookUrl(e.target.value)}
+                  error={fieldErrors.facebookUrl}
+                  onChange={(e) => {
+                    setFacebookUrl(e.target.value);
+                    clearFieldError("facebookUrl");
+                  }}
                 />
                 <Input
                   label="X (Twitter)"
                   type="url"
                   placeholder="https://x.com/…"
                   value={twitterUrl}
-                  onChange={(e) => setTwitterUrl(e.target.value)}
+                  error={fieldErrors.twitterUrl}
+                  onChange={(e) => {
+                    setTwitterUrl(e.target.value);
+                    clearFieldError("twitterUrl");
+                  }}
                 />
                 <Input
                   label="LinkedIn"
                   type="url"
                   placeholder="https://linkedin.com/…"
                   value={linkedinUrl}
-                  onChange={(e) => setLinkedinUrl(e.target.value)}
+                  error={fieldErrors.linkedinUrl}
+                  onChange={(e) => {
+                    setLinkedinUrl(e.target.value);
+                    clearFieldError("linkedinUrl");
+                  }}
                 />
               </div>
             </section>
