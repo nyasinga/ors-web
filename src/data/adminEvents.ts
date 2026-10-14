@@ -23,6 +23,8 @@ export type ManagedEvent = {
   capacity: number;
   status: EventStatus;
   barTone: "green" | "blue" | "purple" | "orange" | "red";
+  /** Shown on the public homepage when true (only one at a time). */
+  isFeatured?: boolean;
 };
 
 /** Manage Events table — from isippe3-manage-events-pure-html-responsive */

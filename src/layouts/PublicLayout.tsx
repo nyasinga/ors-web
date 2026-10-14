@@ -4,12 +4,21 @@ import { useTranslation } from "react-i18next";
 import { Menu, X } from "lucide-react";
 import { navLinks } from "../data/event";
 import { LanguageSwitcher } from "../components/i18n/LanguageSwitcher";
+import { PublicEngagementProvider } from "../contexts/PublicEngagementContext";
 import { useEventCopy } from "../i18n/useEventCopy";
 import { cn } from "../lib/cn";
 import { pageContainer } from "../lib/pageContainer";
 
 /** Public chrome — Tailwind (no home.css) */
 export function PublicLayout() {
+  return (
+    <PublicEngagementProvider>
+      <PublicLayoutShell />
+    </PublicEngagementProvider>
+  );
+}
+
+function PublicLayoutShell() {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation("common");
   const event = useEventCopy();
@@ -189,16 +198,21 @@ export function PublicLayout() {
         >
           <div>
             <p className="text-[15px] font-semibold">
-              {t("brand.aca")} · {event.brandLine}
+              {t("brand.aca")}
+              {event.brandLine ? ` · ${event.brandLine}` : event.loading ? " · …" : ""}
             </p>
 
-            <p className="mt-2 text-xs leading-relaxed text-[#cbd5df]">
-              {event.fullName}
-            </p>
+            {event.fullName ? (
+              <p className="mt-2 text-xs leading-relaxed text-[#cbd5df]">
+                {event.fullName}
+              </p>
+            ) : null}
 
-            <p className="mt-1 text-xs text-[#cbd5df]">
-              {event.dates} · {event.venueShort}
-            </p>
+            {event.dates || event.venueShort ? (
+              <p className="mt-1 text-xs text-[#cbd5df]">
+                {[event.dates, event.venueShort].filter(Boolean).join(" · ")}
+              </p>
+            ) : null}
           </div>
 
           <nav

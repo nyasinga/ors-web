@@ -13,6 +13,7 @@ import {
   Shield,
   Users,
 } from "lucide-react";
+import { PublicEventGate } from "../../components/public/PublicEventGate";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { cn } from "../../lib/cn";
 import { engagementToHomeContent } from "../../lib/publicEvent";
@@ -58,6 +59,7 @@ export function HomePage() {
   const brandEndsWithE = home.showBrandLogo && /e$/i.test(home.brandMark);
 
   return (
+    <PublicEventGate>
     <div className="text-[#0b1016]">
       <section
         className={cn(
@@ -466,5 +468,6 @@ export function HomePage() {
         </div>
       </section>
     </div>
+    </PublicEventGate>
   );
 }

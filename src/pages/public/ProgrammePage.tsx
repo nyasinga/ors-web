@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 import { MapPin, Search } from "lucide-react";
 import { PageHero } from "../../components/public/PageHero";
-import { programmeDays as fallbackDays, programmeSessions as fallbackSessions } from "../../data/publicContent";
+import { PublicEventGate } from "../../components/public/PublicEventGate";
 import { cn } from "../../lib/cn";
 import { engagementToPublicProgramme } from "../../lib/publicEvent";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 
-function tagClass(tone: (typeof fallbackSessions)[number]["tone"]) {
+function tagClass(tone: "red" | "green" | "purple" | "orange" | "blue" | "neutral") {
   const base = "inline-block rounded px-[9px] py-1 text-[10px] font-semibold";
   if (tone === "red") return cn(base, "bg-[#ffe6e8] text-[#e21d2a]");
   if (tone === "green") return cn(base, "bg-[#dff4e8] text-[#168046]");
@@ -41,26 +41,12 @@ const container =
 
 /** Programme — content from the public engagement API. */
 export function ProgrammePage() {
-  const { engagement, loading } = usePublicEngagement();
+  const { engagement } = usePublicEngagement();
   const [dayFilter, setDayFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [openDays, setOpenDays] = useState<Record<number, boolean>>({ 1: true });
 
-  const programme = useMemo(() => {
-    const fromApi = engagementToPublicProgramme(engagement);
-    if (fromApi.sessions.length) return fromApi;
-    const dayMeta: Record<number, { date: string; weekday: string }> = {
-      1: { date: "12 November 2026", weekday: "Thursday" },
-      2: { date: "13 November 2026", weekday: "Friday" },
-      3: { date: "14 November 2026", weekday: "Saturday" },
-    };
-    return {
-      days: fallbackDays.map((d) => ({ id: d.id, label: d.label, sub: d.sub })),
-      sessions: fallbackSessions,
-      dayMeta,
-      venueLine: "Kenyatta International Convention Centre (KICC), Nairobi",
-    };
-  }, [engagement]);
+  const programme = useMemo(() => engagementToPublicProgramme(engagement), [engagement]);
 
   const dayNumbers = useMemo(
     () => [...new Set(programme.sessions.map((s) => s.day))].sort((a, b) => a - b),
@@ -83,23 +69,14 @@ export function ProgrammePage() {
       sessions: filtered.filter((s) => s.day === d),
     }));
 
-  const eventName = engagement?.engagementName?.trim() || "ISIPPE-3";
+  const eventName = engagement?.engagementName?.trim() || "Event";
 
   return (
+    <PublicEventGate>
     <div className="bg-white text-[#101827]">
       <PageHero
         title="Programme"
-        subtitle={
-          <>
-            {eventName.includes("ISIPPE") ? "ISIPPE-3 International Symposium on" : eventName}
-            {eventName.includes("ISIPPE") ? (
-              <>
-                <br />
-                Intellectual Property Protection and Enforcement
-              </>
-            ) : null}
-          </>
-        }
+        subtitle={eventName}
         image="/assets/programme-hero.jpg"
         imageAlt={`${eventName} programme`}
       />
@@ -169,14 +146,16 @@ export function ProgrammePage() {
               />
             </label>
           </div>
-          {loading ? (
-            <p className="mt-3 text-xs text-[#53627a]">Loading programme…</p>
-          ) : null}
         </div>
       </section>
 
       <main className="pb-7 max-[700px]:pb-5">
         <div className={container}>
+          {!programme.sessions.length ? (
+            <p className="rounded-lg border border-[#dbe6f0] bg-[#f7fbff] px-4 py-8 text-center text-[13px] text-[#53627a]">
+              No programme sessions have been published for this event yet.
+            </p>
+          ) : null}
           {byDay.map(({ day, sessions }) => {
             const open = openDays[day] ?? day === dayNumbers[0];
             const meta = programme.dayMeta[day] || { date: `Day ${day}`, weekday: "" };
@@ -295,5 +274,6 @@ export function ProgrammePage() {
         </div>
       </main>
     </div>
+    </PublicEventGate>
   );
 }

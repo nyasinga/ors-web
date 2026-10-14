@@ -12,6 +12,7 @@ import {
   Pencil,
   Plus,
   Search,
+  Star,
   Trash2,
 } from "lucide-react";
 import type { EventStatus, EventType, ManagedEvent } from "../../data/adminEvents";
@@ -19,6 +20,7 @@ import {
   deleteEngagement,
   duplicateEngagement,
   listEngagements,
+  setFeaturedEngagement,
   toManagedEvent,
 } from "../../lib/engagements";
 import { ScrollableNav } from "../../components/ui/ScrollableNav";
@@ -322,6 +324,27 @@ export function ManageEventsPage() {
           : err instanceof Error
             ? err.message
             : "Failed to duplicate event",
+      );
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleFeature = async (row: ManagedEvent) => {
+    setBusyId(row.id);
+    setActionError(null);
+    setMenuId(null);
+    try {
+      await setFeaturedEngagement(row.id, !row.isFeatured);
+      await loadEvents();
+    } catch (err) {
+      if (redirectIfUnauthorized(err)) return;
+      setActionError(
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Failed to update homepage feature",
       );
     } finally {
       setBusyId(null);
@@ -645,12 +668,20 @@ export function ManageEventsPage() {
                         />
                       </td>
                       <td className="px-2">
-                        <Link
-                          to={`/admin/events/${row.id}/overview`}
-                          className="block text-[13px] font-bold text-[#07145b] hover:underline"
-                        >
-                          {row.name}
-                        </Link>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Link
+                            to={`/admin/events/${row.id}/overview`}
+                            className="block text-[13px] font-bold text-[#07145b] hover:underline"
+                          >
+                            {row.name}
+                          </Link>
+                          {row.isFeatured ? (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-[3px] text-[10px] font-semibold text-amber-800">
+                              <Star size={10} strokeWidth={2.5} aria-hidden />
+                              Homepage
+                            </span>
+                          ) : null}
+                        </div>
                         <span className="mt-1 block max-w-[205px] leading-[1.45] text-[#4c5a9c]">
                           {row.subtitle}
                         </span>
@@ -728,7 +759,7 @@ export function ManageEventsPage() {
                           </button>
                           {open ? (
                             <div
-                              className="absolute right-0 top-9 z-40 w-[168px] rounded-lg border border-blue-100 bg-white py-1 text-left shadow-lg"
+                              className="absolute right-0 top-9 z-40 w-[200px] rounded-lg border border-blue-100 bg-white py-1 text-left shadow-lg"
                               role="menu"
                             >
                               <Link
@@ -758,6 +789,21 @@ export function ManageEventsPage() {
                               >
                                 <Copy size={14} strokeWidth={2} aria-hidden />
                                 Duplicate
+                              </button>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-[#07145b] hover:bg-blue-50 disabled:opacity-50"
+                                disabled={busy}
+                                onClick={() => void handleFeature(row)}
+                              >
+                                <Star
+                                  size={14}
+                                  strokeWidth={2}
+                                  aria-hidden
+                                  className={row.isFeatured ? "fill-amber-400 text-amber-500" : undefined}
+                                />
+                                {row.isFeatured ? "Remove from homepage" : "Show on homepage"}
                               </button>
                               <button
                                 type="button"

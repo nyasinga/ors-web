@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import { PageHero } from "../../components/public/PageHero";
+import { PublicEventGate } from "../../components/public/PublicEventGate";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
@@ -57,12 +58,13 @@ export function FaqPage() {
   const items = active?.items ?? [];
 
   return (
+    <PublicEventGate>
     <div className="bg-white text-[#10182a]">
       <PageHero
         title="Frequently Asked Questions"
-        description={`Find answers to common questions about ${event.name} registration, payments, participation and more.`}
+        description={`Find answers to common questions about ${event.name || "this event"} registration, payments, participation and more.`}
         image="/assets/faq-hero.jpg"
-        imageAlt={`${event.name} frequently asked questions`}
+        imageAlt={`${event.name || "Event"} frequently asked questions`}
       />
 
       <section className="pb-[50px] pt-7 max-[760px]:pb-[35px] max-[760px]:pt-[18px]" id="faq">
@@ -176,5 +178,6 @@ export function FaqPage() {
         </div>
       </section>
     </div>
+    </PublicEventGate>
   );
 }

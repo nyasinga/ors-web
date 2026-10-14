@@ -8,6 +8,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { PageHero } from "../../components/public/PageHero";
+import { PublicEventGate } from "../../components/public/PublicEventGate";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { cn } from "../../lib/cn";
 import { engagementToPublicVenue } from "../../lib/publicEvent";
@@ -36,6 +37,7 @@ export function VenuePage() {
   const venue = engagementToPublicVenue(engagement);
 
   return (
+    <PublicEventGate>
     <div className="bg-white text-[#101620]">
       <PageHero
         eyebrow="Venue"
@@ -202,5 +204,6 @@ export function VenuePage() {
         </div>
       </section>
     </div>
+    </PublicEventGate>
   );
 }

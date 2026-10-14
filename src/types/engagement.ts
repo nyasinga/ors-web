@@ -183,6 +183,8 @@ export type Engagement = {
   status?: EngagementStatus;
   visibility?: EngagementVisibility;
   isPublished?: boolean;
+  /** Exactly one published event should be featured on the public homepage. */
+  isFeatured?: boolean;
   publishedAt?: string;
   registrationEnabled?: boolean;
   registrationStartDate?: string;

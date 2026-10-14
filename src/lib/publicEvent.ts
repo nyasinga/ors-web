@@ -26,40 +26,115 @@ import type {
   EngagementVenueSpace,
 } from "../types/engagement";
 
-/** Featured public event — override with VITE_EVENT_ENGAGEMENT_ID. */
-export const PUBLIC_EVENT_ID =
-  (import.meta.env.VITE_EVENT_ENGAGEMENT_ID as string | undefined)?.trim() ||
-  "6ac9ff48e25a978dcd246e34";
+const FEATURED_CACHE_KEY = "featured-public";
 
 const engagementCache = new Map<string, Engagement>();
 const engagementInflight = new Map<string, Promise<Engagement>>();
 
+function filterQuery(filter: Record<string, unknown>) {
+  return `?filter=${encodeURIComponent(JSON.stringify(filter))}`;
+}
+
 /** Drop cached public engagement after admin content edits. */
-export function clearPublicEngagementCache(id = PUBLIC_EVENT_ID) {
-  const key = id.trim() || PUBLIC_EVENT_ID;
-  engagementCache.delete(key);
-  engagementInflight.delete(key);
+export function clearPublicEngagementCache(_id?: string) {
+  engagementCache.clear();
+  engagementInflight.clear();
+}
+
+async function fetchEngagementById(id: string) {
+  return apiRequest<Engagement>(`/engagements/${encodeURIComponent(id)}`);
+}
+
+type ListAttempt = { rows: Engagement[]; ok: boolean; error?: unknown };
+
+async function listPublicCandidates(where?: Record<string, unknown>, limit = 25): Promise<ListAttempt> {
+  try {
+    const rows = await apiRequest<Engagement[]>(
+      `/engagements${filterQuery({
+        ...(where ? { where } : {}),
+        order: "startDate DESC",
+        limit,
+      })}`,
+    );
+    return { rows: Array.isArray(rows) ? rows : [], ok: true };
+  } catch (error) {
+    return { rows: [], ok: false, error };
+  }
+}
+
+function isPubliclyListed(engagement: Engagement) {
+  const visibility = String(engagement.visibility || "public").toLowerCase();
+  if (visibility === "private") return false;
+  return (
+    engagement.isPublished === true ||
+    engagement.status === "published" ||
+    engagement.status === "ongoing"
+  );
+}
+
+function pickPublicId(rows: Engagement[]) {
+  const hit = rows.find(isPubliclyListed) || rows.find((row) => row.engagementID);
+  return hit?.engagementID ? String(hit.engagementID) : null;
+}
+
+function listFailureMessage(error: unknown) {
+  if (error instanceof Error && error.message.trim()) return error.message;
+  return "Could not reach the engagements API.";
+}
+
+/**
+ * Resolve the single event shown on the public site.
+ * Prefer `isFeatured`; otherwise fall back to the latest published public event.
+ * No hard-coded engagement ID. Uses simple filters + client-side selection.
+ */
+export async function resolvePublicEngagementId(): Promise<string> {
+  const attempts: ListAttempt[] = [];
+
+  const featured = await listPublicCandidates({ isFeatured: true });
+  attempts.push(featured);
+  const featuredId = pickPublicId(featured.rows);
+  if (featuredId) return featuredId;
+
+  const published = await listPublicCandidates({
+    or: [{ isPublished: true }, { status: "published" }, { status: "ongoing" }],
+  });
+  attempts.push(published);
+  const publishedId = pickPublicId(published.rows);
+  if (publishedId) return publishedId;
+
+  const any = await listPublicCandidates(undefined, 50);
+  attempts.push(any);
+  const anyId = pickPublicId(any.rows);
+  if (anyId) return anyId;
+
+  const lastError = [...attempts].reverse().find((a) => !a.ok)?.error;
+  if (attempts.every((a) => !a.ok) && lastError) {
+    throw new Error(listFailureMessage(lastError));
+  }
+
+  throw new Error("No published public event is available to display.");
 }
 
 /** Fetch the featured public engagement (request-deduped + session-cached). */
-export async function getPublicEngagement(id = PUBLIC_EVENT_ID) {
-  const key = id.trim() || PUBLIC_EVENT_ID;
-  const hit = engagementCache.get(key);
+export async function getPublicEngagement(id?: string) {
+  const cacheKey = id?.trim() || FEATURED_CACHE_KEY;
+  const hit = engagementCache.get(cacheKey);
   if (hit) return hit;
 
-  const pending = engagementInflight.get(key);
+  const pending = engagementInflight.get(cacheKey);
   if (pending) return pending;
 
-  const request = apiRequest<Engagement>(`/engagements/${encodeURIComponent(key)}`)
-    .then((data) => {
-      engagementCache.set(key, data);
-      return data;
-    })
-    .finally(() => {
-      engagementInflight.delete(key);
-    });
+  const request = (async () => {
+    const resolvedId = id?.trim() || (await resolvePublicEngagementId());
+    const data = await fetchEngagementById(resolvedId);
+    engagementCache.set(cacheKey, data);
+    engagementCache.set(resolvedId, data);
+    return data;
+  })().finally(() => {
+    engagementInflight.delete(cacheKey);
+  });
 
-  engagementInflight.set(key, request);
+  engagementInflight.set(cacheKey, request);
   return request;
 }
 
@@ -222,9 +297,28 @@ const FALLBACK: PublicAboutContent = {
   cover: "/assets/about-overview.jpg",
 };
 
-/** Map engagement record → About page content (with static fallbacks). */
+/** Empty shell when no engagement is loaded (avoids hard-coded demo copy). */
+const EMPTY_ABOUT: PublicAboutContent = {
+  name: "",
+  shortDescription: "",
+  overviewParagraphs: [],
+  objectives: [],
+  audienceLabel: "",
+  attendIntro: "",
+  attendGroups: [],
+  themes: [],
+  venueTitle: "",
+  venueCity: "",
+  venueCountry: "",
+  venueLine: "",
+  modeLabel: "",
+  datesLabel: "",
+  cover: "/assets/about-overview.jpg",
+};
+
+/** Map engagement record → About page content (field-level fallbacks only). */
 export function engagementToAboutContent(engagement: Engagement | null): PublicAboutContent {
-  if (!engagement) return FALLBACK;
+  if (!engagement) return EMPTY_ABOUT;
 
   const themes = asStringList(engagement.themes);
   const objectives = asStringList(engagement.objectives);
@@ -304,41 +398,29 @@ export type PublicHomeContent = {
   venueImageAlt: string;
 };
 
-const HOME_FALLBACK: PublicHomeContent = {
-  brandMark: "ISIPPE",
-  brandYear: "2026",
-  showBrandLogo: true,
-  subtitle: "3rd International Symposium on Intellectual Property Protection and Enforcement",
-  datesLabel: "18th – 19th November 2026",
-  cityLine: "Nairobi, Kenya",
-  venueLine: "Pride Inn Flamingo, Mombasa, Kenya",
-  intro:
-    "A global platform for dialogue, collaboration and action against counterfeiting, bringing together government agencies, industry leaders, policy makers, experts and stakeholders from across Africa and beyond.",
-  tagline: "Strengthening Intellectual Property Protection across Africa and Beyond",
-  earlyBirdNote: "Early bird registration is now open. Register by 31 October 2026 for a special offer.",
-  aboutTitle: "About ISIPPE-3",
-  aboutBody:
-    "The International Symposium on Intellectual Property Protection and Enforcement (ISIPPE-3) is a premier global forum bringing together government agencies, industry leaders, policy makers, experts and stakeholders to discuss and advance strategies for combating counterfeiting and strengthening intellectual property protection and enforcement.",
-  themes: [
-    "Pan-African Dialogue",
-    "Knowledge Exchange",
-    "Strategic Partnerships",
-    "Safer Markets",
-    "Innovation & Solutions",
-  ],
-  stats: {
-    participants: "500+",
-    speakers: "50+",
-    days: "3 Days",
-  },
-  venueName: "Pride Inn Flamingo",
-  venueCityCountry: "Mombasa, Kenya",
+const EMPTY_HOME: PublicHomeContent = {
+  brandMark: "",
+  brandYear: String(new Date().getFullYear()),
+  showBrandLogo: false,
+  subtitle: "",
+  datesLabel: "",
+  cityLine: "",
+  venueLine: "",
+  intro: "",
+  tagline: "",
+  earlyBirdNote: "",
+  aboutTitle: "",
+  aboutBody: "",
+  themes: [],
+  stats: { participants: "", speakers: "", days: "" },
+  venueName: "",
+  venueCityCountry: "",
   venueImageAlt: "Event venue",
 };
 
 /** Map engagement record → Home page hero / about content. */
 export function engagementToHomeContent(engagement: Engagement | null): PublicHomeContent {
-  if (!engagement) return HOME_FALLBACK;
+  if (!engagement) return EMPTY_HOME;
 
   const about = engagementToAboutContent(engagement);
   const brand = homeBrand(engagement);
@@ -353,10 +435,11 @@ export function engagementToHomeContent(engagement: Engagement | null): PublicHo
     tickets.find((t) => /early/i.test(t.period || ""));
   const earlyBirdNote = early
     ? `Early bird registration is now open.${early.period ? ` ${early.period}.` : ""}${early.price ? ` ${early.price}.` : ""}`
-    : HOME_FALLBACK.earlyBirdNote;
+    : "";
 
-  const cityLine = [about.venueCity, about.venueCountry].filter(Boolean).join(", ") || HOME_FALLBACK.cityLine;
+  const cityLine = [about.venueCity, about.venueCountry].filter(Boolean).join(", ");
   const shortName = about.name.split(/[—–-]/)[0]?.trim() || about.name;
+  const shortDesc = engagement.shortDescription?.trim() || "";
 
   return {
     brandMark: brand.mark,
@@ -365,30 +448,22 @@ export function engagementToHomeContent(engagement: Engagement | null): PublicHo
     subtitle: homeSubtitle(engagement.engagementName),
     datesLabel: formatPublicDatesShort(engagement.startDate, engagement.endDate),
     cityLine,
-    venueLine: about.venueTitle || HOME_FALLBACK.venueLine,
-    intro:
-      engagement.shortDescription?.trim() ||
-      about.overviewParagraphs[0] ||
-      HOME_FALLBACK.intro,
-    tagline:
-      (engagement.shortDescription?.trim().length || 0) <= 120
-        ? engagement.shortDescription?.trim() || HOME_FALLBACK.tagline
-        : HOME_FALLBACK.tagline,
+    venueLine: about.venueTitle,
+    intro: shortDesc || about.overviewParagraphs[0] || "",
+    tagline: shortDesc.length && shortDesc.length <= 120 ? shortDesc : shortDesc.slice(0, 120),
     earlyBirdNote,
-    aboutTitle: `About ${shortName}`,
+    aboutTitle: shortName ? `About ${shortName}` : "About",
     aboutBody:
-      engagement.description?.trim() ||
-      about.overviewParagraphs.join(" ") ||
-      HOME_FALLBACK.aboutBody,
-    themes: themes.length ? themes : HOME_FALLBACK.themes,
+      engagement.description?.trim() || about.overviewParagraphs.join(" ") || "",
+    themes,
     stats: {
-      participants: capacity ? `${Number(capacity).toLocaleString("en-KE")}+` : HOME_FALLBACK.stats.participants,
-      speakers: speakers.length ? `${speakers.length}+` : HOME_FALLBACK.stats.speakers,
-      days: days ? `${days} Day${days === 1 ? "" : "s"}` : HOME_FALLBACK.stats.days,
+      participants: capacity ? `${Number(capacity).toLocaleString("en-KE")}+` : "",
+      speakers: speakers.length ? `${speakers.length}+` : "",
+      days: days ? `${days} Day${days === 1 ? "" : "s"}` : "",
     },
     venueName: about.venueTitle,
     venueCityCountry: cityLine,
-    venueImageAlt: `${about.venueTitle}, ${cityLine}`,
+    venueImageAlt: [about.venueTitle, cityLine].filter(Boolean).join(", ") || "Event venue",
   };
 }
 
@@ -445,30 +520,33 @@ function parseTicketAmounts(price?: string | number) {
   };
 }
 
-const FEE_FALLBACK: PublicFeeTier = {
-  earlyBird: {
-    id: "early-bird",
-    label: "Early Bird Registration",
-    until: "Up to 31 October 2026",
-    kes: 60000,
-    usd: 470,
-  },
-  late: {
-    id: "late",
-    label: "Late Registration",
-    until: "1 to 18 November 2026",
-    kes: 70000,
-    usd: 510,
-  },
-  active: "earlyBird",
-};
 
 /** Shared public chrome copy (hero meta, footer, login, registration). */
 export function engagementToEventCopy(engagement: Engagement | null): PublicEventCopy {
+  const year = new Date().getFullYear();
+  if (!engagement) {
+    return {
+      name: "",
+      brandLine: "",
+      fullName: "",
+      edition: "",
+      dates: "",
+      datesShort: "",
+      city: "",
+      venue: "",
+      venueShort: "",
+      tagline: "",
+      supportEmail: "",
+      supportPhone: "",
+      year,
+      referencePrefix: `EVENT-${year}`,
+    };
+  }
+
   const home = engagementToHomeContent(engagement);
   const about = engagementToAboutContent(engagement);
-  const shortName = about.name.split(/[—–-]/)[0]?.trim() || about.name || "ISIPPE-3";
-  const year = Number(home.brandYear) || new Date().getFullYear();
+  const shortName = about.name.split(/[—–-]/)[0]?.trim() || about.name || "Event";
+  const eventYear = Number(home.brandYear) || year;
   const venueShort =
     [about.venueTitle.split(/[,(]/)[0]?.trim() || about.venueTitle, about.venueCity]
       .filter(Boolean)
@@ -485,17 +563,36 @@ export function engagementToEventCopy(engagement: Engagement | null): PublicEven
     venue: home.venueLine,
     venueShort,
     tagline: home.tagline,
-    supportEmail: engagement?.contactEmail?.trim() || "isippe@aca.go.ke",
-    supportPhone: engagement?.contactPhone?.trim() || "+254 700 123 456",
-    year,
-    referencePrefix: `${shortName.replace(/\s+/g, "-").toUpperCase()}-${year}`,
+    supportEmail: engagement.contactEmail?.trim() || "",
+    supportPhone: engagement.contactPhone?.trim() || "",
+    year: eventYear,
+    referencePrefix: `${shortName.replace(/\s+/g, "-").toUpperCase()}-${eventYear}`,
   };
 }
 
-/** Registration fee tiers from engagement tickets (with static fallback). */
+const EMPTY_FEES: PublicFeeTier = {
+  earlyBird: {
+    id: "early-bird",
+    label: "Early Bird Registration",
+    until: "—",
+    kes: 0,
+    usd: 0,
+  },
+  late: {
+    id: "late",
+    label: "Late Registration",
+    until: "—",
+    kes: 0,
+    usd: 0,
+  },
+  active: "earlyBird",
+};
+
+/** Registration fee tiers from engagement tickets (API only — no hard-coded prices). */
 export function engagementToRegistrationFees(engagement: Engagement | null): PublicFeeTier {
-  const tickets = asTickets(engagement?.tickets);
-  if (!tickets.length) return FEE_FALLBACK;
+  if (!engagement) return EMPTY_FEES;
+  const tickets = asTickets(engagement.tickets);
+  if (!tickets.length) return EMPTY_FEES;
 
   const early =
     tickets.find((t) => /early/i.test(t.name) || /early/i.test(t.period || "")) || tickets[0];
@@ -512,19 +609,19 @@ export function engagementToRegistrationFees(engagement: Engagement | null): Pub
   return {
     earlyBird: {
       id: early.id || "early-bird",
-      label: early.name || FEE_FALLBACK.earlyBird.label,
-      until: early.period || FEE_FALLBACK.earlyBird.until,
-      kes: earlyAmounts.kes || FEE_FALLBACK.earlyBird.kes,
-      usd: earlyAmounts.usd || FEE_FALLBACK.earlyBird.usd,
+      label: early.name || EMPTY_FEES.earlyBird.label,
+      until: early.period || "—",
+      kes: earlyAmounts.kes,
+      usd: earlyAmounts.usd,
     },
     late: {
       id: late.id || "late",
-      label: late.name || FEE_FALLBACK.late.label,
-      until: late.period || FEE_FALLBACK.late.until,
-      kes: lateAmounts.kes || FEE_FALLBACK.late.kes,
-      usd: lateAmounts.usd || FEE_FALLBACK.late.usd,
+      label: late.name || EMPTY_FEES.late.label,
+      until: late.period || "—",
+      kes: lateAmounts.kes,
+      usd: lateAmounts.usd,
     },
-    active: /early/i.test(early.name) ? "earlyBird" : "earlyBird",
+    active: "earlyBird",
   };
 }
 
@@ -687,9 +784,9 @@ export function engagementToPublicProgramme(engagement: Engagement | null): {
   dayMeta: Record<number, { date: string; weekday: string }>;
   venueLine: string;
 } {
-  const venueTitle = engagement?.venue?.trim() || FALLBACK.venueTitle;
-  const venueCity = engagement?.city?.trim() || FALLBACK.venueCity;
-  const venueCountry = countryLabel(engagement?.country) || FALLBACK.venueCountry;
+  const venueTitle = engagement?.venue?.trim() || "";
+  const venueCity = engagement?.city?.trim() || "";
+  const venueCountry = countryLabel(engagement?.country) || "";
   const venueLine = [venueTitle, venueCity, venueCountry].filter(Boolean).join(", ");
   const venueSub = engagement?.city?.trim() || venueTitle.split(/\s+/)[0] || "Venue";
 
@@ -790,13 +887,18 @@ export function engagementToPublicVenue(engagement: Engagement | null): PublicVe
     datesLabel: about.datesLabel,
     modeLabel: about.modeLabel,
     shortName,
-    highlights: highlights.length ? highlights : DEFAULT_VENUE_HIGHLIGHTS,
-    spaces: spaces.length ? spaces : DEFAULT_VENUE_SPACES,
+    highlights: engagement
+      ? highlights.length
+        ? highlights
+        : DEFAULT_VENUE_HIGHLIGHTS
+      : [],
+    spaces: engagement ? (spaces.length ? spaces : DEFAULT_VENUE_SPACES) : [],
   };
 }
 
-/** Public FAQ categories from engagement (falls back to defaults). */
+/** Public FAQ categories from engagement (defaults only when an engagement is loaded). */
 export function engagementToPublicFaqs(engagement: Engagement | null): EngagementFaqCategory[] {
-  const faqs = asFaqs(engagement?.faqs);
+  if (!engagement) return [];
+  const faqs = asFaqs(engagement.faqs);
   return faqs.length ? faqs : DEFAULT_FAQ_CATEGORIES;
 }

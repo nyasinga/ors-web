@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageHero } from "../../components/public/PageHero";
+import { PublicEventGate } from "../../components/public/PublicEventGate";
 import { cn } from "../../lib/cn";
 import {
   engagementToPublicSponsors,
@@ -8,74 +9,6 @@ import {
 } from "../../lib/publicEvent";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 
-const fallbackPackages: PublicSponsorPackage[] = [
-  {
-    id: "platinum",
-    name: "Platinum Sponsor",
-    price: "KES 1,000,000",
-    medal: "/assets/sponsor-platinum.png",
-    description: "Maximum visibility and strategic engagement opportunities.",
-    button: "Select Platinum Package",
-    benefits: [
-      "Prime exhibition space",
-      "Keynote speaking opportunity",
-      "Branding across all event materials",
-      "Multiple delegate passes (5)",
-      "Dedicated networking opportunities",
-      "Acknowledgement during event",
-    ],
-    tierKey: "platinum",
-  },
-  {
-    id: "gold",
-    name: "Gold Sponsor",
-    price: "KES 500,000",
-    medal: "/assets/sponsor-gold.png",
-    description: "High visibility and extensive engagement opportunities.",
-    button: "Select Gold Package",
-    benefits: [
-      "Prime exhibition space",
-      "Keynote speaking opportunity",
-      "Panel participation opportunity",
-      "Branding across all event materials",
-      "Multiple delegate passes (4)",
-      "Dedicated networking opportunities",
-    ],
-    tierKey: "gold",
-  },
-  {
-    id: "silver",
-    name: "Silver Sponsor",
-    price: "KES 300,000",
-    medal: "/assets/sponsor-silver.png",
-    description: "Enhanced visibility and engagement opportunities.",
-    button: "Select Silver Package",
-    benefits: [
-      "Prime exhibition space",
-      "Panel participation opportunity",
-      "Branding across all event materials",
-      "Multiple delegate passes (3)",
-      "Dedicated networking opportunities",
-    ],
-    tierKey: "silver",
-  },
-  {
-    id: "bronze",
-    name: "Bronze Sponsor",
-    price: "KES 150,000",
-    medal: "/assets/sponsor-bronze.png",
-    description: "Brand exposure and networking opportunities.",
-    button: "Select Bronze Package",
-    benefits: [
-      "Branding across website",
-      "Multiple delegate passes (2)",
-      "Delegate passes to social events",
-      "Dedicated networking opportunities",
-      "Acknowledgement during event",
-    ],
-    tierKey: "bronze",
-  },
-];
 
 type Cell = "tick" | "dash" | string;
 
@@ -120,33 +53,29 @@ const arrow = "text-[23px] font-normal leading-none";
 
 /** Sponsorship — packages from the public engagement API. */
 export function SponsorshipPage() {
-  const { engagement, loading } = usePublicEngagement();
-  const packages = useMemo(() => {
-    const fromApi = engagementToPublicSponsors(engagement);
-    return fromApi.length ? fromApi : fallbackPackages;
-  }, [engagement]);
-  const [selected, setSelected] = useState(packages[0]?.id || "platinum");
+  const { engagement } = usePublicEngagement();
+  const packages = useMemo(() => engagementToPublicSponsors(engagement), [engagement]);
+  const [selected, setSelected] = useState(packages[0]?.id || "");
 
   useEffect(() => {
     if (!packages.some((p) => p.id === selected)) {
-      setSelected(packages[0]?.id || "platinum");
+      setSelected(packages[0]?.id || "");
     }
   }, [packages, selected]);
 
   const pkg = packages.find((p) => p.id === selected) || packages[0];
   const comparisonRows = useMemo(() => buildComparison(packages), [packages]);
-  const eventName = engagement?.engagementName?.trim() || "ISIPPE-3";
-
-  if (!pkg) return null;
+  const eventName = engagement?.engagementName?.trim() || "Event";
 
   return (
+    <PublicEventGate>
     <div className="overflow-x-hidden bg-white text-[#101620]">
       <PageHero
         title="Become a Sponsor"
-        subtitle={`Partner with ${eventName.includes("ISIPPE") ? "ISIPPE-3" : eventName}`}
+        subtitle={`Partner with ${eventName}`}
         description={
           engagement?.shortDescription?.trim() ||
-          "Position your brand as a leader in the fight against counterfeiting and support a premier global platform on intellectual property protection and enforcement."
+          "Position your brand as a leader in the fight against counterfeiting and support intellectual property protection and enforcement."
         }
         image="/assets/sponsor-hero.jpg"
         imageAlt={`${eventName} sponsorship partnership`}
@@ -165,8 +94,12 @@ export function SponsorshipPage() {
               Choose a sponsorship package that aligns with your objectives. Select a package to
               view its benefits and comparison.
             </p>
-            {loading ? <p className="mb-3 text-xs text-[#53627a]">Loading packages…</p> : null}
           </div>
+          {!pkg ? (
+            <p className="rounded-lg border border-[#dbe6f0] bg-[#f7fbff] px-4 py-8 text-center text-[13px] text-[#53627a]">
+              No sponsorship packages have been published for this event yet.
+            </p>
+          ) : (
           <div className="grid grid-cols-[minmax(0,2.85fr)_minmax(0,1.05fr)] items-start gap-4 max-[960px]:grid-cols-1 max-[640px]:gap-3">
             <div>
               <div className="grid grid-cols-4 gap-2 max-[1100px]:grid-cols-2 max-[640px]:grid-cols-1 max-[640px]:gap-2.5">
@@ -374,8 +307,10 @@ export function SponsorshipPage() {
               </Link>
             </aside>
           </div>
+          )}
         </div>
       </section>
     </div>
+    </PublicEventGate>
   );
 }

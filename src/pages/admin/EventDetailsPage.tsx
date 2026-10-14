@@ -82,6 +82,7 @@ import {
   formatEngagementStatusLabel,
   formatModeLabel,
   getEngagement,
+  setFeaturedEngagement,
   toUiEventType,
   updateEngagement,
 } from "../../lib/engagements";
@@ -288,6 +289,7 @@ type DetailView = {
   visibility: string;
   registration: string;
   payment: string;
+  isFeatured: boolean;
   website: string;
   facebook: string;
   twitter: string;
@@ -330,6 +332,7 @@ function toDetailView(engagement: Engagement | null): DetailView {
       visibility: eventDetail.visibility,
       registration: eventDetail.registration,
       payment: eventDetail.payment,
+      isFeatured: false,
       website: eventDetail.website,
       facebook: eventDetail.facebook,
       twitter: eventDetail.twitter,
@@ -387,6 +390,7 @@ function toDetailView(engagement: Engagement | null): DetailView {
       : "—",
     registration: engagement.registrationEnabled ? "Open" : "Closed",
     payment: engagement.paymentEnabled ? "Enabled" : "Disabled",
+    isFeatured: Boolean(engagement.isFeatured),
     website: engagement.websiteUrl || "",
     facebook: engagement.facebookUrl || "",
     twitter: engagement.twitterUrl || "",
@@ -1014,6 +1018,35 @@ function EventClassificationSettings({
   onChanged: () => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
+  const [featureBusy, setFeatureBusy] = useState(false);
+  const [featureError, setFeatureError] = useState<string | null>(null);
+  const { push } = useToast();
+
+  const toggleFeatured = async () => {
+    if (!fromApi || featureBusy) return;
+    setFeatureBusy(true);
+    setFeatureError(null);
+    try {
+      await setFeaturedEngagement(eventId, !detail.isFeatured);
+      await onChanged();
+      push({
+        tone: "success",
+        message: detail.isFeatured
+          ? "Removed from homepage — this event is no longer featured."
+          : "Shown on homepage — this is now the only public event.",
+      });
+    } catch (err) {
+      setFeatureError(
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Could not update homepage feature",
+      );
+    } finally {
+      setFeatureBusy(false);
+    }
+  };
 
   return (
     <Card>
@@ -1030,6 +1063,7 @@ function EventClassificationSettings({
           ["Visibility", detail.visibility],
           ["Registration", detail.registration],
           ["Payment", detail.payment],
+          ["Homepage", detail.isFeatured ? "Featured" : "Not featured"],
           ["Mode", detail.mode],
           ["Category", detail.category],
           ["Target Audience", detail.audience],
@@ -1044,6 +1078,36 @@ function EventClassificationSettings({
           </div>
         ))}
       </dl>
+      {fromApi ? (
+        <div className="mt-4 rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-ink">Show on homepage</p>
+              <p className="mt-0.5 text-[12px] leading-snug text-mute">
+                Only one published event appears on the public site. Enabling this
+                clears the previous featured event.
+              </p>
+            </div>
+            <Button
+              variant={detail.isFeatured ? "outline" : "primary"}
+              size="sm"
+              disabled={featureBusy}
+              onClick={() => void toggleFeatured()}
+            >
+              {featureBusy
+                ? "Saving…"
+                : detail.isFeatured
+                  ? "Remove from homepage"
+                  : "Show on homepage"}
+            </Button>
+          </div>
+          {featureError ? (
+            <p className="mt-2 text-[12px] text-rose-600" role="alert">
+              {featureError}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <Link to={`/admin/events/${eventId}/edit`} className="mt-4 inline-block">
         <Button variant="outline" size="sm">
           Edit Event <ArrowRight size={14} />

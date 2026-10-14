@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import { PageHero } from "../../components/public/PageHero";
+import { PublicEventGate } from "../../components/public/PublicEventGate";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { cn } from "../../lib/cn";
 import { engagementToAboutContent } from "../../lib/publicEvent";
@@ -75,7 +76,7 @@ function splitObjective(text: string) {
 /** About — tabs wired to sections loaded from the public engagement. */
 export function AboutPage() {
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]["id"]>("overview");
-  const { engagement, loading } = usePublicEngagement();
+  const { engagement } = usePublicEngagement();
   const about = useMemo(() => engagementToAboutContent(engagement), [engagement]);
 
   const goToTab = (tab: (typeof tabs)[number]) => {
@@ -106,11 +107,12 @@ export function AboutPage() {
   }, [about]);
 
   return (
+    <PublicEventGate>
     <div className="bg-white text-[#111a31]">
       <PageHero
         dark
         breadcrumb="About"
-        title={`About ${about.name.includes("ISIPPE") ? "ISIPPE-3" : about.name}`}
+        title={`About ${about.name}`}
         description={about.shortDescription}
         image="/assets/about-hero.jpg"
         imageAlt={`About ${about.name}`}
@@ -144,10 +146,6 @@ export function AboutPage() {
           ))}
         </div>
       </nav>
-
-      {loading ? (
-        <p className="px-6 py-3 text-center text-sm text-mute">Loading event details…</p>
-      ) : null}
 
       <section className="pb-[45px] pt-7 max-[760px]:pb-[35px] max-[760px]:pt-[17px]">
         <div
@@ -393,5 +391,6 @@ export function AboutPage() {
         </div>
       </section>
     </div>
+    </PublicEventGate>
   );
 }

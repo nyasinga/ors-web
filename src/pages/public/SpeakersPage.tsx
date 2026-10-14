@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { PageHero } from "../../components/public/PageHero";
-import { SpeakerCardGrid, type SpeakerCardData } from "../../components/speakers/SpeakerCard";
-import { speakers as fallbackSpeakers, type SpeakerCategory } from "../../data/publicContent";
+import { PublicEventGate } from "../../components/public/PublicEventGate";
+import { SpeakerCardGrid } from "../../components/speakers/SpeakerCard";
+import type { SpeakerCategory } from "../../data/publicContent";
 import { cn } from "../../lib/cn";
 import { engagementToPublicSpeakers } from "../../lib/publicEvent";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
@@ -18,31 +19,13 @@ const filters: { id: "all" | SpeakerCategory; label: string }[] = [
 const container =
   "mx-auto box-border w-[min(calc(100%-clamp(28px,5vw,80px)),1440px)] max-w-full max-[1200px]:w-[min(calc(100%-48px),1440px)] max-[640px]:w-[calc(100%-32px)] max-[380px]:!w-[calc(100%-24px)]";
 
-function toCards(list: typeof fallbackSpeakers): SpeakerCardData[] {
-  return list.map((s) => ({
-    id: s.id,
-    name: s.name,
-    role: s.role,
-    org: s.org,
-    roleLines: s.roleLines,
-    country: s.country,
-    flag: s.flag,
-    category: s.category,
-    photo: s.photo,
-    bio: s.bio,
-  }));
-}
-
 /** Speakers — content from the public engagement API. */
 export function SpeakersPage() {
-  const { engagement, loading } = usePublicEngagement();
+  const { engagement } = usePublicEngagement();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<(typeof filters)[number]["id"]>("all");
 
-  const speakers = useMemo(() => {
-    const fromApi = engagementToPublicSpeakers(engagement);
-    return fromApi.length ? fromApi : toCards(fallbackSpeakers);
-  }, [engagement]);
+  const speakers = useMemo(() => engagementToPublicSpeakers(engagement), [engagement]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -53,23 +36,14 @@ export function SpeakersPage() {
     });
   }, [speakers, query, filter]);
 
-  const eventName = engagement?.engagementName?.trim() || "ISIPPE-3";
+  const eventName = engagement?.engagementName?.trim() || "Event";
 
   return (
+    <PublicEventGate>
     <div className="bg-white text-[#101620]">
       <PageHero
         title="Speakers"
-        subtitle={
-          <>
-            {eventName.includes("ISIPPE") ? "ISIPPE-3 International Symposium on" : eventName}
-            {eventName.includes("ISIPPE") ? (
-              <>
-                <br />
-                Intellectual Property Protection and Enforcement
-              </>
-            ) : null}
-          </>
-        }
+        subtitle={eventName}
         image="/assets/speakers-hero.jpg"
         imageAlt={`${eventName} speakers`}
       />
@@ -111,9 +85,6 @@ export function SpeakersPage() {
               />
             </label>
           </div>
-          {loading ? (
-            <p className="mt-3 text-xs text-[#53627a]">Loading speakers…</p>
-          ) : null}
         </div>
       </section>
 
@@ -122,10 +93,15 @@ export function SpeakersPage() {
           <SpeakerCardGrid
             speakers={filtered}
             columns={4}
-            emptyMessage="No speakers match your search."
+            emptyMessage={
+              speakers.length
+                ? "No speakers match your search."
+                : "No speakers have been published for this event yet."
+            }
           />
         </div>
       </section>
     </div>
+    </PublicEventGate>
   );
 }

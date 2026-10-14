@@ -502,7 +502,30 @@ export function toManagedEvent(engagement: Engagement): ManagedEvent {
     capacity,
     status: toUiListStatus(engagement),
     barTone: barToneFor(type),
+    isFeatured: Boolean(engagement.isFeatured),
   };
+}
+
+/** Mark one engagement as the public homepage feature (clears any previous). */
+export async function setFeaturedEngagement(id: string, featured = true) {
+  if (featured) {
+    const current = await listEngagements({
+      where: { isFeatured: true },
+      fields: { engagementID: true, isFeatured: true },
+      limit: 50,
+    });
+    await Promise.all(
+      current
+        .map((row) => String(row.engagementID || "").trim())
+        .filter((otherId) => otherId && otherId !== id)
+        .map((otherId) => updateEngagement(otherId, { isFeatured: false })),
+    );
+    await updateEngagement(id, { isFeatured: true });
+  } else {
+    await updateEngagement(id, { isFeatured: false });
+  }
+  const { clearPublicEngagementCache } = await import("./publicEvent");
+  clearPublicEngagementCache();
 }
 
 export type DashboardUpcomingItem = {

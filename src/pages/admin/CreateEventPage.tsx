@@ -1316,8 +1316,7 @@ export function CreateEventPage() {
                   variant="outline"
                   className="mt-4"
                   onClick={() => {
-                    setNewSpeakerPhoto("");
-                    setNewSpeakerPhotoName("");
+                    clearSpeakerPhoto();
                     setSpeakerModal(true);
                   }}
                 >
