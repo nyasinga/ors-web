@@ -2,8 +2,6 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
 import { useRegistration } from "../../contexts/RegistrationContext";
-import { fees } from "../../data/event";
-import { useTranslation } from "react-i18next";
 import { formatMoney } from "../../i18n/format";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
@@ -20,9 +18,8 @@ const inclusions = [
 /** Registration step 2 — structure & CSS from HTML package */
 export function RegisterDetailsPage() {
   const navigate = useNavigate();
-  const { t } = useTranslation("common");
   const event = useEventCopy();
-  const { details, setDetails } = useRegistration();
+  const { details, setDetails, earlyBird, late } = useRegistration();
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validate = () => {
@@ -47,7 +44,7 @@ export function RegisterDetailsPage() {
         <div className={cn(r.container, r.layout)}>
           <section className={cn(r.card, r.section)}>
             <h2 className={r.sectionTitle}>2. Details</h2>
-            <p className={r.subtitle}>Please provide your information to register for ISIPPE-3.</p>
+            <p className={r.subtitle}>Please provide your information to register for {event.name}.</p>
 
             <div className={r.formCard}>
               <div className={r.formTitle}>
@@ -237,20 +234,20 @@ export function RegisterDetailsPage() {
             <div className={r.sidePrice}>
               <div className={r.priceLabel}>🏷 Registration Fee</div>
               <div className={r.period}>
-                {t(fees.earlyBird.labelKey)} &nbsp; <b>Current Period</b>
+                {earlyBird.label} &nbsp; <b>Current Period</b>
               </div>
-              <div className={r.price}>{formatMoney(fees.earlyBird.kes, "KES")}</div>
+              <div className={r.price}>{formatMoney(earlyBird.kes, "KES")}</div>
               <div className={r.priceSub}>
-                {formatMoney(fees.earlyBird.usd, "USD")} (Approx.)
+                {formatMoney(earlyBird.usd, "USD")} (Approx.)
               </div>
-              <div className={r.period}>{t(fees.earlyBird.untilKey)}</div>
+              <div className={r.period}>{earlyBird.until}</div>
             </div>
             <div className={r.late}>
-              <b>{t(fees.late.labelKey)}</b>
+              <b>{late.label}</b>
               <br />
-              <span className="text-[11px] text-[#61708a]">{t(fees.late.untilKey)}</span>
+              <span className="text-[11px] text-[#61708a]">{late.until}</span>
               <br />
-              <strong>{formatMoney(fees.late.kes, "KES")}</strong>
+              <strong>{formatMoney(late.kes, "KES")}</strong>
             </div>
             <div className={r.infoBox}>
               <div className={r.infoTitle}>👥 What&apos;s Included?</div>

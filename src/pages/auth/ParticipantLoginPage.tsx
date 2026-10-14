@@ -143,7 +143,7 @@ export function ParticipantLoginPage() {
               {t("nav.participantLogin")}
             </h1>
             <p className="mb-[17px] max-w-[520px] text-[19px] leading-[1.35] text-white max-[600px]:text-[14px]">
-              Access your ISIPPE-3 registration, ticket and event information.
+              Access your {event.name} registration, ticket and event information.
             </p>
             <div className="flex items-center gap-[17px] max-[600px]:block">
               <div className="flex items-center gap-[11px] text-white max-[600px]:my-[7px]">
@@ -154,11 +154,7 @@ export function ParticipantLoginPage() {
               <div className="flex items-center gap-[11px] text-white max-[600px]:text-[11px]">
                 <MapPin className={eventSvg} size={34} strokeWidth={0} fill="currentColor" />
                 <div>
-                  <strong>
-                    Kenyatta International
-                    <br />
-                    Convention Centre (KICC)
-                  </strong>
+                  <strong>{event.venue}</strong>
                   <small className="mt-[3px] block text-[12px] leading-[1.35] opacity-90 max-[600px]:text-[9px]">
                     {event.city}
                   </small>
@@ -302,7 +298,7 @@ export function ParticipantLoginPage() {
                     Can&apos;t find your pass code?
                   </strong>
                   <ul className="mt-[5px] pl-4 text-[11px] leading-[1.55] text-[#56698e] max-[600px]:text-[9px]">
-                    <li>Check your inbox (including spam folder) for the email from ISIPPE-3.</li>
+                    <li>Check your inbox (including spam folder) for the email from {event.name}.</li>
                     <li>Use the QR code from your registration receipt.</li>
                     <li>If you still can&apos;t access your account, contact support.</li>
                   </ul>

@@ -2,8 +2,10 @@ import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { PageHero } from "../../components/public/PageHero";
 import { SpeakerCardGrid, type SpeakerCardData } from "../../components/speakers/SpeakerCard";
+import { speakers as fallbackSpeakers, type SpeakerCategory } from "../../data/publicContent";
 import { cn } from "../../lib/cn";
-import { speakers, type SpeakerCategory } from "../../data/publicContent";
+import { engagementToPublicSpeakers } from "../../lib/publicEvent";
+import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 
 const filters: { id: "all" | SpeakerCategory; label: string }[] = [
   { id: "all", label: "All Speakers" },
@@ -16,34 +18,42 @@ const filters: { id: "all" | SpeakerCategory; label: string }[] = [
 const container =
   "mx-auto box-border w-[min(calc(100%-clamp(28px,5vw,80px)),1440px)] max-w-full max-[1200px]:w-[min(calc(100%-48px),1440px)] max-[640px]:w-[calc(100%-32px)] max-[380px]:!w-[calc(100%-24px)]";
 
-/** Speakers — Tailwind port of isippe3-speakers-pure-html-responsive */
+function toCards(list: typeof fallbackSpeakers): SpeakerCardData[] {
+  return list.map((s) => ({
+    id: s.id,
+    name: s.name,
+    role: s.role,
+    org: s.org,
+    roleLines: s.roleLines,
+    country: s.country,
+    flag: s.flag,
+    category: s.category,
+    photo: s.photo,
+    bio: s.bio,
+  }));
+}
+
+/** Speakers — content from the public engagement API. */
 export function SpeakersPage() {
+  const { engagement, loading } = usePublicEngagement();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<(typeof filters)[number]["id"]>("all");
 
+  const speakers = useMemo(() => {
+    const fromApi = engagementToPublicSpeakers(engagement);
+    return fromApi.length ? fromApi : toCards(fallbackSpeakers);
+  }, [engagement]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return speakers
-      .filter((s) => {
-        const matchFilter = filter === "all" || s.category === filter;
-        const haystack = `${s.name} ${s.org} ${s.role} ${s.country}`.toLowerCase();
-        return matchFilter && (!q || haystack.includes(q));
-      })
-      .map(
-        (s): SpeakerCardData => ({
-          id: s.id,
-          name: s.name,
-          role: s.role,
-          org: s.org,
-          roleLines: s.roleLines,
-          country: s.country,
-          flag: s.flag,
-          category: s.category,
-          photo: s.photo,
-          bio: s.bio,
-        }),
-      );
-  }, [query, filter]);
+    return speakers.filter((s) => {
+      const matchFilter = filter === "all" || s.category === filter;
+      const haystack = `${s.name} ${s.org} ${s.role} ${s.country}`.toLowerCase();
+      return matchFilter && (!q || haystack.includes(q));
+    });
+  }, [speakers, query, filter]);
+
+  const eventName = engagement?.engagementName?.trim() || "ISIPPE-3";
 
   return (
     <div className="bg-white text-[#101620]">
@@ -51,13 +61,17 @@ export function SpeakersPage() {
         title="Speakers"
         subtitle={
           <>
-            ISIPPE-3 International Symposium on
-            <br />
-            Intellectual Property Protection and Enforcement
+            {eventName.includes("ISIPPE") ? "ISIPPE-3 International Symposium on" : eventName}
+            {eventName.includes("ISIPPE") ? (
+              <>
+                <br />
+                Intellectual Property Protection and Enforcement
+              </>
+            ) : null}
           </>
         }
         image="/assets/speakers-hero.jpg"
-        imageAlt="ISIPPE speakers and symposium"
+        imageAlt={`${eventName} speakers`}
       />
 
       <section className="pb-3 pt-[17px] max-[640px]:pt-3" id="speakers">
@@ -97,6 +111,9 @@ export function SpeakersPage() {
               />
             </label>
           </div>
+          {loading ? (
+            <p className="mt-3 text-xs text-[#53627a]">Loading speakers…</p>
+          ) : null}
         </div>
       </section>
 

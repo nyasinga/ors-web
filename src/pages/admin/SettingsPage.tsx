@@ -38,6 +38,7 @@ import { Card } from "../../components/ui/Card";
 import { Donut } from "../../components/ui/Donut";
 import { Input } from "../../components/ui/Input";
 import { Pill } from "../../components/ui/Pill";
+import { ScrollableNav } from "../../components/ui/ScrollableNav";
 import { Select } from "../../components/ui/Select";
 import { Table } from "../../components/ui/Table";
 import { Toggle } from "../../components/ui/Toggle";
@@ -128,12 +129,17 @@ export function SettingsPage() {
         )}
       </div>
 
-      <div className="flex gap-0 overflow-x-auto border-b border-slate-200" role="tablist">
+      <ScrollableNav
+        activeKey={active}
+        aria-label="Settings sections"
+        className="border-b border-slate-200"
+        trackClassName="gap-0"
+      >
         {settingsTabs.map((tab, i) => {
           const Icon = tabIcons[tab.id] ?? SettingsIcon;
           const isActive = active === tab.id;
           return (
-            <div key={tab.id} className="flex shrink-0 items-stretch">
+            <div key={tab.id} className="flex shrink-0 items-stretch" data-nav-id={tab.id}>
               {i > 0 ? <span className="my-2 w-px bg-slate-200" aria-hidden /> : null}
               <button
                 type="button"
@@ -153,7 +159,7 @@ export function SettingsPage() {
             </div>
           );
         })}
-      </div>
+      </ScrollableNav>
 
       {active === "general" ? (
         <GeneralSection workspace={workspace} onChange={setWorkspace} />

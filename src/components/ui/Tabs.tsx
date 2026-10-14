@@ -1,3 +1,4 @@
+import { ScrollableNav } from "./ScrollableNav";
 import { cn } from "../../lib/cn";
 
 export type TabItem = { id: string; label: string; count?: number };
@@ -11,12 +12,11 @@ type Props = {
 
 export function Tabs({ items, value, onChange, className }: Props) {
   return (
-    <div
-      role="tablist"
-      className={cn(
-        "flex gap-1 overflow-x-auto border-b border-slate-200 pb-px",
-        className,
-      )}
+    <ScrollableNav
+      activeKey={value}
+      aria-label="Tabs"
+      className={cn("border-b border-slate-200", className)}
+      trackClassName="gap-1 pb-px"
     >
       {items.map((item) => {
         const active = item.id === value;
@@ -25,6 +25,7 @@ export function Tabs({ items, value, onChange, className }: Props) {
             key={item.id}
             type="button"
             role="tab"
+            data-nav-id={item.id}
             aria-selected={active}
             onClick={() => onChange(item.id)}
             className={cn(
@@ -43,6 +44,6 @@ export function Tabs({ items, value, onChange, className }: Props) {
           </button>
         );
       })}
-    </div>
+    </ScrollableNav>
   );
 }

@@ -3,6 +3,7 @@ import { Handshake, Mic2, Monitor, Users } from "lucide-react";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
 import { useRegistration } from "../../contexts/RegistrationContext";
 import { participationTypes, type ParticipationType } from "../../data/registration";
+import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
 import * as r from "../../components/registration/registerStyles";
 
@@ -30,6 +31,7 @@ const includedLabel: Record<ParticipationType, string> = {
 /** Registration step 1 — structure & CSS from HTML package */
 export function RegisterParticipationPage() {
   const navigate = useNavigate();
+  const event = useEventCopy();
   const { participationType, setParticipationType } = useRegistration();
   const selected = participationTypes.find((t) => t.id === participationType)!;
   const SelectedIcon = icons[selected.id];
@@ -42,7 +44,7 @@ export function RegisterParticipationPage() {
         <div className={cn(r.container, r.layout)}>
           <section className={cn(r.card, r.section)}>
             <h2 className={r.sectionTitle}>1. Participation</h2>
-            <p className={r.subtitle}>Select how you will participate in ISIPPE-3.</p>
+            <p className={r.subtitle}>Select how you will participate in {event.name}.</p>
 
             <div className="grid grid-cols-[repeat(4,1fr)] gap-[11px] max-[760px]:grid-cols-[1fr] max-[760px]:gap-2">
               {participationTypes.map((type) => {

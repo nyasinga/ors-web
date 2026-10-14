@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -12,71 +13,63 @@ import {
   Shield,
   Users,
 } from "lucide-react";
+import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { cn } from "../../lib/cn";
+import { engagementToHomeContent } from "../../lib/publicEvent";
 
-const features = [
-  { icon: Globe2, titleKey: "features.dialogue.title", textKey: "features.dialogue.text", tone: "blue" as const },
-  { icon: Users, titleKey: "features.knowledge.title", textKey: "features.knowledge.text", tone: "green" as const },
-  { icon: Handshake, titleKey: "features.partnerships.title", textKey: "features.partnerships.text", tone: "blue" as const },
-  { icon: ChartColumnIncreasing, titleKey: "features.markets.title", textKey: "features.markets.text", tone: "blue" as const },
-  { icon: Cog, titleKey: "features.solutions.title", textKey: "features.solutions.text", tone: "blue" as const },
+const featureIcons = [Globe2, Users, Handshake, ChartColumnIncreasing, Cog] as const;
+const featureTones = ["blue", "green", "blue", "blue", "blue"] as const;
+
+const featureFallbackKeys = [
+  { titleKey: "features.dialogue.title", textKey: "features.dialogue.text" },
+  { titleKey: "features.knowledge.title", textKey: "features.knowledge.text" },
+  { titleKey: "features.partnerships.title", textKey: "features.partnerships.text" },
+  { titleKey: "features.markets.title", textKey: "features.markets.text" },
+  { titleKey: "features.solutions.title", textKey: "features.solutions.text" },
 ] as const;
 
-const stats = [
-  {
-    icon: Users,
-    valueKey: "stats.participants.value",
-    labelKey: "stats.participants.label",
-    noteKey: "stats.participants.note",
-  },
-  {
-    icon: Globe2,
-    valueKey: "stats.countries.value",
-    labelKey: "stats.countries.label",
-    noteKey: "stats.countries.note",
-  },
-  {
-    icon: Mic2,
-    valueKey: "stats.speakers.value",
-    labelKey: "stats.speakers.label",
-    noteKey: "stats.speakers.note",
-  },
-  {
-    icon: CalendarDays,
-    valueKey: "stats.dialogue.value",
-    labelKey: "stats.dialogue.label",
-    noteKey: "stats.dialogue.note",
-  },
-] as const;
+const pillarIcons = [Shield, Users, Lightbulb] as const;
 
-const pillars = [
-  { icon: Shield, labelKey: "hero.pillars.enforcement" },
-  { icon: Users, labelKey: "hero.pillars.collaboration" },
-  { icon: Lightbulb, labelKey: "hero.pillars.innovation" },
-] as const;
+const container =
+  "mx-auto w-[calc(100%-clamp(32px,5vw,120px))] max-w-[1440px] max-[768px]:w-[calc(100%-40px)] max-[480px]:w-[calc(100%-32px)]";
 
-const container = "mx-auto w-[calc(100%-clamp(32px,5vw,120px))] max-w-[1440px] max-[768px]:w-[calc(100%-40px)] max-[480px]:w-[calc(100%-32px)]";
-
-/** Home — Tailwind port of index 2.html / home.css page body */
+/** Home — hero and about content from the public engagement API. */
 export function HomePage() {
   const { t } = useTranslation(["home", "common"]);
+  const { engagement } = usePublicEngagement();
+  const home = useMemo(() => engagementToHomeContent(engagement), [engagement]);
+
+  const features = home.themes.slice(0, 5).map((theme, i) => ({
+    icon: featureIcons[i] || Globe2,
+    tone: featureTones[i] || "blue",
+    title: theme,
+    text: t(featureFallbackKeys[i]?.textKey || "features.dialogue.text"),
+  }));
+
+  const pillars = home.themes.slice(0, 3).map((theme, i) => ({
+    icon: pillarIcons[i] || Shield,
+    label: theme,
+  }));
+
+  const brandLetters = home.brandMark.split("");
+  const brandBeforeE = home.showBrandLogo
+    ? home.brandMark.replace(/e$/i, "")
+    : home.brandMark;
+  const brandEndsWithE = home.showBrandLogo && /e$/i.test(home.brandMark);
 
   return (
     <div className="text-[#0b1016]">
-      {/* Hero — left copy + right artwork; theme overlay sits on the photo */}
       <section
         className={cn(
           "relative isolate min-h-[516px] overflow-hidden bg-white",
           "max-[960px]:min-h-0",
         )}
       >
-        {/* Desktop art: nudged right a bit for modest gap; curve still faces copy */}
         <div
           className="pointer-events-none absolute inset-y-0 left-[min(44%,520px)] right-0 z-0 hidden bg-[url('/assets/hero-home-visual.png')] bg-[length:auto_100%] bg-[-140px_center] bg-no-repeat min-[961px]:block min-[1400px]:left-[min(46%,580px)] min-[1400px]:bg-[-100px_center]"
           aria-hidden
         />
-        
-        {/* White under copy, soft fade into the image */}
+
         <div
           className="pointer-events-none absolute inset-0 z-[1] hidden bg-[linear-gradient(90deg,#fff_0%,#fff_38%,rgba(255,255,255,.92)_44%,rgba(255,255,255,.4)_52%,transparent_62%)] min-[961px]:block"
           aria-hidden
@@ -98,19 +91,18 @@ export function HomePage() {
               "max-[640px]:pt-[0px]",
             )}
           >
-            {/* Mobile/tablet visual band */}
-          <div
-            className={cn(
-              "relative z-0 hidden max-[960px]:order-2 max-[960px]:block",
-              "max-[960px]:mx-[calc(50%-50vw)] max-[960px]:mt-0",
-              "max-[960px]:h-[clamp(100px,20vw,180px)] max-[960px]:w-screen max-[960px]:max-w-none",
-              "max-[960px]:bg-[url('/assets/hero-home-visual-mobile.png')]",
-              "max-[960px]:bg-[length:100%_auto] max-[960px]:bg-top max-[960px]:bg-no-repeat",
-              "max-[640px]:h-[clamp(90px,20vw,140px)]",
-              "max-[380px]:h-[76px]",
-            )}
-          />
-          
+            <div
+              className={cn(
+                "relative z-0 hidden max-[960px]:order-2 max-[960px]:block",
+                "max-[960px]:mx-[calc(50%-50vw)] max-[960px]:mt-0",
+                "max-[960px]:h-[clamp(100px,20vw,180px)] max-[960px]:w-screen max-[960px]:max-w-none",
+                "max-[960px]:bg-[url('/assets/hero-home-visual-mobile.png')]",
+                "max-[960px]:bg-[length:100%_auto] max-[960px]:bg-top max-[960px]:bg-no-repeat",
+                "max-[640px]:h-[clamp(90px,20vw,140px)]",
+                "max-[380px]:h-[76px]",
+              )}
+            />
+
             <div
               className="mb-[22px] flex h-1.5 w-[112px] max-[640px]:mb-3.5 max-[640px]:h-1 max-[640px]:w-[68px]"
               aria-hidden
@@ -125,19 +117,26 @@ export function HomePage() {
                 "max-[1200px]:text-[68px]",
                 "max-[960px]:whitespace-normal max-[960px]:text-[clamp(2.75rem,7vw,3.75rem)] max-[960px]:tracking-[-0.04em]",
                 "max-[640px]:text-[clamp(2.35rem,11vw,3.25rem)] max-[640px]:tracking-[-0.045em]",
-                "max-[640px]:mt-10"
+                "max-[640px]:mt-10",
               )}
             >
-              ISIPP<span className="relative inline-block">
-                E
-                <img
-                  src="/assets/logo-issipe.png"
-                  alt=""
-                  aria-hidden="true"
-                  className="absolute bottom-[90%] left-1/2 h-[0.85em] w-[0.85em] max-w-none -translate-x-1/2 object-contain"
-                />
-              </span>{" "}
-              <span className="text-[#ed1c24]/90">2026</span>
+              {brandEndsWithE ? (
+                <>
+                  {brandBeforeE}
+                  <span className="relative inline-block">
+                    E
+                    <img
+                      src="/assets/logo-issipe.png"
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute bottom-[90%] left-1/2 h-[0.85em] w-[0.85em] max-w-none -translate-x-1/2 object-contain"
+                    />
+                  </span>
+                </>
+              ) : (
+                brandLetters.join("")
+              )}{" "}
+              <span className="text-[#ed1c24]/90">{home.brandYear}</span>
             </h1>
 
             <div
@@ -158,16 +157,16 @@ export function HomePage() {
                 "max-[640px]:max-w-none max-[640px]:text-[clamp(1rem,4.2vw,1.15rem)] max-[640px]:leading-[1.2]",
               )}
             >
-              {t("common:event.fullName",{ number: '3rd'})}
+              {home.subtitle}
             </div>
 
-            <div className="flex items-center gap-4 max-[640px]:flex-col max-[640px]:items-start max-[640px]:gap-2.5 mt-3">
+            <div className="mt-3 flex items-center gap-4 max-[640px]:flex-col max-[640px]:items-start max-[640px]:gap-2.5">
               <div className="flex items-center gap-3 max-[640px]:gap-2.5">
                 <div className="w-[31px] shrink-0 text-[#075fd8] max-[640px]:w-7 [&_svg]:block [&_svg]:h-[31px] [&_svg]:w-[31px] max-[640px]:[&_svg]:h-7 max-[640px]:[&_svg]:w-7">
                   <CalendarDays size={27} strokeWidth={1.7} />
                 </div>
                 <div className="text-[14px] leading-[1.35] text-[#0b1016] max-[640px]:text-[13px]">
-                  {t("common:event.datesShort")}
+                  {home.datesLabel}
                 </div>
               </div>
 
@@ -176,8 +175,8 @@ export function HomePage() {
                   <MapPin size={27} strokeWidth={1.7} fill="none" />
                 </div>
                 <div className="text-[14px] leading-[1.35] text-[#0b1016] max-[640px]:text-[13px] [&>span]:block">
-                  <span>{t("common:event.city")}</span>
-                  <span>{t("common:event.venue")}</span>
+                  <span>{home.cityLine}</span>
+                  <span>{home.venueLine}</span>
                 </div>
               </div>
             </div>
@@ -189,14 +188,14 @@ export function HomePage() {
                 "max-[640px]:mb-4 max-[640px]:mt-3.5 max-[640px]:text-[12px] max-[640px]:leading-[1.45]",
               )}
             >
-              {t("hero.intro")}
+              {home.intro}
             </p>
 
             <div
               className={cn(
                 "flex flex-wrap gap-3",
                 "max-[960px]:gap-3",
-                "max-[640px]:grid max-[640px]:grid-cols-1 max-[640px]:gap-2.5"
+                "max-[640px]:grid max-[640px]:grid-cols-1 max-[640px]:gap-2.5",
               )}
             >
               <Link
@@ -226,7 +225,6 @@ export function HomePage() {
             </div>
           </div>
 
-          {/* Overlay on the photo: theme + pillars sit in the clear photo area */}
           <aside
             className={cn(
               "z-[3] flex min-w-0 flex-col text-left",
@@ -236,23 +234,20 @@ export function HomePage() {
               "max-[960px]:px-4 max-[960px]:pb-4 max-[960px]:pt-5",
               "max-[640px]:mt-4 max-[640px]:mb-6 max-[640px]:rounded-lg max-[640px]:px-3.5 max-[640px]:pb-4 max-[640px]:pt-4",
               "max-[380px]:px-3",
-              "max-[380px]:text-[#3F5BA9]"
+              "max-[380px]:text-[#3F5BA9]",
             )}
           >
             <div className="min-w-0 shrink-0">
-              <div
-                className="mb-2.5 h-1 w-10 bg-[#ed1c24] max-[960px]:mb-2"
-                aria-hidden
-              />
+              <div className="mb-2.5 h-1 w-10 bg-[#ed1c24] max-[960px]:mb-2" aria-hidden />
 
               <h2
                 className={cn(
                   "m-0 max-w-[340px] text-[clamp(1.05rem,1.3vw,1.25rem)] font-extrabold leading-[1.28] text-[#0b1016] [overflow-wrap:anywhere] [text-wrap:balance]",
                   "max-[960px]:max-w-none max-[960px]:text-[clamp(1rem,4.2vw,1.2rem)]",
-                  "max-[640px]:text-[clamp(1.05rem,4.5vw,1.2rem)]"
+                  "max-[640px]:text-[clamp(1.05rem,4.5vw,1.2rem)]",
                 )}
               >
-                {t("common:event.tagline")}
+                {home.tagline}
               </h2>
             </div>
 
@@ -260,7 +255,7 @@ export function HomePage() {
               className={cn(
                 "mt-auto flex min-w-0 flex-col",
                 "min-[961px]:pt-5",
-                "max-[960px]:mt-4 max-[960px]:pt-0"
+                "max-[960px]:mt-4 max-[960px]:pt-0",
               )}
             >
               <div
@@ -271,8 +266,12 @@ export function HomePage() {
                   "max-[380px]:gap-1.5",
                 )}
               >
-                {pillars.map((item) => (
-                  <div key={item.labelKey} className="min-w-0 text-center">
+                {(pillars.length ? pillars : [
+                  { icon: Shield, label: t("hero.pillars.enforcement") },
+                  { icon: Users, label: t("hero.pillars.collaboration") },
+                  { icon: Lightbulb, label: t("hero.pillars.innovation") },
+                ]).map((item) => (
+                  <div key={item.label} className="min-w-0 text-center">
                     <div
                       className={cn(
                         "mx-auto mb-1.5 grid h-[44px] w-[44px] place-items-center rounded-full border-2 border-[#15191e] bg-white text-[#0b1016]",
@@ -291,7 +290,7 @@ export function HomePage() {
                         "max-[640px]:text-[clamp(0.65rem,2.8vw,0.75rem)]",
                       )}
                     >
-                      {t(item.labelKey)}
+                      {item.label}
                     </strong>
                   </div>
                 ))}
@@ -303,15 +302,13 @@ export function HomePage() {
                   "max-[640px]:mt-6",
                 )}
               >
-                Early bird registration is <strong>now open</strong>. Register by 31
-                October 2026 for a special offer.
+                {home.earlyBirdNote}
               </p>
             </div>
           </aside>
         </div>
       </section>
 
-      {/* Features */}
       <section className="border-b border-[#edf1f4] bg-white max-[640px]:border-t">
         <div
           className={cn(
@@ -323,7 +320,7 @@ export function HomePage() {
         >
           {features.map((item, i) => (
             <article
-              key={item.titleKey}
+              key={`${item.title}-${i}`}
               className={cn(
                 "flex min-h-[57px] items-center gap-4 border-r border-[#dfe5ea] px-6",
                 i === 0 && "first:pl-5.5",
@@ -346,10 +343,10 @@ export function HomePage() {
               </div>
               <div className="min-w-0">
                 <h3 className="m-0 mb-1 text-[12.5px] font-bold text-[#0b1016] max-[640px]:mb-[3px] max-[640px]:text-[14px]">
-                  {t(item.titleKey)}
+                  {item.title}
                 </h3>
                 <p className="m-0 text-[11.5px] leading-[1.25] text-[#5b6470] max-[640px]:text-[12.5px] max-[640px]:leading-[1.35]">
-                  {t(item.textKey)}
+                  {item.text}
                 </p>
               </div>
             </article>
@@ -357,7 +354,6 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* About */}
       <section
         className="bg-[linear-gradient(90deg,#fbfdff,#f7fafc)] py-[30px] pb-[35px] max-[640px]:py-7 max-[640px]:pb-8"
         id="about"
@@ -372,10 +368,10 @@ export function HomePage() {
           <div>
             <div className="mb-2.5 h-[5px] w-11 bg-[#ed1c24]" aria-hidden />
             <h2 className="mb-1.5 text-[30px] font-extrabold leading-none tracking-[-1px] text-[#0b1016] max-[640px]:text-[clamp(1.45rem,6vw,1.75rem)]">
-              {t("about.title")}
+              {home.aboutTitle}
             </h2>
             <p className="m-0 max-w-[400px] text-[14px] leading-[1.38] text-[#374151] max-[640px]:max-w-none max-[640px]:text-[13.5px] max-[640px]:leading-[1.45]">
-              {t("about.body")}
+              {home.aboutBody}
             </p>
             <Link
               className={cn(
@@ -392,9 +388,34 @@ export function HomePage() {
           </div>
 
           <div className="grid grid-cols-2 gap-px px-[18px] max-[960px]:px-0 max-[640px]:gap-2">
-            {stats.map((stat) => (
+            {[
+              {
+                icon: Users,
+                value: home.stats.participants,
+                label: t("stats.participants.label"),
+                note: t("stats.participants.note"),
+              },
+              {
+                icon: Globe2,
+                value: t("stats.countries.value"),
+                label: t("stats.countries.label"),
+                note: t("stats.countries.note"),
+              },
+              {
+                icon: Mic2,
+                value: home.stats.speakers,
+                label: t("stats.speakers.label"),
+                note: t("stats.speakers.note"),
+              },
+              {
+                icon: CalendarDays,
+                value: home.stats.days,
+                label: t("stats.dialogue.label"),
+                note: t("stats.dialogue.note"),
+              },
+            ].map((stat) => (
               <article
-                key={stat.labelKey}
+                key={stat.label}
                 className={cn(
                   "flex min-h-[105px] items-center gap-[13px] border border-[#f0f3f6] bg-white px-[19px] py-[15px]",
                   "max-[640px]:min-h-0 max-[640px]:flex-col max-[640px]:items-start max-[640px]:gap-2 max-[640px]:p-3",
@@ -405,13 +426,13 @@ export function HomePage() {
                 </div>
                 <div>
                   <div className="text-[21px] font-extrabold text-[#075fd8] max-[640px]:text-[18px]">
-                    {t(stat.valueKey)}
+                    {stat.value}
                   </div>
                   <div className="mt-1 text-[12px] font-extrabold text-[#0b1016] max-[640px]:text-[11px]">
-                    {t(stat.labelKey)}
+                    {stat.label}
                   </div>
                   <div className="mt-[3px] text-[10.5px] leading-[1.25] text-[#5b6470] max-[640px]:text-[10px]">
-                    {t(stat.noteKey)}
+                    {stat.note}
                   </div>
                 </div>
               </article>
@@ -424,7 +445,7 @@ export function HomePage() {
           >
             <img
               src="/assets/home-about-venue.jpg"
-              alt={t("venueImageAlt")}
+              alt={home.venueImageAlt}
               className="absolute inset-0 block h-full w-full object-cover"
             />
             <div
@@ -438,8 +459,8 @@ export function HomePage() {
                 strokeWidth={0}
                 fill="currentColor"
               />
-              <strong className="block text-[11px] leading-[1.2]">{t("common:event.venue")}</strong>
-              <span className="mt-0.5 block text-[10.5px]">{t("common:event.city")}</span>
+              <strong className="block text-[11px] leading-[1.2]">{home.venueName}</strong>
+              <span className="mt-0.5 block text-[10.5px]">{home.venueCityCountry}</span>
             </div>
           </div>
         </div>

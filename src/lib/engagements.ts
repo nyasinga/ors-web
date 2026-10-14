@@ -1,6 +1,8 @@
 import type { EventStatus, EventType, ManagedEvent } from "../data/adminEvents";
 import type {
   Engagement,
+  EngagementFaqCategory,
+  EngagementFaqItem,
   EngagementFilter,
   EngagementMode,
   EngagementPaymentMethod,
@@ -10,6 +12,8 @@ import type {
   EngagementTicket,
   EngagementStatus,
   EngagementType,
+  EngagementVenueHighlight,
+  EngagementVenueSpace,
   LoopbackCount,
   NewEngagement,
 } from "../types/engagement";
@@ -134,13 +138,40 @@ export function toUiEventType(type?: string): EventType {
 export function toEngagementMode(ui: "in-person" | "virtual" | "hybrid"): EngagementMode {
   if (ui === "virtual") return "virtual";
   if (ui === "hybrid") return "hybrid";
-  return "in_person";
+  // OpenAPI enum is hyphenated (`in-person`), not underscore.
+  return "in-person";
 }
 
-export function toUiMode(mode?: EngagementMode): "in-person" | "virtual" | "hybrid" {
-  if (mode === "virtual") return "virtual";
-  if (mode === "hybrid") return "hybrid";
+export function toUiMode(mode?: EngagementMode | string | null): "in-person" | "virtual" | "hybrid" {
+  const value = String(mode || "")
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, "-");
+  if (value === "virtual") return "virtual";
+  if (value === "hybrid") return "hybrid";
   return "in-person";
+}
+
+/** API themes/objectives must be objects (`{ name }`), not bare strings. */
+export function toNamedItems(values: Array<string | Record<string, unknown> | null | undefined>) {
+  return values
+    .map((item) => {
+      if (typeof item === "string") {
+        const name = item.trim();
+        return name ? { name } : null;
+      }
+      if (item && typeof item === "object") {
+        const record = item as Record<string, unknown>;
+        const name =
+          [record.name, record.title, record.label, record.theme, record.value, record.text]
+            .find((v) => typeof v === "string" && String(v).trim()) ?? null;
+        if (typeof name === "string" && name.trim()) {
+          return { ...record, name: name.trim() };
+        }
+      }
+      return null;
+    })
+    .filter(Boolean) as Array<{ name: string; [key: string]: unknown }>;
 }
 
 /** Derive Manage Events tab status from API status + dates */
@@ -210,7 +241,21 @@ function barToneFor(type: EventType): ManagedEvent["barTone"] {
 
 export function asStringList(value: unknown): string[] {
   if (!value) return [];
-  if (Array.isArray(value)) return value.map(String).filter(Boolean);
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === "string") return item.trim();
+        if (item && typeof item === "object") {
+          const record = item as Record<string, unknown>;
+          for (const key of ["name", "title", "label", "theme", "value", "text"]) {
+            const v = record[key];
+            if (typeof v === "string" && v.trim()) return v.trim();
+          }
+        }
+        return "";
+      })
+      .filter(Boolean);
+  }
   if (typeof value === "string" && value.trim()) return [value.trim()];
   return [];
 }
@@ -322,6 +367,87 @@ export function asTickets(value: unknown): EngagementTicket[] {
       } satisfies EngagementTicket;
     })
     .filter(Boolean) as EngagementTicket[];
+}
+
+function asFaqItems(value: unknown): EngagementFaqItem[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item, index) => {
+      if (!item || typeof item !== "object") return null;
+      const row = item as Record<string, unknown>;
+      const q = String(row.q ?? row.question ?? "").trim();
+      const a = String(row.a ?? row.answer ?? "").trim();
+      if (!q || !a) return null;
+      return {
+        id: row.id != null ? String(row.id) : `faq-item-${index + 1}`,
+        q,
+        a,
+      } satisfies EngagementFaqItem;
+    })
+    .filter(Boolean) as EngagementFaqItem[];
+}
+
+export function asFaqs(value: unknown): EngagementFaqCategory[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item, index) => {
+      if (!item || typeof item !== "object") return null;
+      const row = item as Record<string, unknown>;
+      const label = String(row.label ?? row.name ?? "").trim();
+      const items = asFaqItems(row.items ?? row.faqs ?? row.questions);
+      if (!label && !items.length) return null;
+      const id = String(row.id ?? label ?? `faq-${index + 1}`)
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "-");
+      return {
+        id: id || `faq-${index + 1}`,
+        label: label || `Category ${index + 1}`,
+        icon: row.icon != null ? String(row.icon) : undefined,
+        intro: row.intro != null ? String(row.intro) : undefined,
+        items,
+      } satisfies EngagementFaqCategory;
+    })
+    .filter(Boolean) as EngagementFaqCategory[];
+}
+
+export function asVenueHighlights(value: unknown): EngagementVenueHighlight[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item, index) => {
+      if (!item || typeof item !== "object") return null;
+      const row = item as Record<string, unknown>;
+      const title = String(row.title ?? "").trim();
+      const text = String(row.text ?? row.description ?? "").trim();
+      if (!title || !text) return null;
+      return {
+        id: row.id != null ? String(row.id) : `vh-${index + 1}`,
+        icon: row.icon != null ? String(row.icon) : undefined,
+        title,
+        text,
+      } satisfies EngagementVenueHighlight;
+    })
+    .filter(Boolean) as EngagementVenueHighlight[];
+}
+
+export function asVenueSpaces(value: unknown): EngagementVenueSpace[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item, index) => {
+      if (!item || typeof item !== "object") return null;
+      const row = item as Record<string, unknown>;
+      const name = String(row.name ?? "").trim();
+      const text = String(row.text ?? row.description ?? "").trim();
+      if (!name || !text) return null;
+      return {
+        id: row.id != null ? String(row.id) : `vs-${index + 1}`,
+        name,
+        text,
+        capacity: row.capacity != null ? String(row.capacity) : undefined,
+        image: row.image != null ? String(row.image) : undefined,
+      } satisfies EngagementVenueSpace;
+    })
+    .filter(Boolean) as EngagementVenueSpace[];
 }
 
 function truncateText(value: string, max = 90) {
@@ -747,6 +873,8 @@ export type WizardEngagementInput = {
   facebookUrl?: string;
   twitterUrl?: string;
   linkedinUrl?: string;
+  /** Preserved on edit when the wizard does not manage objectives. */
+  objectives?: Array<string | Record<string, unknown>>;
 };
 
 export function buildEngagementPayload(input: WizardEngagementInput): NewEngagement {
@@ -857,8 +985,8 @@ export function buildEngagementPayload(input: WizardEngagementInput): NewEngagem
     paymentEnabled: paymentMethods.some((m) => m !== "free"),
     paymentMethods,
     currency: "KES",
-    themes: tags,
-    objectives: [],
+    themes: toNamedItems(tags),
+    objectives: toNamedItems(input.objectives || []),
     programme,
     speakers,
     sponsors,
@@ -943,6 +1071,7 @@ export function engagementToWizardState(engagement: Engagement) {
     : [];
   const tags =
     tagsFromRecord.length > 0 ? tagsFromRecord : asStringList(engagement.themes);
+  const objectives = asStringList(engagement.objectives);
 
   return {
     eventType: toUiEventType(engagement.engagementType),
@@ -953,6 +1082,7 @@ export function engagementToWizardState(engagement: Engagement) {
     tone: engagement.tone || "professional",
     language: engagement.language || "en",
     tags,
+    objectives,
     startDate: toDateInput(engagement.startDate),
     endDate: toDateInput(engagement.endDate),
     allDay: Boolean(engagement.allDay),
@@ -1044,8 +1174,9 @@ export function formatEngagementStatusLabel(status?: EngagementStatus | string) 
   return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export function formatModeLabel(mode?: EngagementMode) {
-  if (mode === "virtual") return "Virtual";
-  if (mode === "hybrid") return "Hybrid";
+export function formatModeLabel(mode?: EngagementMode | string | null) {
+  const ui = toUiMode(mode);
+  if (ui === "virtual") return "Virtual";
+  if (ui === "hybrid") return "Hybrid";
   return "In-Person";
 }

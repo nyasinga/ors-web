@@ -13,7 +13,14 @@ export type EngagementType =
   | "meeting"
   | "other";
 
-export type EngagementMode = "in_person" | "virtual" | "hybrid";
+/** API OpenAPI enum uses hyphenated `in-person`; older records may still store `in_person`. */
+export type EngagementMode = "in-person" | "in_person" | "virtual" | "hybrid";
+
+/** Theme / objective items — API validates these as objects, not plain strings. */
+export type EngagementNamedItem = {
+  name: string;
+  [key: string]: unknown;
+};
 
 export type EngagementStatus =
   | "draft"
@@ -115,6 +122,35 @@ export type EngagementTicket = {
   tone?: string;
 };
 
+export type EngagementFaqItem = {
+  id?: string;
+  q: string;
+  a: string;
+};
+
+export type EngagementFaqCategory = {
+  id: string;
+  label: string;
+  icon?: string;
+  intro?: string;
+  items: EngagementFaqItem[];
+};
+
+export type EngagementVenueHighlight = {
+  id?: string;
+  icon?: string;
+  title: string;
+  text: string;
+};
+
+export type EngagementVenueSpace = {
+  id?: string;
+  name: string;
+  text: string;
+  capacity?: string;
+  image?: string;
+};
+
 export type Engagement = {
   engagementID?: string;
   engagementType: EngagementType;
@@ -157,13 +193,19 @@ export type Engagement = {
   paymentEnabled?: boolean;
   paymentMethods?: EngagementPaymentMethod[] | string[];
   currency?: EngagementCurrency;
-  themes?: string[] | unknown;
-  objectives?: string[] | unknown;
+  themes?: EngagementNamedItem[] | string[] | unknown;
+  objectives?: EngagementNamedItem[] | string[] | unknown;
   programme?: EngagementProgrammeSession[] | unknown;
   /** Nested on same Engagement record (flexible extension) */
   speakers?: EngagementSpeaker[] | unknown;
   sponsors?: EngagementSponsor[] | unknown;
   tickets?: EngagementTicket[] | unknown;
+  /** Public FAQ catalogue managed in admin */
+  faqs?: EngagementFaqCategory[] | unknown;
+  /** Venue page highlight strip */
+  venueHighlights?: EngagementVenueHighlight[] | unknown;
+  /** Venue page spaces / rooms */
+  venueSpaces?: EngagementVenueSpace[] | unknown;
   websiteUrl?: string;
   facebookUrl?: string;
   twitterUrl?: string;

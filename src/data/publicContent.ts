@@ -1,6 +1,6 @@
 export type ProgrammeSession = {
   id: string;
-  day: 1 | 2 | 3;
+  day: number;
   time: string;
   title: string;
   type: string;

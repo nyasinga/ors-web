@@ -154,6 +154,7 @@ export function CreateEventPage() {
   const [tone, setTone] = useState("professional");
   const [language, setLanguage] = useState("en");
   const [tags, setTags] = useState<string[]>([]);
+  const [objectives, setObjectives] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
   const audienceLabel =
     EVENT_AUDIENCE_OPTIONS.find((o) => o.value === audience)?.label || audience;
@@ -354,6 +355,7 @@ export function CreateEventPage() {
         setTone(state.tone);
         setLanguage(state.language);
         setTags(state.tags.length ? state.tags : []);
+        setObjectives(state.objectives.length ? state.objectives : []);
         setStartDate(state.startDate);
         setEndDate(state.endDate);
         setAllDay(state.allDay);
@@ -512,6 +514,7 @@ export function CreateEventPage() {
         tone,
         language,
         tags,
+        objectives,
         startDate,
         endDate,
         allDay,

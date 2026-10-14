@@ -55,7 +55,7 @@ type HeroProps = {
 export function RegisterHero({
   current,
   defaultStep = RegistrationStep.PARTICIPATION,
-  title = "Register for ISIPPE-3",
+  title,
   subtitle = "Join global experts, policymakers and industry leaders to advance intellectual property protection and enforcement.",
   crumb = "Register",
   onStepChange,
@@ -63,6 +63,7 @@ export function RegisterHero({
 }: HeroProps) {
   const { t } = useTranslation("common");
   const event = useEventCopy();
+  const heroTitle = title || `Register for ${event.name}`;
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Capture the initial selection before removing the query parameters.
@@ -172,7 +173,7 @@ export function RegisterHero({
               "max-[640px]:text-[clamp(1.85rem,8vw,2.75rem)] max-[640px]:tracking-[-0.04em] max-[640px]:leading-[1.05]",
             )}
           >
-            {title}
+            {heroTitle}
           </h1>
 
           <p className="mb-[18px] max-w-[620px] text-[19px] leading-[1.3] text-white max-[760px]:mb-[13px] max-[760px]:max-w-[390px] max-[760px]:text-[12px]">
@@ -336,6 +337,7 @@ export function RegisterHero({
 }
 
 export function PrivacyBar() {
+  const event = useEventCopy();
   return (
     <div
       className={cn(
@@ -350,7 +352,7 @@ export function PrivacyBar() {
         </strong>
         <br />
         <span className="text-[10px]">
-          Your personal information will be used only for ISIPPE-3
+          Your personal information will be used only for {event.name}{" "}
           registration and event communications.
         </span>
       </div>

@@ -1,21 +1,15 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageHero } from "../../components/public/PageHero";
 import { cn } from "../../lib/cn";
-type PackageId = "platinum" | "gold" | "silver" | "bronze";
-const packages: Record<
-  PackageId,
+import {
+  engagementToPublicSponsors,
+  type PublicSponsorPackage,
+} from "../../lib/publicEvent";
+import { usePublicEngagement } from "../../hooks/usePublicEngagement";
+
+const fallbackPackages: PublicSponsorPackage[] = [
   {
-    id: PackageId;
-    name: string;
-    price: string;
-    medal: string;
-    description: string;
-    button: string;
-    benefits: string[];
-  }
-> = {
-  platinum: {
     id: "platinum",
     name: "Platinum Sponsor",
     price: "KES 1,000,000",
@@ -30,8 +24,9 @@ const packages: Record<
       "Dedicated networking opportunities",
       "Acknowledgement during event",
     ],
+    tierKey: "platinum",
   },
-  gold: {
+  {
     id: "gold",
     name: "Gold Sponsor",
     price: "KES 500,000",
@@ -46,8 +41,9 @@ const packages: Record<
       "Multiple delegate passes (4)",
       "Dedicated networking opportunities",
     ],
+    tierKey: "gold",
   },
-  silver: {
+  {
     id: "silver",
     name: "Silver Sponsor",
     price: "KES 300,000",
@@ -61,8 +57,9 @@ const packages: Record<
       "Multiple delegate passes (3)",
       "Dedicated networking opportunities",
     ],
+    tierKey: "silver",
   },
-  bronze: {
+  {
     id: "bronze",
     name: "Bronze Sponsor",
     price: "KES 150,000",
@@ -76,56 +73,83 @@ const packages: Record<
       "Dedicated networking opportunities",
       "Acknowledgement during event",
     ],
+    tierKey: "bronze",
   },
-};
-const packageOrder: PackageId[] = ["platinum", "gold", "silver", "bronze"];
-type Cell = "tick" | "dash" | string;
-const comparisonRows: { label: string; cells: Cell[] }[] = [
-  { label: "Prime exhibition space", cells: ["tick", "tick", "tick", "dash"] },
-  { label: "Keynote speaking opportunity", cells: ["tick", "tick", "dash", "dash"] },
-  { label: "Panel participation opportunity", cells: ["tick", "tick", "tick", "dash"] },
-  {
-    label: "Branding across all event materials",
-    cells: ["tick", "tick", "tick", "Website only"],
-  },
-  { label: "Multiple delegate passes", cells: ["5", "4", "3", "2"] },
-  { label: "Delegate passes to social events", cells: ["tick", "tick", "tick", "tick"] },
-  { label: "Dedicated networking opportunities", cells: ["tick", "tick", "tick", "tick"] },
-  { label: "Acknowledgement during event", cells: ["tick", "tick", "tick", "tick"] },
 ];
-const container =
-  "mx-auto box-border w-[min(calc(100%-clamp(28px,5vw,80px)),1440px)] max-w-full max-[1200px]:w-[min(calc(100%-48px),1440px)] max-[640px]:w-[calc(100%-32px)] max-[380px]:!w-[calc(100%-24px)]";
-const priceColor: Record<PackageId, string> = {
+
+type Cell = "tick" | "dash" | string;
+
+function buildComparison(packages: PublicSponsorPackage[]): { label: string; cells: Cell[] }[] {
+  const allBenefits = [...new Set(packages.flatMap((p) => p.benefits))];
+  return allBenefits.map((label) => ({
+    label,
+    cells: packages.map((pkg) => {
+      const hit = pkg.benefits.find((b) => b.toLowerCase() === label.toLowerCase());
+      if (!hit) return "dash";
+      const passes = hit.match(/(\d+)\s*delegate/i);
+      if (passes) return passes[1];
+      if (/website only/i.test(hit)) return "Website only";
+      return "tick";
+    }),
+  }));
+}
+
+const priceColor: Record<string, string> = {
   platinum: "text-[#075fd8]",
   gold: "text-[#b77d00]",
   silver: "text-[#53617b]",
   bronze: "text-[#ad321e]",
 };
 const headBg = ["bg-[#08713f]", "bg-[#075fd8]", "bg-[#d19700]", "bg-[#7d899e]", "bg-[#b94c2d]"] as const;
+const container =
+  "mx-auto box-border w-[min(calc(100%-clamp(28px,5vw,80px)),1440px)] max-w-full max-[1200px]:w-[min(calc(100%-48px),1440px)] max-[640px]:w-[calc(100%-32px)] max-[380px]:!w-[calc(100%-24px)]";
 const cellBase =
   "h-[25px] border border-[#d5e0eb] px-[9px] py-[7px] text-center align-middle text-[11px] leading-snug text-[#101620] max-[640px]:px-2 max-[640px]:py-2 first:w-[27%] first:min-w-[150px] first:text-left";
 const thBase = cn(
   cellBase,
   "h-[48px] text-[13px] font-extrabold leading-[1.15] text-white max-[640px]:text-[11px]",
 );
+
 function renderCell(cell: Cell) {
   if (cell === "tick") return <span className="text-[15px] font-black text-[#075fd8]">✓</span>;
   if (cell === "dash") return "-";
   return cell;
 }
+
 const arrow = "text-[23px] font-normal leading-none";
-/** Sponsorship — Tailwind port of isippe3-sponsorship-pure-html-responsive */
+
+/** Sponsorship — packages from the public engagement API. */
 export function SponsorshipPage() {
-  const [selected, setSelected] = useState<PackageId>("platinum");
-  const pkg = packages[selected];
+  const { engagement, loading } = usePublicEngagement();
+  const packages = useMemo(() => {
+    const fromApi = engagementToPublicSponsors(engagement);
+    return fromApi.length ? fromApi : fallbackPackages;
+  }, [engagement]);
+  const [selected, setSelected] = useState(packages[0]?.id || "platinum");
+
+  useEffect(() => {
+    if (!packages.some((p) => p.id === selected)) {
+      setSelected(packages[0]?.id || "platinum");
+    }
+  }, [packages, selected]);
+
+  const pkg = packages.find((p) => p.id === selected) || packages[0];
+  const comparisonRows = useMemo(() => buildComparison(packages), [packages]);
+  const eventName = engagement?.engagementName?.trim() || "ISIPPE-3";
+
+  if (!pkg) return null;
+
   return (
     <div className="overflow-x-hidden bg-white text-[#101620]">
       <PageHero
         title="Become a Sponsor"
-        subtitle="Partner with ISIPPE-3"
-        description="Position your brand as a leader in the fight against counterfeiting and support a premier global platform on intellectual property protection and enforcement."
+        subtitle={`Partner with ${eventName.includes("ISIPPE") ? "ISIPPE-3" : eventName}`}
+        description={
+          engagement?.shortDescription?.trim() ||
+          "Position your brand as a leader in the fight against counterfeiting and support a premier global platform on intellectual property protection and enforcement."
+        }
         image="/assets/sponsor-hero.jpg"
-        imageAlt="ISIPPE sponsorship partnership"
+        imageAlt={`${eventName} sponsorship partnership`}
       />
       <section className="pt-[15px] pb-6 sm:pb-10" id="sponsorship">
         <div className={container}>
@@ -141,16 +165,16 @@ export function SponsorshipPage() {
               Choose a sponsorship package that aligns with your objectives. Select a package to
               view its benefits and comparison.
             </p>
+            {loading ? <p className="mb-3 text-xs text-[#53627a]">Loading packages…</p> : null}
           </div>
           <div className="grid grid-cols-[minmax(0,2.85fr)_minmax(0,1.05fr)] items-start gap-4 max-[960px]:grid-cols-1 max-[640px]:gap-3">
             <div>
               <div className="grid grid-cols-4 gap-2 max-[1100px]:grid-cols-2 max-[640px]:grid-cols-1 max-[640px]:gap-2.5">
-                {packageOrder.map((id) => {
-                  const item = packages[id];
-                  const active = selected === id;
+                {packages.map((item) => {
+                  const active = selected === item.id;
                   return (
                     <article
-                      key={id}
+                      key={item.id}
                       className={cn(
                         "relative flex min-h-[242px] min-w-0 flex-col rounded-md bg-[linear-gradient(180deg,#fff,#fbfdff)] px-2.5 pb-2.5 pt-[15px] text-center",
                         "max-[640px]:grid max-[640px]:min-h-0 max-[640px]:grid-cols-[56px_minmax(0,1fr)] max-[640px]:grid-rows-[auto_auto] max-[640px]:gap-x-3 max-[640px]:gap-y-1.5 max-[640px]:p-3 max-[640px]:text-left",
@@ -182,7 +206,7 @@ export function SponsorshipPage() {
                         <div
                           className={cn(
                             "mt-1 text-[19px] font-black leading-none max-[640px]:mt-[3px] max-[640px]:text-[17px]",
-                            priceColor[id],
+                            priceColor[item.tierKey] || "text-[#075fd8]",
                           )}
                         >
                           {item.price}
@@ -197,7 +221,7 @@ export function SponsorshipPage() {
                           "mt-auto h-[42px] w-full cursor-pointer rounded-[5px] border border-[#075fd8] px-2 text-xs font-extrabold max-[640px]:col-[2] max-[640px]:h-10 max-[640px]:text-[11px]",
                           active ? "bg-[#075fd8] text-white" : "bg-white text-[#075fd8]",
                         )}
-                        onClick={() => setSelected(id)}
+                        onClick={() => setSelected(item.id)}
                       >
                         Select Package
                       </button>
@@ -211,33 +235,50 @@ export function SponsorshipPage() {
                 </h2>
                 <div className="hidden max-[640px]:block">
                   <div className="grid grid-cols-1 gap-3">
-                    {packageOrder.map((id, packageIndex) => {
-                      const item = packages[id];
-                      const active = selected === id;
+                    {packages.map((item, packageIndex) => {
+                      const active = selected === item.id;
                       return (
                         <article
-                          key={id}
+                          key={item.id}
                           className={cn(
                             "min-w-0 overflow-hidden rounded-lg border bg-white",
                             active ? "border-[#075fd8] shadow-[0_0_0_1px_rgba(7,95,216,0.08)]" : "border-[#d5e0eb]",
                           )}
                         >
-                          <div className={cn("flex items-center gap-3 px-3 py-3 text-white", headBg[packageIndex + 1])}>
+                          <div
+                            className={cn(
+                              "flex items-center gap-3 px-3 py-3 text-white",
+                              headBg[(packageIndex % (headBg.length - 1)) + 1],
+                            )}
+                          >
                             <img className="h-11 w-11 shrink-0 object-contain" src={item.medal} alt="" />
                             <div className="min-w-0 flex-1">
                               <h3 className="text-sm font-extrabold leading-tight">{item.name}</h3>
                               <p className="mt-1 text-sm font-bold">{item.price}</p>
                             </div>
-                            {active && <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-sm font-black text-[#075fd8]">✓</span>}
+                            {active ? (
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-sm font-black text-[#075fd8]">
+                                ✓
+                              </span>
+                            ) : null}
                           </div>
                           <div className="divide-y divide-[#e5edf5] px-3">
                             {comparisonRows.map((row) => {
                               const value = row.cells[packageIndex];
                               return (
-                                <div key={row.label} className="flex items-start justify-between gap-3 py-2.5 text-[12px] leading-snug">
+                                <div
+                                  key={row.label}
+                                  className="flex items-start justify-between gap-3 py-2.5 text-[12px] leading-snug"
+                                >
                                   <span className="min-w-0 flex-1 text-[#344256]">{row.label}</span>
                                   <span className="shrink-0 text-right font-semibold text-[#101620]">
-                                    {value === "tick" ? <span className="text-[16px] font-black text-[#075fd8]">✓</span> : value === "dash" ? <span className="text-[#9aa6b5]">—</span> : value}
+                                    {value === "tick" ? (
+                                      <span className="text-[16px] font-black text-[#075fd8]">✓</span>
+                                    ) : value === "dash" ? (
+                                      <span className="text-[#9aa6b5]">—</span>
+                                    ) : (
+                                      value
+                                    )}
                                   </span>
                                 </div>
                               );
@@ -246,7 +287,7 @@ export function SponsorshipPage() {
                           <div className="p-3 pt-0">
                             <button
                               type="button"
-                              onClick={() => setSelected(id)}
+                              onClick={() => setSelected(item.id)}
                               className={cn(
                                 "mt-3 min-h-10 w-full rounded-md border border-[#075fd8] px-3 text-xs font-extrabold",
                                 active ? "bg-[#075fd8] text-white" : "bg-white text-[#075fd8]",
@@ -265,26 +306,13 @@ export function SponsorshipPage() {
                     <thead>
                       <tr>
                         <th className={cn(thBase, headBg[0])}>Benefits</th>
-                        <th className={cn(thBase, headBg[1])}>
-                          Platinum
-                          <br />
-                          KES 1,000,000
-                        </th>
-                        <th className={cn(thBase, headBg[2])}>
-                          Gold
-                          <br />
-                          KES 500,000
-                        </th>
-                        <th className={cn(thBase, headBg[3])}>
-                          Silver
-                          <br />
-                          KES 300,000
-                        </th>
-                        <th className={cn(thBase, headBg[4])}>
-                          Bronze
-                          <br />
-                          KES 150,000
-                        </th>
+                        {packages.map((item, i) => (
+                          <th key={item.id} className={cn(thBase, headBg[(i % (headBg.length - 1)) + 1])}>
+                            {item.name.replace(/\s+Sponsor$/i, "")}
+                            <br />
+                            {item.price}
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>

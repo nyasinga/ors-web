@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   BarChart3,
@@ -10,12 +10,9 @@ import {
   Users,
 } from "lucide-react";
 import { PageHero } from "../../components/public/PageHero";
+import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { cn } from "../../lib/cn";
-import {
-  engagementToAboutContent,
-  getPublicEngagement,
-  type PublicAboutContent,
-} from "../../lib/publicEvent";
+import { engagementToAboutContent } from "../../lib/publicEvent";
 
 const tabs = [
   { id: "overview", label: "Overview", target: "overview" },
@@ -78,26 +75,8 @@ function splitObjective(text: string) {
 /** About — tabs wired to sections loaded from the public engagement. */
 export function AboutPage() {
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]["id"]>("overview");
-  const [about, setAbout] = useState<PublicAboutContent>(() => engagementToAboutContent(null));
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const engagement = await getPublicEngagement();
-        if (!cancelled) setAbout(engagementToAboutContent(engagement));
-      } catch {
-        if (!cancelled) setAbout(engagementToAboutContent(null));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { engagement, loading } = usePublicEngagement();
+  const about = useMemo(() => engagementToAboutContent(engagement), [engagement]);
 
   const goToTab = (tab: (typeof tabs)[number]) => {
     setActiveTab(tab.id);

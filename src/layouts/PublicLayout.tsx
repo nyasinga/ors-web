@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Menu, X } from "lucide-react";
 import { navLinks } from "../data/event";
 import { LanguageSwitcher } from "../components/i18n/LanguageSwitcher";
+import { useEventCopy } from "../i18n/useEventCopy";
 import { cn } from "../lib/cn";
 import { pageContainer } from "../lib/pageContainer";
 
@@ -11,6 +12,7 @@ import { pageContainer } from "../lib/pageContainer";
 export function PublicLayout() {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation("common");
+  const event = useEventCopy();
   const { pathname } = useLocation();
   const onRegister = pathname.startsWith("/register");
 
@@ -187,15 +189,15 @@ export function PublicLayout() {
         >
           <div>
             <p className="text-[15px] font-semibold">
-              {t("brand.acaIsippe")}
+              {t("brand.aca")} · {event.brandLine}
             </p>
 
             <p className="mt-2 text-xs leading-relaxed text-[#cbd5df]">
-              {t("event.fullName", { number: "3rd" })}
+              {event.fullName}
             </p>
 
             <p className="mt-1 text-xs text-[#cbd5df]">
-              {t("event.dates")} · {t("event.venueShort")}
+              {event.dates} · {event.venueShort}
             </p>
           </div>
 
@@ -228,7 +230,7 @@ export function PublicLayout() {
           </nav>
 
           <p className="border-t border-[#2a3743] pt-4 text-[11px] text-[#9eabb8] md:col-span-3">
-            {t("brand.orsCopyright", { year: 2026 })}
+            {t("brand.orsCopyright", { year: event.year })}
           </p>
         </div>
       </footer>

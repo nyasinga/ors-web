@@ -3,13 +3,13 @@ import { PrivacyBar, RegisterHero } from "../../components/registration/Register
 import { useRegistration } from "../../contexts/RegistrationContext";
 import { participationTypes } from "../../data/registration";
 import { formatMoney } from "../../i18n/format";
-import { useTranslation } from "react-i18next";
+import { useEventCopy } from "../../i18n/useEventCopy";
 import * as r from "../../components/registration/registerStyles";
 
 /** Registration step 4 — structure & CSS from HTML package */
 export function RegisterConfirmationPage() {
-  const { t } = useTranslation("common");
-  const { details, participationType, feeKes, feeLabelKey, reference } = useRegistration();
+  const event = useEventCopy();
+  const { details, participationType, feeKes, feeLabel, reference } = useRegistration();
   const typeLabel =
     participationTypes.find((item) => item.id === participationType)?.title ?? "Delegate";
   const displayName =
@@ -29,7 +29,7 @@ export function RegisterConfirmationPage() {
               <div className={r.successMark}>✓</div>
               <h2 className={r.successTitle}>Registration Successful!</h2>
               <p className={r.successText}>
-                Your registration for ISIPPE-3 has been confirmed and payment has been received.
+                Your registration for {event.name} has been confirmed and payment has been received.
                 <br />
                 A confirmation email with your registration details has been sent to your email
                 address.
@@ -89,7 +89,7 @@ export function RegisterConfirmationPage() {
                     <span>
                       <b className={r.drowLabel}>Amount Paid</b>
                       {formatMoney(totalPaid, "KES")}
-                      <br />({formatMoney(feeKes, "KES")} {t(feeLabelKey)} + KES 50 eCitizen fee)
+                      <br />({formatMoney(feeKes, "KES")} {feeLabel} + KES 50 eCitizen fee)
                     </span>
                   </div>
                   <div className={r.drow}>

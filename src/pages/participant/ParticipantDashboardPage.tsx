@@ -61,7 +61,7 @@ const quickActions = [
   {
     to: "/venue",
     title: "Venue Information",
-    text: "KICC, Nairobi, Kenya",
+    text: "Venue details and travel tips",
     icon: MapPin,
     primary: false,
   },
@@ -140,7 +140,7 @@ export function ParticipantDashboardPage() {
           >
             {participantPass.name}
           </h1>
-          <div className="mb-[17px] text-[17px] max-[600px]:text-[13px]">ISIPPE-3 Participant</div>
+          <div className="mb-[17px] text-[17px] max-[600px]:text-[13px]">{event.name} Participant</div>
           <div className="flex items-center gap-4 max-[600px]:block">
             <div className="flex items-center gap-[9px] text-[11px] max-[600px]:my-[7px] max-[600px]:text-[9px]">
               <CalendarDays className={heroEventSvg} size={28} strokeWidth={2} />
@@ -155,9 +155,7 @@ export function ParticipantDashboardPage() {
                 fill="currentColor"
               />
               <div>
-                Kenyatta International
-                <br />
-                Convention Centre (KICC)
+                {event.venue}
                 <small className="mt-[2px] block text-[9px] opacity-90 max-[600px]:text-[8px]">{event.city}</small>
               </div>
             </div>

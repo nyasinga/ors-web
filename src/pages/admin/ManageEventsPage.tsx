@@ -21,6 +21,7 @@ import {
   listEngagements,
   toManagedEvent,
 } from "../../lib/engagements";
+import { ScrollableNav } from "../../components/ui/ScrollableNav";
 import { ApiError } from "../../lib/api";
 import { cn } from "../../lib/cn";
 
@@ -424,10 +425,11 @@ export function ManageEventsPage() {
 
       <section className={cn(glass, "overflow-hidden")}>
         <div className="flex flex-col gap-3 border-b border-blue-100 px-4 py-3 lg:flex-row lg:items-center">
-          <div
-            className="flex min-w-0 flex-1 items-center gap-4 self-stretch overflow-x-auto text-[13px] sm:gap-5"
-            role="tablist"
+          <ScrollableNav
+            activeKey={tab}
             aria-label="Event status"
+            className="min-w-0 flex-1 self-stretch text-[13px]"
+            trackClassName="items-center gap-4 self-stretch sm:gap-5"
           >
             {tabs.map((item) => {
               const active = tab === item.id;
@@ -436,6 +438,7 @@ export function ManageEventsPage() {
                   key={item.id}
                   type="button"
                   role="tab"
+                  data-nav-id={item.id}
                   aria-selected={active}
                   className={cn(
                     "relative h-[45px] shrink-0 whitespace-nowrap",
@@ -453,7 +456,7 @@ export function ManageEventsPage() {
                 </button>
               );
             })}
-          </div>
+          </ScrollableNav>
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <label className="flex h-[42px] w-full min-w-0 items-center gap-2 rounded-lg bg-blue-50 px-3 text-slate-500 sm:w-[182px]">

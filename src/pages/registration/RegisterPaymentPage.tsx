@@ -1,9 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
 import { useRegistration } from "../../contexts/RegistrationContext";
-import { fees } from "../../data/event";
 import { participationTypes } from "../../data/registration";
-import { useTranslation } from "react-i18next";
 import { formatMoney } from "../../i18n/format";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
@@ -12,9 +10,16 @@ import * as r from "../../components/registration/registerStyles";
 /** Registration step 3 — structure & CSS from HTML package */
 export function RegisterPaymentPage() {
   const navigate = useNavigate();
-  const { t } = useTranslation("common");
   const event = useEventCopy();
-  const { participationType, feeKes, feeUsd, feeLabelKey } = useRegistration();
+  const {
+    participationType,
+    feeKes,
+    feeUsd,
+    feeLabel,
+    feeUntil,
+    earlyBird,
+    late,
+  } = useRegistration();
   const typeLabel =
     participationTypes.find((item) => item.id === participationType)?.title ?? "Delegate";
 
@@ -33,22 +38,22 @@ export function RegisterPaymentPage() {
             <div className={r.payTop}>
               <div className={r.sidePrice}>
                 <div className={r.priceLabel}>🏷 Registration Fee</div>
-                <b>{t(feeLabelKey)}</b>
-                <div className={r.period}>{t(fees.earlyBird.untilKey)}</div>
+                <b>{feeLabel}</b>
+                <div className={r.period}>{feeUntil}</div>
                 <div className={r.price}>{formatMoney(feeKes, "KES")}</div>
                 <div className={r.priceSub}>{formatMoney(feeUsd, "USD")} (Approx.)</div>
               </div>
               <div className={r.infoBox}>
                 <div className={r.infoTitle}>▣ Registration Periods</div>
                 <p className={r.infoText}>
-                  <b>{t(fees.earlyBird.labelKey)}</b>
+                  <b>{earlyBird.label}</b>
                   <br />
-                  {t(fees.earlyBird.untilKey)} &nbsp; <b>{formatMoney(fees.earlyBird.kes, "KES")}</b>
+                  {earlyBird.until} &nbsp; <b>{formatMoney(earlyBird.kes, "KES")}</b>
                   <br />
                   <br />
-                  <b>{t(fees.late.labelKey)}</b>
+                  <b>{late.label}</b>
                   <br />
-                  {t(fees.late.untilKey)} &nbsp; <b>{formatMoney(fees.late.kes, "KES")}</b>
+                  {late.until} &nbsp; <b>{formatMoney(late.kes, "KES")}</b>
                 </p>
               </div>
             </div>

@@ -32,11 +32,14 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { EventFaqsTab } from "../../components/admin/EventFaqsTab";
 import { EventProgrammeSchedule } from "../../components/admin/EventProgrammeSchedule";
+import { EventVenueContentTab } from "../../components/admin/EventVenueContentTab";
 import { PaymentsDashboard } from "../../components/admin/PaymentsDashboard";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Modal } from "../../components/ui/Modal";
+import { ScrollableNav } from "../../components/ui/ScrollableNav";
 import { Select } from "../../components/ui/Select";
 import { useToast } from "../../components/ui/Toast";
 import {
@@ -728,16 +731,19 @@ export function EventDetailsPage() {
         </div>
       ) : null}
 
-      <nav
-        className="mb-3 flex h-[39px] overflow-auto rounded-[9px] border border-[#e1eaf4] bg-white [scrollbar-width:thin]"
+      <ScrollableNav
+        activeKey={validTab}
         aria-label="Event sections"
+        className="mb-3 h-[39px] rounded-[9px] border border-[#e1eaf4] bg-white"
+        trackClassName="h-full px-7"
       >
         {eventDetailTabs.map((t) => (
           <button
             key={t.id}
             type="button"
+            data-nav-id={t.id}
             className={cn(
-              "relative flex min-w-max cursor-pointer items-center justify-center whitespace-nowrap border-0 bg-transparent px-[27px] font-[inherit] text-[10px] max-[500px]:px-[13px]",
+              "relative flex h-full min-w-max cursor-pointer items-center justify-center whitespace-nowrap border-0 bg-transparent px-[27px] font-[inherit] text-[10px] max-[500px]:px-[13px]",
               validTab === t.id
                 ? "font-bold text-[#0764e8] after:absolute after:inset-x-0 after:bottom-0 after:h-[3px] after:bg-[#0764e8] after:content-['']"
                 : "text-[#26468e]",
@@ -750,7 +756,7 @@ export function EventDetailsPage() {
             {t.label}
           </button>
         ))}
-      </nav>
+      </ScrollableNav>
 
       {validTab === "overview" ? (
         <OverviewTab
@@ -806,6 +812,32 @@ export function EventDetailsPage() {
             fromApi={fromApi}
             loading={loading}
             mode={validTab === "exhibitors" ? "exhibitors" : "sponsors"}
+            onChanged={async () => {
+              const row = await getEngagement(id);
+              setEngagement(row);
+            }}
+          />
+        </div>
+      ) : null}
+      {validTab === "faqs" ? (
+        <div className="mt-1">
+          <EventFaqsTab
+            eventId={id}
+            engagement={engagement}
+            fromApi={fromApi}
+            onChanged={async () => {
+              const row = await getEngagement(id);
+              setEngagement(row);
+            }}
+          />
+        </div>
+      ) : null}
+      {validTab === "venue-content" ? (
+        <div className="mt-1">
+          <EventVenueContentTab
+            eventId={id}
+            engagement={engagement}
+            fromApi={fromApi}
             onChanged={async () => {
               const row = await getEngagement(id);
               setEngagement(row);
@@ -882,7 +914,7 @@ function ClassificationEditModal({
         tone: tone as EngagementTone,
         language: language as EngagementLanguage,
         tags: nextTags,
-        themes: nextTags,
+        themes: nextTags.map((name) => ({ name })),
       });
       toast.success("Classification updated");
       await onSaved();

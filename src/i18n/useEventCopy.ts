@@ -1,21 +1,24 @@
-import { useTranslation } from "react-i18next";
-import { eventInfo } from "../data/event";
+import { useMemo } from "react";
+import { usePublicEngagement } from "../hooks/usePublicEngagement";
+import {
+  engagementToEventCopy,
+  engagementToRegistrationFees,
+} from "../lib/publicEvent";
 
-/** Translated event copy for UI; brand codes/contact stay on `eventInfo`. */
+/** Live event copy for public chrome, registration, and login surfaces. */
 export function useEventCopy() {
-  const { t } = useTranslation("common");
+  const { engagement, loading } = usePublicEngagement();
+  return useMemo(() => {
+    const copy = engagementToEventCopy(engagement);
+    return { ...copy, loading };
+  }, [engagement, loading]);
+}
 
-  return {
-    name: eventInfo.name,
-    supportEmail: eventInfo.supportEmail,
-    supportPhone: eventInfo.supportPhone,
-    fullName: t("event.fullName", { number: '3rd'}),
-    edition: t("event.edition"),
-    dates: t("event.dates"),
-    datesShort: t("event.datesShort"),
-    city: t("event.city"),
-    venue: t("event.venue"),
-    venueShort: t("event.venueShort"),
-    tagline: t("event.tagline"),
-  };
+/** Live registration fee tiers from engagement tickets. */
+export function useRegistrationFees() {
+  const { engagement, loading } = usePublicEngagement();
+  return useMemo(() => {
+    const fees = engagementToRegistrationFees(engagement);
+    return { ...fees, loading };
+  }, [engagement, loading]);
 }

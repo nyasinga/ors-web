@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CreditCard,
   FileText,
@@ -10,8 +10,10 @@ import {
   Users,
 } from "lucide-react";
 import { PageHero } from "../../components/public/PageHero";
+import { usePublicEngagement } from "../../hooks/usePublicEngagement";
+import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
-import { faqCategories, faqsByCategory } from "../../data/publicContent";
+import { engagementToPublicFaqs } from "../../lib/publicEvent";
 
 const icons = {
   FileText,
@@ -24,26 +26,43 @@ const icons = {
   Headset,
 } as const;
 
+type IconName = keyof typeof icons;
+
 const container =
   "mx-auto box-border w-[min(calc(100%-clamp(28px,5vw,80px)),1440px)] max-w-full max-[1200px]:w-[min(calc(100%-48px),1440px)] max-[640px]:w-[calc(100%-32px)] max-[380px]:!w-[calc(100%-24px)]";
 
 const panel = "rounded-[10px] border border-[#dbe5ef] bg-white";
 
-/** FAQ — Tailwind port of isippe3-faq-pure-html-responsive */
+function resolveIcon(name?: string) {
+  if (name && name in icons) return icons[name as IconName];
+  return FileText;
+}
+
+/** FAQ — content from the public engagement API. */
 export function FaqPage() {
-  const [category, setCategory] = useState<(typeof faqCategories)[number]["id"]>("general");
+  const { engagement } = usePublicEngagement();
+  const event = useEventCopy();
+  const categories = useMemo(() => engagementToPublicFaqs(engagement), [engagement]);
+  const [category, setCategory] = useState(categories[0]?.id || "general");
   const [openId, setOpenId] = useState<string | null>(null);
 
-  const active = faqCategories.find((c) => c.id === category) ?? faqCategories[0];
-  const items = useMemo(() => faqsByCategory[category] ?? [], [category]);
+  useEffect(() => {
+    if (!categories.some((c) => c.id === category)) {
+      setCategory(categories[0]?.id || "general");
+      setOpenId(null);
+    }
+  }, [categories, category]);
+
+  const active = categories.find((c) => c.id === category) ?? categories[0];
+  const items = active?.items ?? [];
 
   return (
     <div className="bg-white text-[#10182a]">
       <PageHero
         title="Frequently Asked Questions"
-        description="Find answers to common questions about ISIPPE-3 registration, payments, participation and more."
+        description={`Find answers to common questions about ${event.name} registration, payments, participation and more.`}
         image="/assets/faq-hero.jpg"
-        imageAlt="ISIPPE frequently asked questions"
+        imageAlt={`${event.name} frequently asked questions`}
       />
 
       <section className="pb-[50px] pt-7 max-[760px]:pb-[35px] max-[760px]:pt-[18px]" id="faq">
@@ -57,10 +76,10 @@ export function FaqPage() {
             className={cn(panel, "p-4 max-[900px]:w-full max-[760px]:p-2.5")}
             aria-label="FAQ categories"
           >
-            {faqCategories.map((cat) => {
-              const Icon = icons[cat.icon];
+            {categories.map((cat) => {
+              const Icon = resolveIcon(cat.icon);
               const isActive = cat.id === category;
-              const count = faqsByCategory[cat.id]?.length ?? 0;
+              const count = cat.items.length;
               return (
                 <button
                   key={cat.id}
@@ -110,17 +129,17 @@ export function FaqPage() {
             )}
           >
             <h2 className="text-[36px] font-black leading-[1.02] tracking-[-1.7px] text-[#10182a] max-[760px]:text-[25px] max-[760px]:tracking-[-1px]">
-              {active.label}
+              {active?.label || "FAQs"}
             </h2>
             <p className="mb-[26px] mt-2 text-base leading-[1.35] text-[#53627a] max-[760px]:mb-[17px] max-[760px]:mt-[7px] max-[760px]:text-xs">
-              {active.intro}
+              {active?.intro || "Browse answers by category."}
             </p>
             <div>
               {items.map((item, index) => {
-                const id = String(index);
+                const id = item.id || String(index);
                 const open = openId === id;
                 return (
-                  <div key={item.q} className="mb-2.5">
+                  <div key={id} className="mb-2.5">
                     <button
                       type="button"
                       className={cn(
@@ -149,6 +168,9 @@ export function FaqPage() {
                   </div>
                 );
               })}
+              {!items.length ? (
+                <p className="text-sm text-[#53627a]">No questions published in this category yet.</p>
+              ) : null}
             </div>
           </section>
         </div>

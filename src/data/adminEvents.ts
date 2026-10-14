@@ -382,6 +382,8 @@ export const eventDetailTabs = [
   { id: "speakers", label: "Speakers" },
   { id: "sponsors", label: "Sponsors" },
   { id: "exhibitors", label: "Exhibitors" },
+  { id: "faqs", label: "FAQs" },
+  { id: "venue-content", label: "Venue content" },
   { id: "payments", label: "Payments" },
   { id: "communications", label: "Communications" },
   { id: "reports", label: "Reports" },

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { CalendarDays, MapPinIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
 
 const container =
@@ -45,6 +46,7 @@ export function PageHero({
   children,
 }: Props) {
   const { t } = useTranslation("common");
+  const event = useEventCopy();
 
   return (
     <section
@@ -164,7 +166,7 @@ export function PageHero({
                     dark ? "text-white" : "text-[#0964df]",
                   )}
                 />
-                <strong className="font-extrabold">{t("event.datesShort")}</strong>
+                <strong className="font-extrabold">{event.datesShort}</strong>
               </div>
               <div
                 className={cn(
@@ -189,18 +191,18 @@ export function PageHero({
                 />
                 {combinedLocation ? (
                   <div className="font-extrabold">
-                    {t("event.venue")}, {t("event.city")}
+                    {event.venue}, {event.city}
                   </div>
                 ) : (
                   <div>
-                    <strong className="block font-extrabold">{t("event.city")}</strong>
+                    <strong className="block font-extrabold">{event.city}</strong>
                     <span
                       className={cn(
                         "block text-[11px] max-[640px]:text-[9px]",
                         dark ? "text-white/75" : "text-[#53627a]",
                       )}
                     >
-                      {t("event.venue")}
+                      {event.venue}
                     </span>
                   </div>
                 )}

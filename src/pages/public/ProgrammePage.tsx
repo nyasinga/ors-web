@@ -1,19 +1,12 @@
 import { useMemo, useState } from "react";
 import { MapPin, Search } from "lucide-react";
 import { PageHero } from "../../components/public/PageHero";
+import { programmeDays as fallbackDays, programmeSessions as fallbackSessions } from "../../data/publicContent";
 import { cn } from "../../lib/cn";
-import { programmeDays, programmeSessions } from "../../data/publicContent";
+import { engagementToPublicProgramme } from "../../lib/publicEvent";
+import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 
-const dayMeta: Record<1 | 2 | 3, { date: string; weekday: string }> = {
-  1: { date: "12 November 2026", weekday: "Thursday" },
-  2: { date: "13 November 2026", weekday: "Friday" },
-  3: { date: "14 November 2026", weekday: "Saturday" },
-};
-
-const container =
-  "mx-auto box-border w-[min(calc(100%-clamp(28px,5vw,80px)),1440px)] max-w-full max-[1200px]:w-[min(calc(100%-48px),1440px)] max-[640px]:w-[calc(100%-32px)] max-[380px]:!w-[calc(100%-24px)]";
-
-function tagClass(tone: (typeof programmeSessions)[number]["tone"]) {
+function tagClass(tone: (typeof fallbackSessions)[number]["tone"]) {
   const base = "inline-block rounded px-[9px] py-1 text-[10px] font-semibold";
   if (tone === "red") return cn(base, "bg-[#ffe6e8] text-[#e21d2a]");
   if (tone === "green") return cn(base, "bg-[#dff4e8] text-[#168046]");
@@ -43,31 +36,54 @@ const td = {
   venue: "w-[24%] text-[#101827] max-[700px]:w-auto",
 } as const;
 
-/** Programme — Tailwind port of isippe3-programme-pure-html-responsive */
+const container =
+  "mx-auto box-border w-[min(calc(100%-clamp(28px,5vw,80px)),1440px)] max-w-full max-[1200px]:w-[min(calc(100%-48px),1440px)] max-[640px]:w-[calc(100%-32px)] max-[380px]:!w-[calc(100%-24px)]";
+
+/** Programme — content from the public engagement API. */
 export function ProgrammePage() {
+  const { engagement, loading } = usePublicEngagement();
   const [dayFilter, setDayFilter] = useState("all");
   const [query, setQuery] = useState("");
-  const [openDays, setOpenDays] = useState<Record<1 | 2 | 3, boolean>>({
-    1: true,
-    2: false,
-    3: false,
-  });
+  const [openDays, setOpenDays] = useState<Record<number, boolean>>({ 1: true });
+
+  const programme = useMemo(() => {
+    const fromApi = engagementToPublicProgramme(engagement);
+    if (fromApi.sessions.length) return fromApi;
+    const dayMeta: Record<number, { date: string; weekday: string }> = {
+      1: { date: "12 November 2026", weekday: "Thursday" },
+      2: { date: "13 November 2026", weekday: "Friday" },
+      3: { date: "14 November 2026", weekday: "Saturday" },
+    };
+    return {
+      days: fallbackDays.map((d) => ({ id: d.id, label: d.label, sub: d.sub })),
+      sessions: fallbackSessions,
+      dayMeta,
+      venueLine: "Kenyatta International Convention Centre (KICC), Nairobi",
+    };
+  }, [engagement]);
+
+  const dayNumbers = useMemo(
+    () => [...new Set(programme.sessions.map((s) => s.day))].sort((a, b) => a - b),
+    [programme.sessions],
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return programmeSessions.filter((s) => {
+    return programme.sessions.filter((s) => {
       const dayOk = dayFilter === "all" || String(s.day) === dayFilter;
       const haystack = `${s.title} ${s.speakers} ${s.type} ${s.venue}`.toLowerCase();
       return dayOk && (!q || haystack.includes(q));
     });
-  }, [dayFilter, query]);
+  }, [programme.sessions, dayFilter, query]);
 
-  const byDay = ([1, 2, 3] as const)
+  const byDay = dayNumbers
     .filter((d) => dayFilter === "all" || dayFilter === String(d))
     .map((d) => ({
       day: d,
       sessions: filtered.filter((s) => s.day === d),
     }));
+
+  const eventName = engagement?.engagementName?.trim() || "ISIPPE-3";
 
   return (
     <div className="bg-white text-[#101827]">
@@ -75,13 +91,17 @@ export function ProgrammePage() {
         title="Programme"
         subtitle={
           <>
-            ISIPPE-3 International Symposium on
-            <br />
-            Intellectual Property Protection and Enforcement
+            {eventName.includes("ISIPPE") ? "ISIPPE-3 International Symposium on" : eventName}
+            {eventName.includes("ISIPPE") ? (
+              <>
+                <br />
+                Intellectual Property Protection and Enforcement
+              </>
+            ) : null}
           </>
         }
         image="/assets/programme-hero.jpg"
-        imageAlt="Nairobi skyline and Kenyatta International Convention Centre"
+        imageAlt={`${eventName} programme`}
       />
 
       <section className="pb-3.5 pt-3 max-[700px]:pt-2.5">
@@ -93,7 +113,7 @@ export function ProgrammePage() {
               "max-[700px]:grid max-[700px]:grid-cols-2 max-[700px]:gap-2",
             )}
           >
-            {programmeDays.map((d, idx) => {
+            {programme.days.map((d, idx) => {
               const active = dayFilter === d.id;
               return (
                 <button
@@ -110,13 +130,12 @@ export function ProgrammePage() {
                   )}
                   onClick={() => {
                     setDayFilter(d.id);
-                    if (d.id === "all") setOpenDays({ 1: true, 2: false, 3: false });
-                    else
-                      setOpenDays({
-                        1: d.id === "1",
-                        2: d.id === "2",
-                        3: d.id === "3",
-                      });
+                    if (d.id === "all") {
+                      setOpenDays(Object.fromEntries(dayNumbers.map((n, i) => [n, i === 0])));
+                    } else {
+                      const n = Number(d.id);
+                      setOpenDays(Object.fromEntries(dayNumbers.map((day) => [day, day === n])));
+                    }
                   }}
                 >
                   {d.sub ? (
@@ -150,14 +169,17 @@ export function ProgrammePage() {
               />
             </label>
           </div>
+          {loading ? (
+            <p className="mt-3 text-xs text-[#53627a]">Loading programme…</p>
+          ) : null}
         </div>
       </section>
 
       <main className="pb-7 max-[700px]:pb-5">
         <div className={container}>
           {byDay.map(({ day, sessions }) => {
-            const open = openDays[day];
-            const meta = dayMeta[day];
+            const open = openDays[day] ?? day === dayNumbers[0];
+            const meta = programme.dayMeta[day] || { date: `Day ${day}`, weekday: "" };
             return (
               <section
                 key={day}
@@ -175,7 +197,7 @@ export function ProgrammePage() {
                     open ? "h-12 max-[700px]:h-[54px]" : "h-[53px] max-[700px]:h-[52px]",
                   )}
                   aria-expanded={open}
-                  onClick={() => setOpenDays((s) => ({ ...s, [day]: !s[day] }))}
+                  onClick={() => setOpenDays((s) => ({ ...s, [day]: !open }))}
                 >
                   <div
                     className={cn(
@@ -186,11 +208,12 @@ export function ProgrammePage() {
                     Day {day}
                   </div>
                   <div className="ml-6 text-[13px] font-semibold text-[#101827] max-[700px]:ml-3.5 max-[700px]:text-[10px]">
-                    {meta.date}, {meta.weekday}
+                    {meta.date}
+                    {meta.weekday ? `, ${meta.weekday}` : ""}
                   </div>
                   <div className="ml-auto flex items-center gap-2 text-[11px] text-[#101827] max-[700px]:hidden [&_svg]:h-[19px] [&_svg]:w-[19px] [&_svg]:shrink-0 [&_svg]:text-[#0964df]">
                     <MapPin size={19} strokeWidth={0} fill="currentColor" />
-                    Kenyatta International Convention Centre (KICC), Nairobi
+                    {programme.venueLine}
                   </div>
                   <span
                     className="ml-[18px] text-[22px] leading-none text-[#0964df] max-[700px]:ml-auto"
@@ -249,7 +272,7 @@ export function ProgrammePage() {
                                   <div className="text-[10px] font-semibold leading-[1.2] text-[#15223a] max-[700px]:text-[9px]">
                                     {s.venue}
                                     <br />
-                                    <span className="font-medium text-[#53627a]">{s.venueSub ?? "KICC"}</span>
+                                    <span className="font-medium text-[#53627a]">{s.venueSub}</span>
                                   </div>
                                   <span
                                     className="ml-auto shrink-0 text-[22px] leading-none text-[#0964df] max-[700px]:text-lg"
