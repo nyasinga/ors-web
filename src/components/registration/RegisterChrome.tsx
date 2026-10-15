@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
 import { pageContainer } from "../../lib/pageContainer";
+import type { ECitizenPayload } from "../../types/registration";
 
 export const RegistrationStep = {
   PARTICIPATION: 1,
@@ -61,6 +62,14 @@ export function RegisterHero({
   onStepChange,
   onInitialSelection,
 }: HeroProps) {
+
+  // Local state tracking parameters for payment execution structures
+  const [loading, setLoading] = useState<boolean>(false);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [paymentPayload, setPaymentPayload] = useState<ECitizenPayload | null>(null);
+  const [invoiceRef, setInvoiceRef] = useState<string>("");
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+
   const { t } = useTranslation("common");
   const event = useEventCopy();
   const heroTitle = title || `Register for ${event.name}`;
@@ -137,6 +146,74 @@ export function RegisterHero({
       });
     }
   }, [activeStep]);
+
+  const handleInitiateEcitizenPayment = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("http://localhost:3000/api/v1/pesaflow/create-invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: formData?.feeKes.toString(),
+          email: formData?.email || "",
+          idNumber: formData?.idNumber || "",
+          phone: formData?.phone || "",
+          name: formData?.name || "",
+          itemDescription: `ISIPPE Registration Fee`
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok && data?.billRefNumber) {
+        setInvoiceRef(data.billRefNumber);
+        setPaymentPayload(data as ECitizenPayload);
+        setIsModalOpen(true); // Open eCitizen overlay window frame
+      } else {
+        alert(data?.error?.message || "Failed to initialize eCitizen reference token values.");
+      }
+    } catch (error) {
+      alert("Network exception communicating with payment validation nodes.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /** Queries transaction settlement rows, then registers user accounts on success */
+  const handleVerifyAndFinalizeSignup = async () => {
+    setIsVerifying(true);
+    try {
+      const verifyRes = await fetch(`http://localhost:3000/api/v1/pesaflow/check-status?invoiceRef=${invoiceRef}`);
+      const statusData = await verifyRes.json();
+
+      if (statusData?.status === "Success" || statusData?.status === "COMPLETED") {
+        setIsModalOpen(false);
+
+        // Dispatches parameters right into your streamlined /signup-isippe intercept route handle
+        const signupRes = await fetch("http://localhost:3000/signup-isippe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...formData,
+            userType: FormData.userType,
+            invoiceRef: invoiceRef
+          })
+        });
+
+        const signupData = await signupRes.json();
+        if (signupRes.ok) {
+          setCurrentStep(RegistrationStep.CONFIRMATION);
+        } else {
+          alert(`Registration Controller Rejected Record: ${signupData?.error?.message || "Validation failure."}`);
+        }
+      } else {
+        alert("Your transaction status reflects as pending. Complete checkout rules inside the popup panel window frame.");
+      }
+    } catch (error) {
+      alert("Error encountered running payment validation processes.");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   return (
     <>
@@ -332,6 +409,15 @@ export function RegisterHero({
           </div>
         </div>
       </div>
+
+      {/* Persistent modal pipeline tracking handled safely at parent root node layout blocks */}
+      <PaymentModal
+        isOpen={isModalOpen}
+        payload={paymentPayload}
+        onClose={() => setIsModalOpen(false)}
+        onPaymentComplete={handleVerifyAndFinalizeSignup}
+        isVerifying={isVerifying}
+      />
     </>
   );
 }
@@ -363,6 +449,7 @@ export function PrivacyBar() {
       >
         Read our Privacy Policy →
       </a>
+      
     </div>
   );
 }
