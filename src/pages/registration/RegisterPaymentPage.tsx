@@ -54,6 +54,7 @@ export function RegisterPaymentPage() {
     setLoading(true);
     toast.info("Starting eCitizen payment…");
     try {
+
       const session = await initiateEcitizenCheckout({
         amount: String(feeKes),
         email: details.email,
@@ -64,6 +65,7 @@ export function RegisterPaymentPage() {
         currency: "KES",
         callbackURL: window.location.href,
       });
+
       setInvoiceRef(String(session.fields.billRefNumber));
       setCheckout(session);
       setIsModalOpen(true);
@@ -122,7 +124,6 @@ export function RegisterPaymentPage() {
   return (
     <div className={r.registerPage}>
       <RegisterHero current={3} />
-
       <main className={r.main}>
         <div className={cn(r.container, r.payLayout)}>
           <section className={cn(r.card, r.section)}>
@@ -174,7 +175,7 @@ export function RegisterPaymentPage() {
             <h3 className={r.payHeading}>Payment Method</h3>
             <div className={r.paymentMethod}>
               <span className={r.radioBlue} aria-hidden />
-              <img className={r.ecitizen} src="/assets/ecitizen.png" alt="eCitizen" />
+              <img className={r.ecitizen} src="/assets/ecitizen.svg" alt="eCitizen" />
               <div>
                 <strong className={r.paymentMethodTitle}>Pay via eCitizen (Default)</strong>
                 <p className={r.paymentMethodText}>

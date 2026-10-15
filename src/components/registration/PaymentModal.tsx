@@ -64,7 +64,7 @@ export default function PaymentModal({
         <iframe
           name={FRAME_NAME}
           id={FRAME_NAME}
-          title="eCitizen payment"
+          title="eCitizen Payment"
           className="h-[500px] w-full rounded border border-[#eee]"
         />
 
