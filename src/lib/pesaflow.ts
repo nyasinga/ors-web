@@ -10,7 +10,10 @@ const PAYMENT_API_BASE =
   (import.meta.env.VITE_PAYMENT_API_BASE as string | undefined)?.replace(/\/$/, "") ||
   API_BASE_URL;
 
-/** Official Pesaflow iframe POST keys — drop extras like payment_gateway_id. */
+/**
+ * Pesaflow iframe POST params only (Integration Spec §3).
+ * Do NOT send payment_gateway_id or other backend-only keys.
+ */
 const PESAFLOW_FORM_KEYS = [
   "apiClientID",
   "serviceID",
@@ -29,6 +32,28 @@ const PESAFLOW_FORM_KEYS = [
   "sendSTK",
 ] as const;
 
+/** Spec: clientMSISDN is BigInt e.g. 254722222222 */
+export function toKenyaMsisdn(raw: string | number | undefined | null): string {
+  const digits = String(raw ?? "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("254") && digits.length >= 12) return digits;
+  if (digits.startsWith("0") && digits.length >= 10) return `254${digits.slice(1)}`;
+  if (digits.length === 9) return `254${digits}`;
+  return digits;
+}
+
+/** Spec: notificationURL must be a full URL (HTTPS). */
+export function ensureHttpsUrl(raw: string | undefined | null): string {
+  const value = String(raw ?? "").trim();
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value)) return value;
+  return `https://${value}`;
+}
+
+/**
+ * Normalize initiate-checkout fields to what Pesaflow iframe accepts.
+ * (notificationURL / clientMSISDN are not part of secureHash — safe to fix client-side.)
+ */
 export function toPesaflowFormFields(
   fields: Record<string, unknown>,
 ): ECitizenCheckoutFields {
@@ -36,6 +61,14 @@ export function toPesaflowFormFields(
   for (const key of PESAFLOW_FORM_KEYS) {
     const value = fields[key];
     if (value === undefined || value === null) continue;
+    if (key === "clientMSISDN") {
+      out[key] = toKenyaMsisdn(value as string | number);
+      continue;
+    }
+    if (key === "notificationURL") {
+      out[key] = ensureHttpsUrl(String(value));
+      continue;
+    }
     out[key] = String(value);
   }
   return out as ECitizenCheckoutFields;
@@ -43,20 +76,22 @@ export function toPesaflowFormFields(
 
 /**
  * Build a temporary POST form, submit into the named iframe, then remove it.
- * Matches the Pesaflow iframe checkout pattern.
  */
 export function submitCheckoutToFrame(
   url: string,
   fields: Record<string, unknown>,
   frameName = "paymentFrame",
 ) {
+  // Always re-sanitize at submit time so extras never reach Pesaflow.
+  const safeFields = toPesaflowFormFields(fields);
+
   const form = document.createElement("form");
   form.method = "POST";
   form.action = url;
   form.target = frameName;
   form.style.display = "none";
 
-  Object.entries(fields).forEach(([key, value]) => {
+  Object.entries(safeFields).forEach(([key, value]) => {
     const input = document.createElement("input");
     input.type = "hidden";
     input.name = key;
