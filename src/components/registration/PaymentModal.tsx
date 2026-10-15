@@ -1,30 +1,50 @@
 import { useEffect, useRef } from "react";
-import type { ECitizenPayload } from "../../types/registration";
+import { submitCheckoutToFrame } from "../../lib/pesaflow";
+import type { ECitizenCheckoutSession } from "../../types/registration";
+
+const FRAME_NAME = "paymentFrame";
 
 interface PaymentModalProps {
   isOpen: boolean;
-  payload: ECitizenPayload | null;
+  checkout: ECitizenCheckoutSession | null;
   onClose: () => void;
   onPaymentComplete: () => Promise<void>;
   isVerifying?: boolean;
 }
 
+/**
+ * Renders the payment iframe, then POSTs checkout `{ url, fields }` into it
+ * via a temporary form (create → append → submit → remove).
+ */
 export default function PaymentModal({
   isOpen,
-  payload,
+  checkout,
   onClose,
   onPaymentComplete,
   isVerifying = false,
 }: PaymentModalProps) {
-  const formRef = useRef<HTMLFormElement>(null);
+  const submittedFor = useRef<string | null>(null);
 
   useEffect(() => {
-    if (isOpen && payload && formRef.current) {
-      formRef.current.submit();
-    }
-  }, [isOpen, payload]);
+    if (!isOpen || !checkout?.url || !checkout.fields) return;
 
-  if (!isOpen || !payload) return null;
+    const sessionKey = `${checkout.url}:${checkout.fields.billRefNumber}`;
+    if (submittedFor.current === sessionKey) return;
+
+    // Ensure the named iframe is mounted before targeting it.
+    const timer = window.setTimeout(() => {
+      submittedFor.current = sessionKey;
+      submitCheckoutToFrame(checkout.url, checkout.fields, FRAME_NAME);
+    }, 50);
+
+    return () => window.clearTimeout(timer);
+  }, [isOpen, checkout]);
+
+  useEffect(() => {
+    if (!isOpen) submittedFor.current = null;
+  }, [isOpen]);
+
+  if (!isOpen || !checkout?.url || !checkout.fields) return null;
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4">
@@ -41,22 +61,11 @@ export default function PaymentModal({
           </button>
         </div>
 
-        <form
-          ref={formRef}
-          action="https://test.pesaflow.com"
-          method="POST"
-          target="ecitizen_iframe"
-          className="hidden"
-        >
-          {Object.entries(payload).map(([key, value]) => (
-            <input key={key} type="hidden" name={key} value={value?.toString() ?? ""} />
-          ))}
-        </form>
-
         <iframe
-          name="ecitizen_iframe"
-          className="h-[600px] w-full rounded border border-[#eee]"
-          title="eCitizen Gateway"
+          name={FRAME_NAME}
+          id={FRAME_NAME}
+          title="eCitizen payment"
+          className="h-[500px] w-full rounded border border-[#eee]"
         />
 
         <div className="mt-4 text-right">

@@ -8,11 +8,11 @@ import { participationTypes } from "../../data/registration";
 import { formatMoney } from "../../i18n/format";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
-import { createEcitizenInvoice, signupAfterPayment } from "../../lib/pesaflow";
-import type { ECitizenPayload } from "../../types/registration";
+import { initiateEcitizenCheckout, signupAfterPayment } from "../../lib/pesaflow";
+import type { ECitizenCheckoutSession } from "../../types/registration";
 import * as r from "../../components/registration/registerStyles";
 
-/** Registration step 3 — create-invoice → eCitizen iframe → signup-isippe. */
+/** Registration step 3 — initiate-checkout → eCitizen iframe → signup-isippe. */
 export function RegisterPaymentPage() {
   const navigate = useNavigate();
   const toast = useToast();
@@ -37,7 +37,7 @@ export function RegisterPaymentPage() {
 
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [paymentPayload, setPaymentPayload] = useState<ECitizenPayload | null>(null);
+  const [checkout, setCheckout] = useState<ECitizenCheckoutSession | null>(null);
   const [invoiceRef, setInvoiceRef] = useState("");
   const [isFinalizing, setIsFinalizing] = useState(false);
 
@@ -54,7 +54,7 @@ export function RegisterPaymentPage() {
     setLoading(true);
     toast.info("Starting eCitizen payment…");
     try {
-      const data = await createEcitizenInvoice({
+      const session = await initiateEcitizenCheckout({
         amount: String(feeKes),
         email: details.email,
         idNumber: details.phone.replace(/\D/g, "") || reference,
@@ -64,8 +64,8 @@ export function RegisterPaymentPage() {
         currency: "KES",
         callbackURL: window.location.href,
       });
-      setInvoiceRef(data.billRefNumber);
-      setPaymentPayload(data);
+      setInvoiceRef(String(session.fields.billRefNumber));
+      setCheckout(session);
       setIsModalOpen(true);
       toast.success("Invoice ready — complete payment in the eCitizen window.");
     } catch (err) {
@@ -264,7 +264,7 @@ export function RegisterPaymentPage() {
 
       <PaymentModal
         isOpen={isModalOpen}
-        payload={paymentPayload}
+        checkout={checkout}
         onClose={() => setIsModalOpen(false)}
         onPaymentComplete={finalizeAfterPayment}
         isVerifying={isFinalizing}

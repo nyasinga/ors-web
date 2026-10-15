@@ -1,11 +1,73 @@
 import { API_BASE_URL } from "./api";
-import type { ECitizenPayload } from "../types/registration";
+import type {
+  ECitizenCheckoutFields,
+  ECitizenCheckoutSession,
+} from "../types/registration";
 
 const TENANT_ID = (import.meta.env.VITE_API_TENANT_ID as string | undefined)?.trim() || "ACA";
 
 const PAYMENT_API_BASE =
   (import.meta.env.VITE_PAYMENT_API_BASE as string | undefined)?.replace(/\/$/, "") ||
   API_BASE_URL;
+
+/** Official Pesaflow iframe POST keys — drop extras like payment_gateway_id. */
+const PESAFLOW_FORM_KEYS = [
+  "apiClientID",
+  "serviceID",
+  "billDesc",
+  "currency",
+  "billRefNumber",
+  "clientMSISDN",
+  "clientName",
+  "clientIDNumber",
+  "clientEmail",
+  "callBackURLONSuccess",
+  "amountExpected",
+  "notificationURL",
+  "secureHash",
+  "format",
+  "sendSTK",
+] as const;
+
+export function toPesaflowFormFields(
+  fields: Record<string, unknown>,
+): ECitizenCheckoutFields {
+  const out: Record<string, string> = {};
+  for (const key of PESAFLOW_FORM_KEYS) {
+    const value = fields[key];
+    if (value === undefined || value === null) continue;
+    out[key] = String(value);
+  }
+  return out as ECitizenCheckoutFields;
+}
+
+/**
+ * Build a temporary POST form, submit into the named iframe, then remove it.
+ * Matches the Pesaflow iframe checkout pattern.
+ */
+export function submitCheckoutToFrame(
+  url: string,
+  fields: Record<string, unknown>,
+  frameName = "paymentFrame",
+) {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = url;
+  form.target = frameName;
+  form.style.display = "none";
+
+  Object.entries(fields).forEach(([key, value]) => {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = key;
+    input.value = String(value ?? "");
+    form.appendChild(input);
+  });
+
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
+}
 
 /** Current page URL for eCitizen `callbackURL`. */
 export function frontendCallbackUrl() {
@@ -25,7 +87,7 @@ function paymentHeaders(): HeadersInit {
   };
 }
 
-export type CreateInvoiceInput = {
+export type InitiateCheckoutInput = {
   amount: string;
   email: string;
   idNumber: string;
@@ -36,15 +98,15 @@ export type CreateInvoiceInput = {
   callbackURL?: string;
 };
 
-export type CreateInvoiceResult = ECitizenPayload & {
-  billRefNumber: string;
+type InitiateCheckoutResponse = ECitizenCheckoutSession & {
   error?: { message?: string };
+  fields?: Record<string, unknown>;
 };
 
-/** Create eCitizen invoice payload for the Pesaflow iframe. */
-export async function createEcitizenInvoice(input: CreateInvoiceInput) {
+/** Start eCitizen checkout — returns iframe POST url + fields. */
+export async function initiateEcitizenCheckout(input: InitiateCheckoutInput) {
   const callbackURL = input.callbackURL || frontendCallbackUrl();
-  const res = await fetch(`${PAYMENT_API_BASE}/ecitizen/create-invoice`, {
+  const res = await fetch(`${PAYMENT_API_BASE}/ecitizen/initiate-checkout`, {
     method: "POST",
     headers: paymentHeaders(),
     body: JSON.stringify({
@@ -58,12 +120,19 @@ export async function createEcitizenInvoice(input: CreateInvoiceInput) {
       ...(callbackURL ? { callbackURL } : {}),
     }),
   });
-  const data = (await res.json()) as CreateInvoiceResult;
-  if (!res.ok || !data?.billRefNumber) {
+  const data = (await res.json()) as InitiateCheckoutResponse;
+  if (!res.ok || !data?.url || !data?.fields) {
     throw new Error(data?.error?.message || "Failed to initialize eCitizen payment.");
   }
-  return data;
+  const fields = toPesaflowFormFields(data.fields);
+  if (!fields.billRefNumber) {
+    throw new Error(data?.error?.message || "Failed to initialize eCitizen payment.");
+  }
+  return { url: data.url, fields };
 }
+
+/** @deprecated Use initiateEcitizenCheckout */
+export const createEcitizenInvoice = initiateEcitizenCheckout;
 
 export type SignupIsippeInput = Record<string, unknown> & {
   email: string;
