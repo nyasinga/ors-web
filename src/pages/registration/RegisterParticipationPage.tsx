@@ -138,9 +138,15 @@ export function RegisterParticipationPage() {
               <button
                 type="button"
                 className={r.btnPrimary}
-                onClick={() => navigate("/register/details")}
+                onClick={() =>
+                  navigate(
+                    participationType === "sponsor"
+                      ? "/register/package"
+                      : "/register/details",
+                  )
+                }
               >
-                Next: Personal Details{" "}
+                {participationType === "sponsor" ? "Next: Select Package" : "Next: Personal Details"}{" "}
                 <span className={r.arrow} aria-hidden>
                   →
                 </span>

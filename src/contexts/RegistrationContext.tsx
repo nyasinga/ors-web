@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useMemo,
   useState,
@@ -7,6 +8,7 @@ import {
 } from "react";
 import type { ParticipationType } from "../data/registration";
 import { useEventCopy, useRegistrationFees } from "../i18n/useEventCopy";
+import type { PublicSponsorPackage } from "../lib/publicEvent";
 
 export type RegistrationDetails = {
   title: string;
@@ -19,6 +21,17 @@ export type RegistrationDetails = {
   city: string;
   dietary: string;
   accessibility: string;
+};
+
+export type SelectedSponsorPackage = {
+  id: string;
+  name: string;
+  price: string;
+  description: string;
+  benefits: string[];
+  medal: string;
+  kes: number;
+  usd: number;
 };
 
 type RegistrationContextValue = {
@@ -45,6 +58,17 @@ type RegistrationContextValue = {
     kes: number;
     usd: number;
   };
+  /** Set when a sponsorship package has been chosen. */
+  selectedSponsorPackage: SelectedSponsorPackage | null;
+  /** Where the package was chosen from — drives Back navigation. */
+  sponsorEntrySource: "sponsorship" | "register" | null;
+  selectSponsorPackage: (
+    pkg: PublicSponsorPackage,
+    source?: "sponsorship" | "register",
+  ) => void;
+  clearSponsorPackage: () => void;
+  /** True when a sponsorship package is active for this registration. */
+  fromSponsorship: boolean;
 };
 
 const defaultDetails: RegistrationDetails = {
@@ -60,17 +84,78 @@ const defaultDetails: RegistrationDetails = {
   accessibility: "",
 };
 
+function parsePackageAmounts(price?: string | number) {
+  if (typeof price === "number" && Number.isFinite(price)) {
+    return { kes: price, usd: 0 };
+  }
+  const text = String(price || "");
+  const kesMatch = text.match(/KES\s*([\d,]+)/i);
+  const usdMatch = text.match(/USD\s*([\d,]+)/i);
+  const bare = text.match(/([\d,]+)/);
+  return {
+    kes: kesMatch
+      ? Number(kesMatch[1].replace(/,/g, ""))
+      : bare && !/usd/i.test(text)
+        ? Number(bare[1].replace(/,/g, ""))
+        : 0,
+    usd: usdMatch ? Number(usdMatch[1].replace(/,/g, "")) : 0,
+  };
+}
+
 const RegistrationContext = createContext<RegistrationContextValue | null>(null);
 
 export function RegistrationProvider({ children }: { children: ReactNode }) {
   const event = useEventCopy();
   const fees = useRegistrationFees();
-  const [participationType, setParticipationType] = useState<ParticipationType>("delegate");
+  const [participationType, setParticipationTypeState] =
+    useState<ParticipationType>("delegate");
   const [details, setDetailsState] = useState<RegistrationDetails>(defaultDetails);
+  const [selectedSponsorPackage, setSelectedSponsorPackage] =
+    useState<SelectedSponsorPackage | null>(null);
+  const [sponsorEntrySource, setSponsorEntrySource] = useState<
+    "sponsorship" | "register" | null
+  >(null);
   const [referenceSuffix] = useState(() => Math.floor(100000 + Math.random() * 900000));
   const reference = `${event.referencePrefix}-${referenceSuffix}`;
 
+  const clearSponsorPackage = useCallback(() => {
+    setSelectedSponsorPackage(null);
+    setSponsorEntrySource(null);
+  }, []);
+
+  const selectSponsorPackage = useCallback(
+    (pkg: PublicSponsorPackage, source: "sponsorship" | "register" = "register") => {
+      const amounts = parsePackageAmounts(pkg.price);
+      setParticipationTypeState("sponsor");
+      setSponsorEntrySource(source);
+      setSelectedSponsorPackage({
+        id: pkg.id,
+        name: pkg.name,
+        price: pkg.price,
+        description: pkg.description,
+        benefits: pkg.benefits,
+        medal: pkg.medal,
+        kes: amounts.kes,
+        usd: amounts.usd,
+      });
+    },
+    [],
+  );
+
+  const setParticipationType = useCallback(
+    (t: ParticipationType) => {
+      setParticipationTypeState(t);
+      if (t !== "sponsor") clearSponsorPackage();
+    },
+    [clearSponsorPackage],
+  );
+
   const active = fees[fees.active];
+  const usingSponsor = Boolean(selectedSponsorPackage);
+  const feeKes = usingSponsor ? selectedSponsorPackage!.kes : active.kes;
+  const feeUsd = usingSponsor ? selectedSponsorPackage!.usd : active.usd;
+  const feeLabel = usingSponsor ? selectedSponsorPackage!.name : active.label;
+  const feeUntil = usingSponsor ? selectedSponsorPackage!.description : active.until;
 
   const value = useMemo<RegistrationContextValue>(
     () => ({
@@ -79,11 +164,11 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
       details,
       setDetails: (patch) => setDetailsState((d) => ({ ...d, ...patch })),
       reference,
-      feeKes: active.kes,
-      feeUsd: active.usd,
-      feeLabel: active.label,
-      feeUntil: active.until,
-      feeLabelKey: active.label,
+      feeKes,
+      feeUsd,
+      feeLabel,
+      feeUntil,
+      feeLabelKey: feeLabel,
       earlyBird: {
         label: fees.earlyBird.label,
         until: fees.earlyBird.until,
@@ -96,8 +181,28 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
         kes: fees.late.kes,
         usd: fees.late.usd,
       },
+      selectedSponsorPackage,
+      sponsorEntrySource,
+      selectSponsorPackage,
+      clearSponsorPackage,
+      fromSponsorship: usingSponsor,
     }),
-    [participationType, details, reference, active, fees],
+    [
+      participationType,
+      setParticipationType,
+      details,
+      reference,
+      feeKes,
+      feeUsd,
+      feeLabel,
+      feeUntil,
+      fees,
+      selectedSponsorPackage,
+      sponsorEntrySource,
+      selectSponsorPackage,
+      clearSponsorPackage,
+      usingSponsor,
+    ],
   );
 
   return (

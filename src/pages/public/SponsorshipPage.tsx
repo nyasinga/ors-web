@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { PageHero } from "../../components/public/PageHero";
 import { PublicEventGate } from "../../components/public/PublicEventGate";
+import { useRegistration } from "../../contexts/RegistrationContext";
 import { cn } from "../../lib/cn";
 import {
   engagementToPublicSponsors,
@@ -53,6 +54,8 @@ const arrow = "text-[23px] font-normal leading-none";
 
 /** Sponsorship — packages from the public engagement API. */
 export function SponsorshipPage() {
+  const navigate = useNavigate();
+  const { selectSponsorPackage } = useRegistration();
   const { engagement } = usePublicEngagement();
   const packages = useMemo(() => engagementToPublicSponsors(engagement), [engagement]);
   const [selected, setSelected] = useState(packages[0]?.id || "");
@@ -66,6 +69,11 @@ export function SponsorshipPage() {
   const pkg = packages.find((p) => p.id === selected) || packages[0];
   const comparisonRows = useMemo(() => buildComparison(packages), [packages]);
   const eventName = engagement?.engagementName?.trim() || "Event";
+
+  const continueWithPackage = (item: PublicSponsorPackage) => {
+    selectSponsorPackage(item, "sponsorship");
+    navigate("/register/details");
+  };
 
   return (
     <PublicEventGate>
@@ -296,15 +304,16 @@ export function SponsorshipPage() {
                   </li>
                 ))}
               </ul>
-              <Link
-                className="mt-4 inline-flex min-h-[51px] w-full cursor-pointer items-center justify-center gap-3 rounded-md bg-[#075fd8] text-sm font-extrabold text-white no-underline max-[640px]:min-h-[46px] max-[640px]:text-xs"
-                to={`/register?type=sponsor&package=${pkg.id}`}
+              <button
+                type="button"
+                className="mt-4 inline-flex min-h-[51px] w-full cursor-pointer items-center justify-center gap-3 rounded-md border-0 bg-[#075fd8] text-sm font-extrabold text-white max-[640px]:min-h-[46px] max-[640px]:text-xs"
+                onClick={() => continueWithPackage(pkg)}
               >
                 {pkg.button}{" "}
                 <span className={arrow} aria-hidden>
                   →
                 </span>
-              </Link>
+              </button>
             </aside>
           </div>
           )}

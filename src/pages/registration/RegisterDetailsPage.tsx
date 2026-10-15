@@ -1,13 +1,16 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
 import { useRegistration } from "../../contexts/RegistrationContext";
+import { participationTypes } from "../../data/registration";
 import { formatMoney } from "../../i18n/format";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
+import { engagementToPublicSponsors } from "../../lib/publicEvent";
+import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import * as r from "../../components/registration/registerStyles";
 
-const inclusions = [
+const defaultInclusions = [
   "Access to all plenary and parallel sessions",
   "Conference materials (digital)",
   "Lunch and refreshments",
@@ -18,9 +21,48 @@ const inclusions = [
 /** Registration step 2 — structure & CSS from HTML package */
 export function RegisterDetailsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const event = useEventCopy();
-  const { details, setDetails, earlyBird, late } = useRegistration();
+  const { engagement } = usePublicEngagement();
+  const {
+    details,
+    setDetails,
+    earlyBird,
+    late,
+    selectedSponsorPackage,
+    selectSponsorPackage,
+    sponsorEntrySource,
+    participationType,
+  } = useRegistration();
+
+  const backTo =
+    sponsorEntrySource === "sponsorship"
+      ? "/sponsorship"
+      : sponsorEntrySource === "register"
+        ? "/register/package"
+        : "/register";
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const packages = useMemo(() => engagementToPublicSponsors(engagement), [engagement]);
+
+  // Deep link: /register/details?type=sponsor&package=gold
+  useEffect(() => {
+    const type = searchParams.get("type");
+    const packageId = searchParams.get("package");
+    if (type !== "sponsor" || !packageId || !packages.length) return;
+    const pkg = packages.find((p) => p.id === packageId || p.tierKey === packageId);
+    if (pkg) selectSponsorPackage(pkg, "sponsorship");
+    const next = new URLSearchParams(searchParams);
+    next.delete("type");
+    next.delete("package");
+    setSearchParams(next, { replace: true });
+  }, [packages, searchParams, selectSponsorPackage, setSearchParams]);
+
+  const inclusions =
+    selectedSponsorPackage?.benefits?.length
+      ? selectedSponsorPackage.benefits
+      : participationTypes.find((t) => t.id === participationType)?.includes ||
+        defaultInclusions;
 
   const validate = () => {
     const next: Record<string, string> = {};
@@ -212,7 +254,7 @@ export function RegisterDetailsPage() {
             </div>
 
             <div className={r.actions}>
-              <Link className={r.btn} to="/register">
+              <Link className={r.btn} to={backTo}>
                 ← Back
               </Link>
               <button
@@ -231,24 +273,48 @@ export function RegisterDetailsPage() {
           </section>
 
           <aside className={r.sidebar}>
-            <div className={r.sidePrice}>
-              <div className={r.priceLabel}>🏷 Registration Fee</div>
-              <div className={r.period}>
-                {earlyBird.label} &nbsp; <b>Current Period</b>
-              </div>
-              <div className={r.price}>{formatMoney(earlyBird.kes, "KES")}</div>
-              <div className={r.priceSub}>
-                {formatMoney(earlyBird.usd, "USD")} (Approx.)
-              </div>
-              <div className={r.period}>{earlyBird.until}</div>
-            </div>
-            <div className={r.late}>
-              <b>{late.label}</b>
-              <br />
-              <span className="text-[11px] text-[#61708a]">{late.until}</span>
-              <br />
-              <strong>{formatMoney(late.kes, "KES")}</strong>
-            </div>
+            {selectedSponsorPackage ? (
+              <>
+                <div className={r.sidePrice}>
+                  <div className={r.priceLabel}>🏷 Selected Package</div>
+                  <div className={r.period}>
+                    {selectedSponsorPackage.name} &nbsp; <b>Sponsorship</b>
+                  </div>
+                  <div className={r.price}>
+                    {selectedSponsorPackage.kes > 0
+                      ? formatMoney(selectedSponsorPackage.kes, "KES")
+                      : selectedSponsorPackage.price}
+                  </div>
+                  {selectedSponsorPackage.usd > 0 ? (
+                    <div className={r.priceSub}>
+                      {formatMoney(selectedSponsorPackage.usd, "USD")} (Approx.)
+                    </div>
+                  ) : null}
+                  <div className={r.period}>{selectedSponsorPackage.description}</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className={r.sidePrice}>
+                  <div className={r.priceLabel}>🏷 Registration Fee</div>
+                  <div className={r.period}>
+                    {earlyBird.label} &nbsp; <b>Current Period</b>
+                  </div>
+                  <div className={r.price}>{formatMoney(earlyBird.kes, "KES")}</div>
+                  <div className={r.priceSub}>
+                    {formatMoney(earlyBird.usd, "USD")} (Approx.)
+                  </div>
+                  <div className={r.period}>{earlyBird.until}</div>
+                </div>
+                <div className={r.late}>
+                  <b>{late.label}</b>
+                  <br />
+                  <span className="text-[11px] text-[#61708a]">{late.until}</span>
+                  <br />
+                  <strong>{formatMoney(late.kes, "KES")}</strong>
+                </div>
+              </>
+            )}
             <div className={r.infoBox}>
               <div className={r.infoTitle}>👥 What&apos;s Included?</div>
               <p className={r.infoText}>

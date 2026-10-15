@@ -2,22 +2,20 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import PaymentModal from "../../components/registration/PaymentModal";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
+import { useToast } from "../../components/ui/Toast";
 import { useRegistration } from "../../contexts/RegistrationContext";
 import { participationTypes } from "../../data/registration";
 import { formatMoney } from "../../i18n/format";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
-import {
-  checkPesaflowStatus,
-  createPesaflowInvoice,
-  signupAfterPayment,
-} from "../../lib/pesaflow";
+import { createEcitizenInvoice, signupAfterPayment } from "../../lib/pesaflow";
 import type { ECitizenPayload } from "../../types/registration";
 import * as r from "../../components/registration/registerStyles";
 
-/** Registration step 3 — eCitizen payment via Pesaflow. */
+/** Registration step 3 — create-invoice → eCitizen iframe → signup-isippe. */
 export function RegisterPaymentPage() {
   const navigate = useNavigate();
+  const toast = useToast();
   const event = useEventCopy();
   const {
     participationType,
@@ -29,74 +27,67 @@ export function RegisterPaymentPage() {
     feeUntil,
     earlyBird,
     late,
+    selectedSponsorPackage,
   } = useRegistration();
   const typeLabel =
     participationTypes.find((item) => item.id === participationType)?.title ?? "Delegate";
+  const invoiceDescription = selectedSponsorPackage
+    ? `${event.name || "Event"} — ${selectedSponsorPackage.name}`
+    : `${event.name || "Event"} registration fee`;
 
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [paymentPayload, setPaymentPayload] = useState<ECitizenPayload | null>(null);
   const [invoiceRef, setInvoiceRef] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isFinalizing, setIsFinalizing] = useState(false);
 
   const startPayment = async () => {
     if (!feeKes || feeKes <= 0) {
-      setError("Registration fee is not available yet. Please try again once ticket prices are published.");
+      toast.error("Registration fee is not available yet. Please try again once ticket prices are published.");
       return;
     }
     if (!details.email || !details.fullName || !details.phone) {
-      setError("Complete your registration details before paying.");
+      toast.error("Complete your registration details before paying.");
       return;
     }
 
     setLoading(true);
-    setError(null);
+    toast.info("Starting eCitizen payment…");
     try {
-      const data = await createPesaflowInvoice({
+      const data = await createEcitizenInvoice({
         amount: String(feeKes),
         email: details.email,
         idNumber: details.phone.replace(/\D/g, "") || reference,
         phone: details.phone,
         name: details.fullName,
-        itemDescription: `${event.name || "Event"} registration fee`,
+        itemDescription: invoiceDescription,
+        currency: "KES",
+        callbackURL: window.location.href,
       });
       setInvoiceRef(data.billRefNumber);
       setPaymentPayload(data);
       setIsModalOpen(true);
+      toast.success("Invoice ready — complete payment in the eCitizen window.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start eCitizen payment.");
+      toast.error(err instanceof Error ? err.message : "Failed to start eCitizen payment.", 6000);
     } finally {
       setLoading(false);
     }
   };
 
-  const verifyAndFinalize = async () => {
+  const finalizeAfterPayment = async () => {
     if (!invoiceRef) {
-      setError("Missing invoice reference. Please start payment again.");
+      toast.error("Missing invoice reference. Please start payment again.");
       return;
     }
-    setIsVerifying(true);
-    setError(null);
+    setIsFinalizing(true);
+    toast.info("Completing registration…");
     try {
-      const statusData = await checkPesaflowStatus(invoiceRef);
-      const ok =
-        statusData?.status === "Success" ||
-        statusData?.status === "COMPLETED" ||
-        statusData?.status === "completed";
-      if (!ok) {
-        setError(
-          "Payment still pending. Complete checkout in the eCitizen window, then confirm again.",
-        );
-        return;
-      }
-
-      setIsModalOpen(false);
       await signupAfterPayment({
         title: details.title,
         fullName: details.fullName,
         email: details.email,
-        phone: details.phone,
+        phoneNo: details.phone,
         organisation: details.organisation,
         jobTitle: details.jobTitle,
         country: details.country,
@@ -108,12 +99,23 @@ export function RegisterPaymentPage() {
         feeLabel,
         userType: participationType,
         invoiceRef,
+        ...(selectedSponsorPackage
+          ? {
+              sponsorPackageId: selectedSponsorPackage.id,
+              sponsorPackageName: selectedSponsorPackage.name,
+            }
+          : {}),
       });
+      setIsModalOpen(false);
+      toast.success("Payment confirmed — registration complete.");
       navigate("/register/confirmation");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not verify payment.");
+      toast.error(
+        err instanceof Error ? err.message : "Could not complete registration after payment.",
+        6000,
+      );
     } finally {
-      setIsVerifying(false);
+      setIsFinalizing(false);
     }
   };
 
@@ -129,34 +131,42 @@ export function RegisterPaymentPage() {
               Complete your registration by making the payment using the eCitizen platform.
             </p>
 
-            {error ? (
-              <div
-                className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700"
-                role="alert"
-              >
-                {error}
-              </div>
-            ) : null}
-
             <div className={r.payTop}>
               <div className={r.sidePrice}>
-                <div className={r.priceLabel}>🏷 Registration Fee</div>
+                <div className={r.priceLabel}>
+                  {selectedSponsorPackage ? "🏷 Selected Package" : "🏷 Registration Fee"}
+                </div>
                 <b>{feeLabel}</b>
                 <div className={r.period}>{feeUntil}</div>
                 <div className={r.price}>{formatMoney(feeKes, "KES")}</div>
-                <div className={r.priceSub}>{formatMoney(feeUsd, "USD")} (Approx.)</div>
+                {feeUsd > 0 ? (
+                  <div className={r.priceSub}>{formatMoney(feeUsd, "USD")} (Approx.)</div>
+                ) : null}
               </div>
               <div className={r.infoBox}>
-                <div className={r.infoTitle}>▣ Registration Periods</div>
+                <div className={r.infoTitle}>
+                  {selectedSponsorPackage ? "▣ Package Benefits" : "▣ Registration Periods"}
+                </div>
                 <p className={r.infoText}>
-                  <b>{earlyBird.label}</b>
-                  <br />
-                  {earlyBird.until} &nbsp; <b>{formatMoney(earlyBird.kes, "KES")}</b>
-                  <br />
-                  <br />
-                  <b>{late.label}</b>
-                  <br />
-                  {late.until} &nbsp; <b>{formatMoney(late.kes, "KES")}</b>
+                  {selectedSponsorPackage ? (
+                    selectedSponsorPackage.benefits.map((benefit) => (
+                      <span key={benefit}>
+                        ✓ {benefit}
+                        <br />
+                      </span>
+                    ))
+                  ) : (
+                    <>
+                      <b>{earlyBird.label}</b>
+                      <br />
+                      {earlyBird.until} &nbsp; <b>{formatMoney(earlyBird.kes, "KES")}</b>
+                      <br />
+                      <br />
+                      <b>{late.label}</b>
+                      <br />
+                      {late.until} &nbsp; <b>{formatMoney(late.kes, "KES")}</b>
+                    </>
+                  )}
                 </p>
               </div>
             </div>
@@ -221,8 +231,14 @@ export function RegisterPaymentPage() {
                 <span>Participation Type</span>
                 <b>{typeLabel}</b>
               </div>
+              {selectedSponsorPackage ? (
+                <div className={r.summaryRow()}>
+                  <span>Package</span>
+                  <b>{selectedSponsorPackage.name}</b>
+                </div>
+              ) : null}
               <div className={r.summaryRow()}>
-                <span>Registration Fee</span>
+                <span>{selectedSponsorPackage ? "Package Fee" : "Registration Fee"}</span>
                 <span>{formatMoney(feeKes, "KES")}</span>
               </div>
               <div className={r.summaryRow(true)}>
@@ -250,8 +266,8 @@ export function RegisterPaymentPage() {
         isOpen={isModalOpen}
         payload={paymentPayload}
         onClose={() => setIsModalOpen(false)}
-        onPaymentComplete={verifyAndFinalize}
-        isVerifying={isVerifying}
+        onPaymentComplete={finalizeAfterPayment}
+        isVerifying={isFinalizing}
       />
     </div>
   );

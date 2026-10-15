@@ -66,7 +66,7 @@ export default function PaymentModal({
             disabled={isVerifying}
             className="cursor-pointer rounded border-0 bg-[#28a745] px-5 py-2.5 text-white disabled:opacity-60"
           >
-            {isVerifying ? "Verifying payment…" : "I Have Completed Payment ✓"}
+            {isVerifying ? "Completing registration…" : "I Have Completed Payment ✓"}
           </button>
         </div>
       </div>

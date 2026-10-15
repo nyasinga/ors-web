@@ -24,6 +24,7 @@ import { RegisterConfirmationPage } from "../pages/registration/RegisterConfirma
 import { RegisterDetailsPage } from "../pages/registration/RegisterDetailsPage";
 import { RegisterParticipationPage } from "../pages/registration/RegisterParticipationPage";
 import { RegisterPaymentPage } from "../pages/registration/RegisterPaymentPage";
+import { RegisterSponsorPackagePage } from "../pages/registration/RegisterSponsorPackagePage";
 
 export function AppRouter() {
   return (
@@ -37,6 +38,7 @@ export function AppRouter() {
         <Route path="venue" element={<VenuePage />} />
         <Route path="faq" element={<FaqPage />} />
         <Route path="register" element={<RegisterParticipationPage />} />
+        <Route path="register/package" element={<RegisterSponsorPackagePage />} />
         <Route path="register/details" element={<RegisterDetailsPage />} />
         <Route path="register/payment" element={<RegisterPaymentPage />} />
         <Route path="register/confirmation" element={<RegisterConfirmationPage />} />
