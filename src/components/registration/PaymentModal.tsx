@@ -1,44 +1,72 @@
-import { useEffect, useRef } from 'react';
-import type { ECitizenPayload } from '../../types/registration';
+import { useEffect, useRef } from "react";
+import type { ECitizenPayload } from "../../types/registration";
 
 interface PaymentModalProps {
   isOpen: boolean;
   payload: ECitizenPayload | null;
   onClose: () => void;
   onPaymentComplete: () => Promise<void>;
+  isVerifying?: boolean;
 }
 
-export default function PaymentModal({ isOpen, payload, onClose, onPaymentComplete }: PaymentModalProps) {
+export default function PaymentModal({
+  isOpen,
+  payload,
+  onClose,
+  onPaymentComplete,
+  isVerifying = false,
+}: PaymentModalProps) {
   const formRef = useRef<HTMLFormElement>(null);
-  
+
   useEffect(() => {
     if (isOpen && payload && formRef.current) {
-      formRef.current.submit(); // Auto-POST parameters inside the iframe target window
+      formRef.current.submit();
     }
   }, [isOpen, payload]);
 
   if (!isOpen || !payload) return null;
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
-      <div style={{ backgroundColor: '#fff', width: '90%', maxWidth: '800px', borderRadius: '8px', padding: '20px', position: 'relative' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
-          <h4 style={{ margin: 0, color: '#333' }}>eCitizen Secure Payment Portal</h4>
-          <button onClick={onClose} style={{ cursor: 'pointer', background: 'none', border: 'none', fontWeight: 'bold', fontSize: '16px' }}>✕ Close</button>
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4">
+      <div className="relative w-full max-w-[800px] rounded-lg bg-white p-5 shadow-xl">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h4 className="m-0 text-[16px] font-bold text-[#10216d]">eCitizen Secure Payment Portal</h4>
+          <button
+            type="button"
+            onClick={onClose}
+            className="cursor-pointer border-0 bg-transparent text-[16px] font-bold text-[#52627d]"
+            disabled={isVerifying}
+          >
+            ✕ Close
+          </button>
         </div>
-        
-        {/* Hidden configuration routing pipeline targeting iframe handle */}
-        <form ref={formRef} action="https://test.pesaflow.com" method="POST" target="ecitizen_iframe" style={{ display: 'none' }}>
+
+        <form
+          ref={formRef}
+          action="https://test.pesaflow.com"
+          method="POST"
+          target="ecitizen_iframe"
+          className="hidden"
+        >
           {Object.entries(payload).map(([key, value]) => (
-            <input key={key} type="hidden" name={key} value={value?.toString()} />
+            <input key={key} type="hidden" name={key} value={value?.toString() ?? ""} />
           ))}
         </form>
 
-        <iframe name="ecitizen_iframe" style={{ width: '100%', height: '600px', border: '1px solid #eee', borderRadius: '4px' }} title="eCitizen Gateway" />
-        
-        <div style={{ textAlign: 'right', marginTop: '15px' }}>
-          <button onClick={onPaymentComplete} style={{ padding: '10px 20px', backgroundColor: '#28a745', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-            I Have Completed Payment ✓
+        <iframe
+          name="ecitizen_iframe"
+          className="h-[600px] w-full rounded border border-[#eee]"
+          title="eCitizen Gateway"
+        />
+
+        <div className="mt-4 text-right">
+          <button
+            type="button"
+            onClick={() => void onPaymentComplete()}
+            disabled={isVerifying}
+            className="cursor-pointer rounded border-0 bg-[#28a745] px-5 py-2.5 text-white disabled:opacity-60"
+          >
+            {isVerifying ? "Verifying payment…" : "I Have Completed Payment ✓"}
           </button>
         </div>
       </div>
