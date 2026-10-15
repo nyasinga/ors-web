@@ -42,25 +42,7 @@ import { Modal } from "../../components/ui/Modal";
 import { ScrollableNav } from "../../components/ui/ScrollableNav";
 import { Select } from "../../components/ui/Select";
 import { useToast } from "../../components/ui/Toast";
-import {
-  communicationCampaigns,
-  communicationChannelCounts,
-  communicationSegments,
-  communicationTemplates,
-  draftSpeakers,
-  eventDetail,
-  eventDetailTabs,
-  eventParticipants,
-  eventSchedule,
-  eventSponsors,
-  eventTickets,
-  participantCountries,
-  participantDistribution,
-  participantMix,
-  sponsorCategories,
-  sponsorTierBreakdown,
-  topSponsors,
-} from "../../data/adminEvents";
+import { eventDetailTabs } from "../../data/adminEvents";
 import {
   engagementSpeakerToCard,
   SpeakerCardGrid,
@@ -303,42 +285,42 @@ type DetailView = {
 function toDetailView(engagement: Engagement | null): DetailView {
   if (!engagement) {
     return {
-      name: eventDetail.name,
-      statusLabel: eventDetail.status,
-      theme: eventDetail.theme.replace(/\.$/, ""),
-      type: eventDetail.type,
-      category: eventDetail.category,
+      name: "",
+      statusLabel: "—",
+      theme: "",
+      type: "—",
+      category: "—",
       audience: "—",
       tone: "—",
       language: "—",
       tags: [],
-      categoryValue: "legal",
-      audienceValue: "government",
-      toneValue: "professional",
-      languageValue: "en",
-      dates: eventDetail.dates.replace("–", "-"),
-      time: eventDetail.time.replace("–", "-"),
-      mode: eventDetail.mode,
-      venue: eventDetail.venue,
-      venueTitle: "Kenyatta International Convention Centre (KICC)",
-      venueCity: "Nairobi, Kenya",
-      email: eventDetail.email,
-      phone: eventDetail.phone,
-      description: eventDetail.description,
-      descriptionExtra: eventDetail.descriptionExtra,
-      createdBy: eventDetail.createdBy,
-      createdOn: eventDetail.createdOn,
-      lastUpdated: eventDetail.lastUpdated,
-      visibility: eventDetail.visibility,
-      registration: eventDetail.registration,
-      payment: eventDetail.payment,
+      categoryValue: "",
+      audienceValue: "",
+      toneValue: "",
+      languageValue: "",
+      dates: "—",
+      time: "—",
+      mode: "—",
+      venue: "—",
+      venueTitle: "—",
+      venueCity: "—",
+      email: "—",
+      phone: "—",
+      description: "",
+      descriptionExtra: "",
+      createdBy: "—",
+      createdOn: "—",
+      lastUpdated: "—",
+      visibility: "—",
+      registration: "—",
+      payment: "—",
       isFeatured: false,
-      website: eventDetail.website,
-      facebook: eventDetail.facebook,
-      twitter: eventDetail.twitter,
-      linkedin: eventDetail.linkedin,
-      cover: eventDetail.cover,
-      organizer: eventDetail.organizer,
+      website: "",
+      facebook: "",
+      twitter: "",
+      linkedin: "",
+      cover: "",
+      organizer: "—",
       programme: [],
       startDate: undefined,
     };
@@ -355,10 +337,10 @@ function toDetailView(engagement: Engagement | null): DetailView {
   const theme =
     engagement.shortDescription?.trim() ||
     themes[0] ||
-    eventDetail.theme.replace(/\.$/, "");
+    "";
 
   return {
-    name: engagement.engagementName || eventDetail.name,
+    name: engagement.engagementName || "Untitled event",
     statusLabel: formatEngagementStatusLabel(engagement.status),
     theme,
     type: toUiEventType(engagement.engagementType),
@@ -395,8 +377,8 @@ function toDetailView(engagement: Engagement | null): DetailView {
     facebook: engagement.facebookUrl || "",
     twitter: engagement.twitterUrl || "",
     linkedin: engagement.linkedinUrl || "",
-    cover: engagement.bannerImage || engagement.logo || eventDetail.cover,
-    organizer: engagement.contactName || "Anti-Counterfeit Authority",
+    cover: engagement.bannerImage || engagement.logo || "",
+    organizer: engagement.contactName || "—",
     programme: asProgramme(engagement.programme),
     startDate: engagement.startDate,
   };
@@ -404,7 +386,7 @@ function toDetailView(engagement: Engagement | null): DetailView {
 
 /** Screen E Event Details — structure from isippe3-event-details HTML package */
 export function EventDetailsPage() {
-  const { id = "isippe-3", tab = "overview" } = useParams();
+  const { id = "", tab = "overview" } = useParams();
   const navigate = useNavigate();
   const validTab = eventDetailTabs.some((t) => t.id === tab) ? tab : "overview";
   const [engagement, setEngagement] = useState<Engagement | null>(null);
@@ -476,36 +458,36 @@ export function EventDetailsPage() {
     return [
       {
         label: "Total Registrations",
-        value: fromApi ? registered.toLocaleString() : "1,248",
-        trend: fromApi ? "—" : "↑ 12%",
+        value: registered.toLocaleString(),
+        trend: "—",
         tone: "blue" as const,
       },
       {
         label: "Confirmed Participants",
-        value: fromApi ? registered.toLocaleString() : "1,102",
-        trend: fromApi ? "—" : "↑ 18%",
+        value: registered.toLocaleString(),
+        trend: "—",
         tone: "green" as const,
       },
       {
         label: "Speakers",
-        value: fromApi ? String(speakers.length) : "28",
-        trend: fromApi ? "—" : "↑ 7%",
+        value: String(speakers.length),
+        trend: "—",
         tone: "purple" as const,
       },
       {
         label: "Sponsors & Exhibitors",
-        value: fromApi ? String(sponsors.length) : "40",
-        trend: fromApi ? "—" : "↑ 21%",
+        value: String(sponsors.length),
+        trend: "—",
         tone: "orange" as const,
       },
       {
         label: "Total Revenue",
-        value: fromApi ? "KES 0" : "KES 2,740,000",
-        trend: fromApi ? "—" : "↑ 14%",
+        value: "KES 0",
+        trend: "—",
         tone: "red" as const,
       },
     ];
-  }, [engagement, fromApi, speakers.length, sponsors.length]);
+  }, [engagement, speakers.length, sponsors.length]);
 
   if (tab === "reports") {
     return <Navigate to={`/admin/events/${id}/reports`} replace />;
@@ -518,7 +500,7 @@ export function EventDetailsPage() {
           className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
           role="status"
         >
-          {error} Showing placeholder content where needed.
+          {error}
         </div>
       ) : null}
       {loading ? (
@@ -753,8 +735,7 @@ export function EventDetailsPage() {
                 : "text-[#26468e]",
             )}
             onClick={() => {
-              if (t.id === "reports") navigate(`/admin/events/${id}/reports`);
-              else navigate(`/admin/events/${id}/${t.id}`);
+              navigate(`/admin/events/${id}/${t.id}`);
             }}
           >
             {t.label}
@@ -1139,31 +1120,26 @@ function OverviewTab({
   onChanged: () => Promise<void>;
 }) {
   const [classifyOpen, setClassifyOpen] = useState(false);
-  const schedule =
-    detail.programme.length > 0
-      ? detail.programme.map((s, i) => {
-          const stamp = scheduleStamp(detail.startDate, i, s.day);
-          return {
-            key: s.id || `${s.title}-${i}`,
-            month: stamp.month,
-            day: stamp.day,
-            title: s.title,
-            time: s.time || [s.startTime, s.endTime].filter(Boolean).join(" - ") || "—",
-            place: s.venue || s.place || "—",
-          };
-        })
-      : fromApi
-        ? []
-        : eventSchedule.map((s) => ({
-            key: s.title,
-            month: s.month,
-            day: s.day,
-            title: s.title,
-            time: s.time,
-            place: s.place,
-          }));
+  const schedule = detail.programme.map((s, i) => {
+    const stamp = scheduleStamp(detail.startDate, i, s.day);
+    return {
+      key: s.id || `${s.title}-${i}`,
+      month: stamp.month,
+      day: stamp.day,
+      title: s.title,
+      time: s.time || [s.startTime, s.endTime].filter(Boolean).join(" - ") || "—",
+      place: s.venue || s.place || "—",
+    };
+  });
 
-  const registrations = fromApi ? [] : eventParticipants;
+  const registrations: Array<{
+    id?: string;
+    name: string;
+    type: string;
+    org: string;
+    status: string;
+    date: string;
+  }> = [];
 
   const socialLinks = [
     { label: "Event Website", url: detail.website, icon: "◎" },
@@ -1172,18 +1148,14 @@ function OverviewTab({
     { label: "LinkedIn", url: detail.linkedin, icon: "in" },
   ];
 
-  const participantSlices = fromApi
-    ? [
-        { label: "Delegates", count: 0, value: 0, color: "#0964ea" },
-        { label: "Speakers", count: 0, value: 0, color: "#08a268" },
-        { label: "Exhibitors", count: 0, value: 0, color: "#ffae00" },
-        { label: "Sponsors", count: 0, value: 0, color: "#a21ee5" },
-      ]
-    : participantMix;
+  const participantSlices = [
+    { label: "Delegates", count: 0, value: 0, color: "#0964ea" },
+    { label: "Speakers", count: 0, value: 0, color: "#08a268" },
+    { label: "Exhibitors", count: 0, value: 0, color: "#ffae00" },
+    { label: "Sponsors", count: 0, value: 0, color: "#a21ee5" },
+  ];
 
-  const participantTotal = fromApi
-    ? 0
-    : participantMix.reduce((sum, slice) => sum + slice.count, 0);
+  const participantTotal = 0;
 
   const edSocialItem =
     "group grid grid-cols-[32px_1fr_12px] items-center gap-2 text-[9px] text-inherit no-underline";
@@ -1600,26 +1572,15 @@ function parseKes(value?: string) {
   return Number(String(value).replace(/[^\d.]/g, "")) || 0;
 }
 
-function toTicketRows(tickets: EngagementTicket[], fromApi: boolean): TicketRow[] {
-  if (fromApi) {
-    return tickets.map((t, i) => ({
-      id: t.id || `tk-${i + 1}`,
-      name: t.name,
-      blurb: t.period || "Event ticket",
-      priceKes: parseKes(t.price),
-      capacity: t.capacity || 0,
-      sold: 0,
-      status: "Active",
-    }));
-  }
-  return eventTickets.map((t) => ({
-    id: t.id,
+function toTicketRows(tickets: EngagementTicket[]): TicketRow[] {
+  return tickets.map((t, i) => ({
+    id: t.id || `tk-${i + 1}`,
     name: t.name,
-    blurb: t.blurb,
+    blurb: t.period || "Event ticket",
     priceKes: parseKes(t.price),
-    capacity: t.capacity,
-    sold: t.sold,
-    status: t.status,
+    capacity: t.capacity || 0,
+    sold: 0,
+    status: "Active",
   }));
 }
 
@@ -1641,7 +1602,7 @@ function TicketsTab({
   const [editing, setEditing] = useState<EngagementTicket | null>(null);
   const [saving, setSaving] = useState(false);
   const toast = useToast();
-  const rows = toTicketRows(tickets, live);
+  const rows = toTicketRows(tickets);
 
   const persistTickets = async (next: EngagementTicket[], message: string) => {
     if (!fromApi) {
@@ -1689,8 +1650,8 @@ function TicketsTab({
   const capacity = rows.reduce((s, t) => s + t.capacity, 0);
   const sold = rows.reduce((s, t) => s + t.sold, 0);
   const remaining = Math.max(capacity - sold, 0);
-  const paid = live ? 0 : 1102;
-  const canceled = live ? 0 : 48;
+  const paid = 0;
+  const canceled = 0;
   const soldPct = capacity > 0 ? Math.round((sold / capacity) * 100) : 0;
   const remainPct = capacity > 0 ? Math.round((remaining / capacity) * 100) : 0;
   const totalRevenue = rows.reduce((s, t) => s + t.sold * t.priceKes, 0);
@@ -2325,8 +2286,21 @@ function ParticipantsTab({ fromApi, loading }: { fromApi: boolean; loading: bool
   const [selectAll, setSelectAll] = useState(false);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
 
-  const source = live ? [] : eventParticipants;
-  const totalLabel = live ? 0 : 3245;
+  const source: Array<{
+    id: string;
+    name: string;
+    email: string;
+    org: string;
+    type: string;
+    category: string;
+    status: string;
+    date: string;
+    time: string;
+    checkIn: string;
+    initials: string;
+    avatarTone: string;
+  }> = [];
+  const totalLabel = 0;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -2343,21 +2317,13 @@ function ParticipantsTab({ fromApi, loading }: { fromApi: boolean; loading: bool
     });
   }, [source, query, ticketFilter, statusFilter, categoryFilter, orgFilter, sideTicket, sideStatus]);
 
-  const kpis = live
-    ? [
-        { label: "Total Participants", value: "0", meta: "—", tone: "blue", stroke: "#0757ff", Icon: Users },
-        { label: "Confirmed", value: "0", meta: "—", tone: "green", stroke: "#00b65d", Icon: Check },
-        { label: "Pending", value: "0", meta: "—", tone: "amber", stroke: "#ff9200", Icon: Timer },
-        { label: "Cancelled", value: "0", meta: "—", tone: "red", stroke: "#ff303c", Icon: X },
-        { label: "On-site Check-in", value: "0", meta: "—", tone: "purple", stroke: "#ad00f5", Icon: Users },
-      ]
-    : [
-        { label: "Total Participants", value: "3,245", meta: "↑ 18%", tone: "blue", stroke: "#0757ff", Icon: Users },
-        { label: "Confirmed", value: "2,860", meta: "88%", tone: "green", stroke: "#00b65d", Icon: Check },
-        { label: "Pending", value: "210", meta: "6%", tone: "amber", stroke: "#ff9200", Icon: Timer },
-        { label: "Cancelled", value: "48", meta: "↓ 1.5%", tone: "red", stroke: "#ff303c", Icon: X },
-        { label: "On-site Check-in", value: "127", meta: "4%", tone: "purple", stroke: "#ad00f5", Icon: Users },
-      ];
+  const kpis = [
+    { label: "Total Participants", value: "0", meta: "—", tone: "blue", stroke: "#0757ff", Icon: Users },
+    { label: "Confirmed", value: "0", meta: "—", tone: "green", stroke: "#00b65d", Icon: Check },
+    { label: "Pending", value: "0", meta: "—", tone: "amber", stroke: "#ff9200", Icon: Timer },
+    { label: "Cancelled", value: "0", meta: "—", tone: "red", stroke: "#ff303c", Icon: X },
+    { label: "On-site Check-in", value: "0", meta: "—", tone: "purple", stroke: "#ad00f5", Icon: Users },
+  ];
 
   const iconTone: Record<string, string> = {
     blue: "bg-blue-50 text-blue-600",
@@ -2375,17 +2341,9 @@ function ParticipantsTab({ fromApi, loading }: { fromApi: boolean; loading: bool
     purple: "text-purple-600",
   };
 
-  const donutGradient = live
-    ? "conic-gradient(#d7e5f5 0 100%)"
-    : "conic-gradient(#0757ff 0 57%, #00a66a 57% 67%, #ffae00 67% 80%, #d719b4 80% 89%, #a56cff 89% 100%)";
-
-  const distribution = live
-    ? participantDistribution.map((d) => ({ ...d, count: 0, pct: 0 }))
-    : participantDistribution;
-
-  const countries = live
-    ? participantCountries.map((c) => ({ ...c, count: 0, pct: 0, bar: "0%" }))
-    : participantCountries;
+  const donutGradient = "conic-gradient(#d7e5f5 0 100%)";
+  const distribution: Array<{ label: string; count: number; pct: number; color: string }> = [];
+  const countries: Array<{ name: string; flag: string; count: number; pct: number; bar: string }> = [];
 
   const resetFilters = () => {
     setQuery("");
@@ -2407,12 +2365,12 @@ function ParticipantsTab({ fromApi, loading }: { fromApi: boolean; loading: bool
     const blob = new Blob([[header.join(","), ...lines].join("\n")], { type: "text/csv;charset=utf-8;" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "isippe-participants.csv";
+    a.download = "participants.csv";
     a.click();
     URL.revokeObjectURL(a.href);
   };
 
-  const orgs = [...new Set(eventParticipants.map((p) => p.org))];
+  const orgs: string[] = [];
 
   return (
     <div className="text-[#07135f]">
@@ -2849,12 +2807,11 @@ function ProgrammeTab({
 
 function SpeakersTab({
   speakers,
-  fromApi,
 }: {
   speakers: EngagementSpeaker[];
-  fromApi: boolean;
+  fromApi?: boolean;
 }) {
-  const rows = (fromApi ? speakers : draftSpeakers).map(engagementSpeakerToCard);
+  const rows = speakers.map(engagementSpeakerToCard);
 
   return (
     <Card>
@@ -3008,22 +2965,8 @@ function SponsorsTab({
     }
   };
 
-  const apiRows = useMemo(() => (live ? mapApiSponsors(sponsors) : []), [live, sponsors]);
-  const source: SponsorRow[] = live
-    ? apiRows
-    : [
-        ...localExtra,
-        ...eventSponsors.map((s) => ({
-          id: s.id,
-          name: s.name,
-          category: s.category,
-          type: s.type,
-          status: s.status,
-          value: s.value,
-          contact: s.contact,
-          logo: s.logo,
-        })),
-      ];
+  const apiRows = useMemo(() => mapApiSponsors(sponsors), [sponsors]);
+  const source: SponsorRow[] = [...localExtra, ...apiRows];
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -3041,20 +2984,12 @@ function SponsorsTab({
   const pending = source.filter((s) => s.status === "Pending").length;
   const declined = source.filter((s) => s.status === "Declined").length;
   const totalValue = source.reduce((sum, s) => sum + s.value, 0);
-  /** Mock dashboard reports 40 sponsors; sample rows are a subset (matches HTML replica). */
-  const totalCount = live ? source.length : 40;
-  const summaryTotal =
-    !live && !query && !categoryFilter && !statusFilter && !typeFilter
-      ? Math.max(filtered.length, totalCount)
-      : filtered.length;
+  const summaryTotal = filtered.length;
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const start = (currentPage - 1) * pageSize;
   const visible = filtered.slice(start, start + pageSize);
-  const pageButtons = Array.from(
-    { length: Math.min(4, Math.max(totalPages, !live && summaryTotal > filtered.length ? 4 : totalPages)) },
-    (_, i) => i + 1,
-  );
+  const pageButtons = Array.from({ length: Math.min(4, totalPages) }, (_, i) => i + 1);
 
   useEffect(() => {
     setPage(1);
@@ -3172,8 +3107,8 @@ function SponsorsTab({
     purple: "text-emerald-600",
   };
 
-  const donutGradient = live
-    ? source.length === 0
+  const donutGradient =
+    source.length === 0
       ? "conic-gradient(#d7e5f5 0 100%)"
       : (() => {
           const tiers = ["Platinum", "Gold", "Silver", "Bronze", "Supporting"];
@@ -3196,11 +3131,10 @@ function SponsorsTab({
               return `${colorsAll[i]} ${start}% ${end}%`;
             })
             .join(", ")})`;
-        })()
-    : "conic-gradient(#1670ff 0 24%, #00a86b 24% 52%, #ffb21b 52% 72%, #e83eaa 72% 90%, #a020f0 90% 100%)";
+        })();
 
   const liveTierPct = useMemo(() => {
-    if (!live || source.length === 0) return null;
+    if (source.length === 0) return null;
     const labels = ["Platinum", "Gold", "Silver", "Bronze", "Supporting"] as const;
     const colors = ["#1670ff", "#00a86b", "#ffb21b", "#e83eaa", "#a020f0"];
     const sums = labels.map((t) =>
@@ -3212,29 +3146,37 @@ function SponsorsTab({
       pct: Math.round((sums[i] / total) * 100),
       color: colors[i],
     }));
-  }, [live, source]);
+  }, [source]);
 
-  const categories = live
-    ? sponsorCategories.map((c) => ({ ...c, count: 0, value: 0 }))
-    : sponsorCategories;
+  const categories = (() => {
+    const map = new Map<string, { label: string; emoji: string; count: number; value: number }>();
+    for (const s of source) {
+      const key = s.category || "Other";
+      const cur = map.get(key) || { label: key, emoji: "🏢", count: 0, value: 0 };
+      cur.count += 1;
+      cur.value += s.value;
+      map.set(key, cur);
+    }
+    return [...map.values()];
+  })();
 
-  const tiers = live
-    ? liveTierPct ?? sponsorTierBreakdown.map((t) => ({ ...t, pct: 0 }))
-    : sponsorTierBreakdown;
+  const tiers =
+    liveTierPct ??
+    (["Platinum", "Gold", "Silver", "Bronze", "Supporting"] as const).map((label, i) => ({
+      label,
+      pct: 0,
+      color: ["#1670ff", "#00a86b", "#ffb21b", "#e83eaa", "#a020f0"][i],
+    }));
 
-  const tops = live
-    ? source.length === 0
-      ? topSponsors.map((t) => ({ ...t, valueLabel: "0", bar: "0%" }))
-      : [...source]
-          .sort((a, b) => b.value - a.value)
-          .slice(0, 5)
-          .map((s, _, arr) => ({
-            name: s.name,
-            flag: "🏢",
-            valueLabel: formatKesCompact(s.value),
-            bar: arr[0]?.value ? `${Math.round((s.value / arr[0].value) * 100)}%` : "0%",
-          }))
-    : topSponsors;
+  const tops = [...source]
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5)
+    .map((s, _, arr) => ({
+      name: s.name,
+      flag: "🏢",
+      valueLabel: formatKesCompact(s.value),
+      bar: arr[0]?.value ? `${Math.round((s.value / arr[0].value) * 100)}%` : "0%",
+    }));
 
   const categoryOptions = [
     "Telecommunications",
@@ -3277,7 +3219,7 @@ function SponsorsTab({
     });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `isippe-${noun}s.csv`;
+    a.download = `${noun}s.csv`;
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -3889,7 +3831,20 @@ function CommunicationsTab({
   const [statusFilter, setStatusFilter] = useState("");
   const toast = useToast();
 
-  const source = live ? [] : communicationCampaigns;
+  const source: Array<{
+    id: string;
+    name: string;
+    channel: CommChannel | string;
+    audience: string;
+    status: string;
+    recipients: number;
+    delivered: number;
+    deliveredPct: number;
+    clicks: number;
+    clicksPct: number;
+    date: string;
+    time: string;
+  }> = [];
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -3901,21 +3856,13 @@ function CommunicationsTab({
     });
   }, [source, channel, query, statusFilter]);
 
-  const kpis = live
-    ? [
-        { label: "Total Campaigns", value: "0", meta: "—", tone: "blue", stroke: "#0757ff", Icon: Send },
-        { label: "Recipients", value: "0", meta: "—", tone: "green", stroke: "#00ae62", Icon: Users },
-        { label: "Delivered", value: "0", meta: "—", tone: "blue2", stroke: "#00bf71", Icon: Mail },
-        { label: "Link Clicks", value: "0", meta: "—", tone: "purple", stroke: "#b41cff", Icon: ArrowUpRight },
-        { label: "Bounced", value: "0", meta: "—", tone: "red", stroke: "#ff303c", Icon: X },
-      ]
-    : [
-        { label: "Total Campaigns", value: "12", meta: "↑ 33%", tone: "blue", stroke: "#0757ff", Icon: Send },
-        { label: "Recipients", value: "3,245", meta: "↑ 18%", tone: "green", stroke: "#00ae62", Icon: Users },
-        { label: "Delivered", value: "2,980", meta: "↑ 92%", tone: "blue2", stroke: "#00bf71", Icon: Mail },
-        { label: "Link Clicks", value: "642", meta: "↑ 21%", tone: "purple", stroke: "#b41cff", Icon: ArrowUpRight },
-        { label: "Bounced", value: "38", meta: "↓ 1.2%", tone: "red", stroke: "#ff303c", Icon: X },
-      ];
+  const kpis = [
+    { label: "Total Campaigns", value: "0", meta: "—", tone: "blue", stroke: "#0757ff", Icon: Send },
+    { label: "Recipients", value: "0", meta: "—", tone: "green", stroke: "#00ae62", Icon: Users },
+    { label: "Delivered", value: "0", meta: "—", tone: "blue2", stroke: "#00bf71", Icon: Mail },
+    { label: "Link Clicks", value: "0", meta: "—", tone: "purple", stroke: "#b41cff", Icon: ArrowUpRight },
+    { label: "Bounced", value: "0", meta: "—", tone: "red", stroke: "#ff303c", Icon: X },
+  ];
 
   const iconTone: Record<string, string> = {
     blue: "bg-blue-50 text-blue-600",
@@ -3934,27 +3881,9 @@ function CommunicationsTab({
   };
 
   const channelTabs: CommChannel[] = ["All", "Email", "SMS", "In-App", "WhatsApp"];
-  const segments = live
-    ? communicationSegments.map((s) => ({ ...s, count: 0, pct: 0 }))
-    : communicationSegments;
-  const donutGradient = live
-    ? "conic-gradient(#d7e5f5 0 100%)"
-    : "conic-gradient(#0757ff 0 38%, #00a66a 38% 72%, #ffbf00 72% 75%, #a020f0 75% 99%, #f43f5e 99% 100%)";
-
-  const barPairs = [
-    [18, 8],
-    [35, 15],
-    [24, 10],
-    [53, 20],
-    [32, 18],
-    [43, 15],
-    [30, 10],
-    [65, 23],
-    [47, 18],
-    [78, 30],
-    [56, 23],
-    [92, 35],
-  ];
+  const segments: Array<{ label: string; count: number; pct: number; color: string }> = [];
+  const donutGradient = "conic-gradient(#d7e5f5 0 100%)";
+  const barPairs: Array<[number, number]> = [];
 
   return (
     <div className="relative text-[#07135f]">
@@ -4021,7 +3950,7 @@ function CommunicationsTab({
             <div className="flex flex-wrap items-center gap-2 px-3.5 pb-2.5">
               <div className="flex flex-wrap gap-1.5">
                 {channelTabs.map((tab) => {
-                  const count = communicationChannelCounts[tab];
+                  const count = 0;
                   const active = channel === tab;
                   return (
                     <button
@@ -4273,7 +4202,7 @@ function CommunicationsTab({
                   </tr>
                 </thead>
                 <tbody>
-                  {(live ? [] : communicationTemplates).map((t) => (
+                  {([] as Array<{ id: string; name: string; channel: string }>).map((t) => (
                     <tr key={t.id}>
                       <td className="border-b border-l border-blue-100 px-2 py-2">{t.name}</td>
                       <td className="border-b border-blue-100 px-2 py-2">{channelBadge(t.channel)}</td>

@@ -106,99 +106,6 @@ function formatDayDate(startIso: string | undefined, dayIndex: number): string {
   });
 }
 
-const SAMPLE_DAY1: ScheduleRow[] = [
-  {
-    id: "sample-1",
-    time: "08:00 – 09:00",
-    title: "Registration and Networking Coffee",
-    type: "Registration",
-    typeTone: "blue",
-    speakers: "—",
-    venue: "Main Lobby",
-    venueSub: "(KICC)",
-  },
-  {
-    id: "sample-2",
-    time: "09:00 – 09:30",
-    title: "Official Opening Ceremony",
-    type: "Ceremony",
-    typeTone: "red",
-    speakers: "ACA Leadership\nGovernment Representatives",
-    venue: "Tsavo Ballroom",
-    venueSub: "(KICC)",
-  },
-  {
-    id: "sample-3",
-    time: "09:30 – 10:30",
-    title: "Keynote Address: The Future of IP Protection in Africa",
-    type: "Keynote",
-    typeTone: "green",
-    speakers: "International Expert",
-    venue: "Tsavo Ballroom",
-    venueSub: "(KICC)",
-  },
-  {
-    id: "sample-4",
-    time: "10:30 – 11:00",
-    title: "Health Break & Networking",
-    type: "Break",
-    typeTone: "blue",
-    speakers: "—",
-    venue: "Exhibition Area",
-    venueSub: "(KICC)",
-  },
-  {
-    id: "sample-5",
-    time: "11:00 – 12:30",
-    title: "Panel Discussion: Combating Counterfeiting Through Regional Collaboration",
-    type: "Panel",
-    typeTone: "blue",
-    speakers: "Industry Leaders\nPolicy Makers",
-    venue: "Tsavo Ballroom",
-    venueSub: "(KICC)",
-  },
-  {
-    id: "sample-6",
-    time: "12:30 – 14:00",
-    title: "Lunch Break",
-    type: "Break",
-    typeTone: "blue",
-    speakers: "—",
-    venue: "Simba Restaurant",
-    venueSub: "(KICC)",
-  },
-  {
-    id: "sample-7",
-    time: "14:00 – 15:30",
-    title: "Roundtable: Emerging Technologies in IP Enforcement",
-    type: "Roundtable",
-    typeTone: "purple",
-    speakers: "Experts & Stakeholders",
-    venue: "Amboseli Room",
-    venueSub: "(KICC)",
-  },
-  {
-    id: "sample-8",
-    time: "15:30 – 16:00",
-    title: "Coffee Break",
-    type: "Break",
-    typeTone: "blue",
-    speakers: "—",
-    venue: "Exhibition Area",
-    venueSub: "(KICC)",
-  },
-  {
-    id: "sample-9",
-    time: "16:00 – 17:30",
-    title: "Case Studies: Successful IP Enforcement Initiatives in Africa",
-    type: "Presentation",
-    typeTone: "orange",
-    speakers: "Regional Experts",
-    venue: "Maasai Room",
-    venueSub: "(KICC)",
-  },
-];
-
 function toRows(sessions: EngagementProgrammeSession[]): ScheduleRow[] {
   return sessions.map((s, i) => {
     const type = inferType(s);
@@ -221,35 +128,8 @@ function buildDays(args: {
   programme: EngagementProgrammeSession[];
   startDate?: string;
   location: string;
-  useSampleFallback: boolean;
 }): ProgrammeDay[] {
-  const { programme, startDate, location, useSampleFallback } = args;
-
-  if (programme.length === 0 && useSampleFallback) {
-    return [
-      {
-        id: "day-1",
-        label: "Day 1",
-        dateLabel: formatDayDate(startDate || "2026-11-12T06:00:00.000Z", 1),
-        location,
-        rows: SAMPLE_DAY1.map((r) => ({ ...r, venueThumb: DEFAULT_THUMB })),
-      },
-      {
-        id: "day-2",
-        label: "Day 2",
-        dateLabel: formatDayDate(startDate || "2026-11-12T06:00:00.000Z", 2),
-        location,
-        rows: [],
-      },
-      {
-        id: "day-3",
-        label: "Day 3",
-        dateLabel: formatDayDate(startDate || "2026-11-12T06:00:00.000Z", 3),
-        location,
-        rows: [],
-      },
-    ];
-  }
+  const { programme, startDate, location } = args;
 
   const grouped = new Map<number, EngagementProgrammeSession[]>();
   programme.forEach((session, index) => {
@@ -365,7 +245,6 @@ export function EventProgrammeSchedule({
   programme,
   startDate,
   location,
-  fromApi = false,
 }: {
   programme: EngagementProgrammeSession[];
   startDate?: string;
@@ -378,9 +257,8 @@ export function EventProgrammeSchedule({
         programme,
         startDate,
         location,
-        useSampleFallback: !fromApi,
       }),
-    [programme, startDate, location, fromApi],
+    [programme, startDate, location],
   );
 
   const [openId, setOpenId] = useState<string>(days[0]?.id ?? "day-1");
@@ -440,9 +318,7 @@ export function EventProgrammeSchedule({
                 <ScheduleTable rows={day.rows} />
               ) : (
                 <div className="border-t border-[#e4edf5] bg-[#f8fbfe] px-6 py-5 text-sm text-[#60718d]">
-                  {fromApi
-                    ? `No sessions scheduled for ${day.label} yet. Add sessions when editing this event.`
-                    : `Add ${day.label} programme sessions here using the same schedule structure.`}
+                  {`No sessions scheduled for ${day.label} yet. Add sessions when editing this event.`}
                 </div>
               )}
             </div>
