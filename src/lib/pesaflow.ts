@@ -85,6 +85,13 @@ export function submitCheckoutToFrame(
   // Always re-sanitize at submit time so extras never reach Pesaflow.
   const safeFields = toPesaflowFormFields(fields);
 
+  console.log("[pesaflow] iframe form POST", {
+    url,
+    target: frameName,
+    fields: { ...safeFields },
+    droppedKeys: Object.keys(fields).filter((k) => !(k in safeFields)),
+  });
+
   const form = document.createElement("form");
   form.method = "POST";
   form.action = url;
@@ -141,21 +148,30 @@ type InitiateCheckoutResponse = ECitizenCheckoutSession & {
 /** Start eCitizen checkout — returns iframe POST url + fields. */
 export async function initiateEcitizenCheckout(input: InitiateCheckoutInput) {
   const callbackURL = input.callbackURL || frontendCallbackUrl();
-  const res = await fetch(`${PAYMENT_API_BASE}/ecitizen/initiate-checkout`, {
+  const body = {
+    amount: input.amount,
+    email: input.email,
+    idNumber: input.idNumber,
+    phone: input.phone,
+    name: input.name,
+    itemDescription: input.itemDescription,
+    ...(input.currency ? { currency: input.currency } : {}),
+    ...(callbackURL ? { callbackURL } : {}),
+  };
+  const endpoint = `${PAYMENT_API_BASE}/ecitizen/initiate-checkout`;
+  console.log("[pesaflow] initiate-checkout request", { url: endpoint, body });
+
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: paymentHeaders(),
-    body: JSON.stringify({
-      amount: input.amount,
-      email: input.email,
-      idNumber: input.idNumber,
-      phone: input.phone,
-      name: input.name,
-      itemDescription: input.itemDescription,
-      ...(input.currency ? { currency: input.currency } : {}),
-      ...(callbackURL ? { callbackURL } : {}),
-    }),
+    body: JSON.stringify(body),
   });
   const data = (await res.json()) as InitiateCheckoutResponse;
+  console.log("[pesaflow] initiate-checkout response", {
+    status: res.status,
+    url: data?.url,
+    fields: data?.fields,
+  });
   if (!res.ok || !data?.url || !data?.fields) {
     throw new Error(data?.error?.message || "Failed to initialize eCitizen payment.");
   }
