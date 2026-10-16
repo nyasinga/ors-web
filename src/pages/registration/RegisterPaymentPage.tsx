@@ -18,6 +18,7 @@ export function RegisterPaymentPage() {
   const toast = useToast();
   const event = useEventCopy();
   const {
+    files,
     participationType,
     details,
     reference,
@@ -29,8 +30,7 @@ export function RegisterPaymentPage() {
     late,
     selectedSponsorPackage,
   } = useRegistration();
-  const typeLabel =
-    participationTypes.find((item) => item.id === participationType)?.title ?? "Delegate";
+  const typeLabel = participationTypes.find((item) => item.id === participationType)?.title ?? "Delegate";
   const invoiceDescription = selectedSponsorPackage
     ? `${event.name || "Event"} — ${selectedSponsorPackage.name}`
     : `${event.name || "Event"} registration fee`;
@@ -90,24 +90,29 @@ export function RegisterPaymentPage() {
         fullName: details.fullName,
         email: details.email,
         phoneNo: details.phone,
-        organisation: details.organisation,
-        jobTitle: details.jobTitle,
         country: details.country,
         city: details.city,
-        dietary: details.dietary,
-        accessibility: details.accessibility,
-        reference,
-        feeKes,
-        feeLabel,
         userType: participationType,
-        invoiceRef,
-        ...(selectedSponsorPackage
-          ? {
-              sponsorPackageId: selectedSponsorPackage.id,
-              sponsorPackageName: selectedSponsorPackage.name,
-            }
-          : {}),
-      });
+        extraData: {
+          dietary: details.dietary,
+          accessibility: details.accessibility,
+          jobTitle: details.jobTitle,
+          organisation: details.organisation,
+          eCitizen: {
+            reference,
+            feeKes,
+            feeLabel,
+            invoiceRef,
+            ...(selectedSponsorPackage
+              ? {
+                  sponsorPackageId: selectedSponsorPackage.id,
+                  sponsorPackageName: selectedSponsorPackage.name,
+                }
+              : {}),
+          }
+        },
+      }, files);
+
       setIsModalOpen(false);
       toast.success("Payment confirmed — registration complete.");
       navigate("/register/confirmation");

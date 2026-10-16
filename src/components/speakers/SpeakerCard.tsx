@@ -74,7 +74,7 @@ export function SpeakerCard({ speaker, onViewProfile }: SpeakerCardProps) {
 
   return (
     <article className="grid min-h-[185px] grid-cols-[111px_1fr] gap-2 rounded-[7px] border border-[#e0e8f1] bg-white p-2.5 shadow-[0_1px_5px_rgba(15,52,86,0.025)] max-[1200px]:grid-cols-[95px_1fr] max-[640px]:min-h-[126px] max-[640px]:grid-cols-[82px_1fr] max-[640px]:gap-[9px] max-[640px]:p-2">
-      {speaker.photo ? (
+      {speaker.photo?.trim() && !speaker.photo?.trim().includes('/assets/') ? (
         <img
           className={cn(photoBase, "block bg-[#e8edf2] object-cover object-top")}
           src={resourcePublicUrl(speaker.photo)}

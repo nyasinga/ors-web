@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -9,6 +10,18 @@ import {
 import type { ParticipationType } from "../data/registration";
 import { useEventCopy, useRegistrationFees } from "../i18n/useEventCopy";
 import type { PublicSponsorPackage } from "../lib/publicEvent";
+
+export const IMAGE_KEY = 'avatar.jpg';
+export const PERSIST_KEY = 'isippe-registration-details';
+export const IMAGE_PERSIST_KEY = `${PERSIST_KEY}-avatar`;
+
+export type PersistedImage = {
+  dataUrl: string;
+  name: string;
+  type: string;
+  size: number;
+  lastModified: number;
+};
 
 export type RegistrationDetails = {
   title: string;
@@ -35,10 +48,15 @@ export type SelectedSponsorPackage = {
 };
 
 type RegistrationContextValue = {
+  files: File[];
+  setFiles: (files: File[] | ((prev: File[]) => File[])) => void;
+  profilePicturePreview: string;
+  setProfilePicturePreview: (value: string) => void;
   participationType: ParticipationType;
   setParticipationType: (t: ParticipationType) => void;
   details: RegistrationDetails;
   setDetails: (patch: Partial<RegistrationDetails>) => void;
+  clearDetails: () => void;
   reference: string;
   feeKes: number;
   feeUsd: number;
@@ -58,6 +76,7 @@ type RegistrationContextValue = {
     kes: number;
     usd: number;
   };
+  
   /** Set when a sponsorship package has been chosen. */
   selectedSponsorPackage: SelectedSponsorPackage | null;
   /** Where the package was chosen from — drives Back navigation. */
@@ -105,16 +124,19 @@ function parsePackageAmounts(price?: string | number) {
 const RegistrationContext = createContext<RegistrationContextValue | null>(null);
 
 export function RegistrationProvider({ children }: { children: ReactNode }) {
+  
+  const [files, setFiles] = useState<File[]>([]);
+  const [profilePicturePreview, setProfilePicturePreview] = useState("");
+  const [pictureLoaded, setPictureLoaded] = useState(false);
+  const [detailsLoaded, setDetailsLoaded] = useState(false);
+
   const event = useEventCopy();
   const fees = useRegistrationFees();
-  const [participationType, setParticipationTypeState] =
-    useState<ParticipationType>("delegate");
+
+  const [participationType, setParticipationTypeState] = useState<ParticipationType>("delegate");
   const [details, setDetailsState] = useState<RegistrationDetails>(defaultDetails);
-  const [selectedSponsorPackage, setSelectedSponsorPackage] =
-    useState<SelectedSponsorPackage | null>(null);
-  const [sponsorEntrySource, setSponsorEntrySource] = useState<
-    "sponsorship" | "register" | null
-  >(null);
+  const [selectedSponsorPackage, setSelectedSponsorPackage] = useState<SelectedSponsorPackage | null>(null);
+  const [sponsorEntrySource, setSponsorEntrySource] = useState<"sponsorship" | "register" | null>(null);
   const [referenceSuffix] = useState(() => Math.floor(100000 + Math.random() * 900000));
   const reference = `${event.referencePrefix}-${referenceSuffix}`;
 
@@ -149,6 +171,102 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
     },
     [clearSponsorPackage],
   );
+
+  const clearDetails = useCallback(() => {
+    setDetailsState(defaultDetails);
+    setParticipationTypeState("delegate");
+    setFiles([]);
+    setProfilePicturePreview("");
+    clearSponsorPackage();
+  
+    localStorage.removeItem(PERSIST_KEY);
+    localStorage.removeItem(IMAGE_PERSIST_KEY);
+  }, [clearSponsorPackage]);
+
+
+  /* Restore profile picture */
+  useEffect(() => {
+    const restoreImage = async () => {
+      try {
+        const saved = localStorage.getItem(IMAGE_PERSIST_KEY);
+        if (!saved) return;
+
+        const image: PersistedImage = JSON.parse(saved);
+        const response = await fetch(image.dataUrl);
+        const blob = await response.blob();
+        const file = new File([blob], image.name, {
+          type: image.type,
+          lastModified: image.lastModified,
+        });
+
+        setFiles((prev) => [
+          ...prev.filter((f) => f.name !== IMAGE_KEY),
+          file,
+        ]);
+        setProfilePicturePreview(image.dataUrl);
+      } catch (error) {
+        console.error("Failed to restore profile picture:", error);
+      } finally {
+        setPictureLoaded(true);
+      }
+    };
+
+    void restoreImage();
+  }, []);
+
+  /* Persist profile picture */
+  useEffect(() => {
+    if (!pictureLoaded) return;
+    const file = files.find((f) => f.name === IMAGE_KEY);
+
+    if (!file) {
+      localStorage.removeItem(IMAGE_PERSIST_KEY);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image: PersistedImage = {
+        dataUrl: reader.result as string,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        lastModified: file.lastModified,
+      };
+
+      try {
+        localStorage.setItem(IMAGE_PERSIST_KEY, JSON.stringify(image));
+      } catch (error) {
+        console.error("Failed to persist profile picture:", error);
+      }
+    };
+
+    reader.readAsDataURL(file);
+  }, [files, pictureLoaded]);
+
+  /* Restore registration details */
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(PERSIST_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setDetailsState(parsed.details ?? parsed);
+        if (parsed.participationType) {
+          setParticipationTypeState(parsed.participationType);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to restore registration details:", error);
+    } finally {
+      setDetailsLoaded(true);
+    }
+  }, []);
+
+  /* Persist registration details */
+  useEffect(() => {
+    if (!detailsLoaded) return;
+    localStorage.setItem(PERSIST_KEY, JSON.stringify({ details, participationType }));
+  }, [details, detailsLoaded, participationType]);
 
   const active = fees[fees.active];
   const usingSponsor = Boolean(selectedSponsorPackage);
@@ -186,6 +304,11 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
       selectSponsorPackage,
       clearSponsorPackage,
       fromSponsorship: usingSponsor,
+      files,
+      setFiles,
+      profilePicturePreview,
+      setProfilePicturePreview,
+      clearDetails,
     }),
     [
       participationType,
@@ -202,6 +325,8 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
       selectSponsorPackage,
       clearSponsorPackage,
       usingSponsor,
+      files,
+      clearDetails,
     ],
   );
 

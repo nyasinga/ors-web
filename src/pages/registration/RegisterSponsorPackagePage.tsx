@@ -24,6 +24,7 @@ export function RegisterSponsorPackagePage() {
     participationType,
     selectedSponsorPackage,
     selectSponsorPackage,
+    clearDetails
   } = useRegistration();
 
   const packages = useMemo(() => engagementToPublicSponsors(engagement), [engagement]);
@@ -48,6 +49,7 @@ export function RegisterSponsorPackagePage() {
       toast.error("No sponsorship packages are available yet.");
       return;
     }
+    clearDetails();
     selectSponsorPackage(selected, "register");
     navigate("/register/details");
   };

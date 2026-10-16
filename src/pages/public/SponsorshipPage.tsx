@@ -55,7 +55,7 @@ const arrow = "text-[23px] font-normal leading-none";
 /** Sponsorship — packages from the public engagement API. */
 export function SponsorshipPage() {
   const navigate = useNavigate();
-  const { selectSponsorPackage } = useRegistration();
+  const { selectSponsorPackage, clearDetails } = useRegistration();
   const { engagement } = usePublicEngagement();
   const packages = useMemo(() => engagementToPublicSponsors(engagement), [engagement]);
   const [selected, setSelected] = useState(packages[0]?.id || "");
@@ -71,6 +71,7 @@ export function SponsorshipPage() {
   const eventName = engagement?.engagementName?.trim() || "Event";
 
   const continueWithPackage = (item: PublicSponsorPackage) => {
+    clearDetails();
     selectSponsorPackage(item, "sponsorship");
     navigate("/register/details");
   };

@@ -162,7 +162,7 @@ export function FaqPage() {
                     <div
                       className={cn(
                         "rounded-b-[7px] border border-t-0 border-[#dfe8f1] bg-white px-[22px] pb-[17px] text-[13px] leading-[1.5] text-[#53627a] max-[760px]:px-[15px] max-[760px]:pb-[13px] max-[760px]:text-[11px]",
-                        open ? "block" : "hidden",
+                        open ? "block pt-3" : "hidden",
                       )}
                     >
                       {item.a}

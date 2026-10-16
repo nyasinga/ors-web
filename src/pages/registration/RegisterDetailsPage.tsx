@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
-import { useRegistration } from "../../contexts/RegistrationContext";
+import { IMAGE_KEY, IMAGE_PERSIST_KEY, useRegistration } from "../../contexts/RegistrationContext";
 import { participationTypes } from "../../data/registration";
 import { formatMoney } from "../../i18n/format";
 import { useEventCopy } from "../../i18n/useEventCopy";
@@ -9,6 +9,7 @@ import { cn } from "../../lib/cn";
 import { engagementToPublicSponsors } from "../../lib/publicEvent";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import * as r from "../../components/registration/registerStyles";
+import ImagePicker from "../../components/ui/ImagePicker";
 
 const defaultInclusions = [
   "Access to all plenary and parallel sessions",
@@ -24,7 +25,12 @@ export function RegisterDetailsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const event = useEventCopy();
   const { engagement } = usePublicEngagement();
+  
   const {
+    files, 
+    setFiles,
+    profilePicturePreview,
+    setProfilePicturePreview,
     details,
     setDetails,
     earlyBird,
@@ -45,7 +51,6 @@ export function RegisterDetailsPage() {
 
   const packages = useMemo(() => engagementToPublicSponsors(engagement), [engagement]);
 
-  // Deep link: /register/details?type=sponsor&package=gold
   useEffect(() => {
     const type = searchParams.get("type");
     const packageId = searchParams.get("package");
@@ -216,6 +221,44 @@ export function RegisterDetailsPage() {
                   />
                   {errors.city ? <span className={r.fieldError}>{errors.city}</span> : null}
                 </div>
+              </div>
+              <div className="mt-4 pt-4">
+                <label className={r.fieldLabel}>
+                  Profile Picture <span className="text-gray-400">(Optional)</span>
+                </label>
+
+                <p className="mb-3 text-xs text-[#60708b]">
+                  Choose a picture and crop it before saving. The file will be uploaded
+                  later with your registration.
+                </p>
+
+                <ImagePicker
+                  imageKey={IMAGE_KEY}
+                  value={profilePicturePreview}
+                  onChange={(file) => {
+                    if (!file) {
+                      setFiles((prev) => prev.filter((f) => f.name !== IMAGE_KEY));
+                      setProfilePicturePreview("");
+                      localStorage.removeItem(IMAGE_PERSIST_KEY);
+                      return;
+                    }
+
+                    const renamedFile = new File([file], IMAGE_KEY, {
+                      type: file.type,
+                      lastModified: file.lastModified,
+                    });
+
+                    // Update the preview immediately using the new file.
+                    const previewUrl = URL.createObjectURL(renamedFile);
+                    setProfilePicturePreview(previewUrl);
+
+                    setFiles((prev) => [
+                      ...prev.filter((f) => f.name !== IMAGE_KEY),
+                      renamedFile,
+                    ]);
+                  }}
+                />
+                
               </div>
             </div>
 

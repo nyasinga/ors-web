@@ -112,10 +112,10 @@ export function AboutPage() {
       <PageHero
         dark
         breadcrumb="About"
-        title={`About ${about.name}`}
+        title={`About ${about.name?.split(' ')?.[0]}`}
         description={about.shortDescription}
         image="/assets/about-hero.jpg"
-        imageAlt={`About ${about.name}`}
+        imageAlt={`About ${about.name?.split(' ')?.[0]}`}
         combinedLocation
       />
 
@@ -301,7 +301,7 @@ export function AboutPage() {
                 <div className="rounded-[7px] border border-[#e0e8f2] bg-[linear-gradient(160deg,#f3f9ff,#fff)] p-4">
                   <h3 className="text-[16px] font-extrabold text-[#10236f]">{about.venueTitle}</h3>
                   <p className="mt-2 flex items-start gap-2 text-[12px] leading-[1.45] text-[#52617c]">
-                    <MapPin size={16} className="mt-0.5 shrink-0 text-[#075fd8]" />
+                    <MapPin size={16} className="mt-0.5 shrink-0 text-[#f2f2f2]" />
                     <span>
                       {about.venueCity}
                       {about.venueCountry ? `, ${about.venueCountry}` : ""}
@@ -334,7 +334,7 @@ export function AboutPage() {
                 <span>{about.datesLabel}</span>
               </div>
               <div className={detailRow}>
-                <MapPin size={23} strokeWidth={0} fill="currentColor" />
+                <MapPin size={23} strokeWidth={2} />
                 <span>
                   {about.venueTitle}
                   <br />

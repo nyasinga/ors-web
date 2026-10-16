@@ -170,23 +170,48 @@ export async function initiateEcitizenCheckout(input: InitiateCheckoutInput) {
 export const createEcitizenInvoice = initiateEcitizenCheckout;
 
 export type SignupIsippeInput = Record<string, unknown> & {
+  title: string;
   email: string;
   fullName: string;
   phoneNo: string;
   userType: string;
-  invoiceRef: string;
+  country: string;
+  city: string;
+  extraData: any
 };
 
 /** Finalize registration after the user completes payment in the iframe. */
-export async function signupAfterPayment(input: SignupIsippeInput) {
+export async function signupAfterPayment(
+  input: SignupIsippeInput,
+  files: File[] = [],
+) {
+  const formData = new FormData();
+
+  Object.entries(input).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    formData.append(
+      key,
+      typeof value === "object" ? JSON.stringify(value) : String(value),
+    );
+  });
+
+  files.forEach((file) => formData.append("files", file, file.name));
+
+  const headers = paymentHeaders();
+  delete (headers as Record<string, string>)["Content-Type"];
+  delete (headers as Record<string, string>)["content-type"];
+
   const res = await fetch(`${PAYMENT_API_BASE}/signup-isippe`, {
     method: "POST",
-    headers: paymentHeaders(),
-    body: JSON.stringify(input),
+    headers,
+    body: formData,
   });
-  const data = (await res.json()) as { error?: { message?: string } };
+
+  const data = await res.json();
+
   if (!res.ok) {
     throw new Error(data?.error?.message || "Registration failed after payment.");
   }
+
   return data;
 }
