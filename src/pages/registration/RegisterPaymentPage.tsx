@@ -11,6 +11,7 @@ import { cn } from "../../lib/cn";
 import { initiateEcitizenCheckout, signupAfterPayment } from "../../lib/pesaflow";
 import type { ECitizenCheckoutSession } from "../../types/registration";
 import * as r from "../../components/registration/registerStyles";
+import { Currency } from "lucide-react";
 
 /** Registration step 3 — initiate-checkout → eCitizen iframe → signup-isippe. */
 export function RegisterPaymentPage() {
@@ -99,17 +100,21 @@ export function RegisterPaymentPage() {
           jobTitle: details.jobTitle,
           organisation: details.organisation,
           engagementID: null,
+
+          sponsorPackage:(selectedSponsorPackage? {
+            id: selectedSponsorPackage.id,
+            name: selectedSponsorPackage.name
+          } : {}),
+
+          ticket: {
+            amount: 
+            Currency: 
+          }, 
+
           eCitizen: {
             reference,
-            feeKes,
-            feeLabel,
-            invoiceRef,
-            ...(selectedSponsorPackage
-              ? {
-                  sponsorPackageId: selectedSponsorPackage.id,
-                  sponsorPackageName: selectedSponsorPackage.name,
-                }
-              : {}),
+            currency,
+            invoiceRef
           }
         },
       }, files);

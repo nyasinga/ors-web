@@ -193,7 +193,30 @@ export type SignupIsippeInput = Record<string, unknown> & {
   userType: string;
   country: string;
   city: string;
-  extraData: any
+  extraData: {
+    dietary: any; 
+    accessibility: any;
+    jobTitle: string;
+    organisation: string;
+    engagementID: null | string | number;
+
+    sponsorPackage: {
+      id: string | number;
+      name: string;
+    } | Record<string, never>; 
+
+    ticket: {
+      amount: number;
+      Currency: string;
+    }; 
+
+    eCitizen: {
+      reference: string;
+      currency: string;
+      invoiceRef: string;
+    };
+  }
+
 };
 
 /** Finalize registration after the user completes payment in the iframe. */
