@@ -98,6 +98,7 @@ export function RegisterPaymentPage() {
           accessibility: details.accessibility,
           jobTitle: details.jobTitle,
           organisation: details.organisation,
+          engagementID: null,
           eCitizen: {
             reference,
             feeKes,

@@ -12,8 +12,7 @@ export function RegisterConfirmationPage() {
   const { details, participationType, feeKes, feeLabel, reference } = useRegistration();
   const typeLabel =
     participationTypes.find((item) => item.id === participationType)?.title ?? "Delegate";
-  const displayName =
-    [details.title, details.fullName].filter(Boolean).join(" ") || "Jimmy Ng'etich";
+  const displayName = [details.title, details.fullName].filter(Boolean).join(" ") || "Jimmy Ng'etich";
   const displayEmail = details.email || "jimmy@example.co.ke";
   const displayOrg = details.organisation || "SlickSales Limited";
   const totalPaid = feeKes + 50;
