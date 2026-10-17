@@ -191,7 +191,7 @@ export function ProgrammePage() {
                     {meta.weekday ? `, ${meta.weekday}` : ""}
                   </div>
                   <div className="ml-auto flex items-center gap-2 text-[11px] text-[#101827] max-[700px]:hidden [&_svg]:h-[19px] [&_svg]:w-[19px] [&_svg]:shrink-0 [&_svg]:text-[#0964df]">
-                    <MapPin size={19} strokeWidth={0} fill="currentColor" />
+                    <MapPin size={19} strokeWidth={2} />
                     {programme.venueLine}
                   </div>
                   <span

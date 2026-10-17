@@ -458,8 +458,7 @@ export function HomePage() {
               <MapPin
                 className="absolute bottom-[7px] left-0 h-[25px] w-[25px] text-white"
                 size={25}
-                strokeWidth={0}
-                fill="currentColor"
+                strokeWidth={2}
               />
               <strong className="block text-[11px] leading-[1.2]">{home.venueName}</strong>
               <span className="mt-0.5 block text-[10.5px]">{home.venueCityCountry}</span>

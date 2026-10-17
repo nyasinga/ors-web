@@ -204,8 +204,7 @@ export function RegisterHero({
               <div className="h-[34px] w-[34px] shrink-0 max-[760px]:h-[26px] max-[760px]:w-[26px]">
                 <MapPin
                   size={34}
-                  strokeWidth={0}
-                  fill="currentColor"
+                  strokeWidth={2}
                   className="block h-[34px] w-[34px] max-[760px]:h-[26px] max-[760px]:w-[26px]"
                 />
               </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Award,
@@ -11,14 +11,51 @@ import {
   Users,
 } from "lucide-react";
 import { useEventCopy } from "../../i18n/useEventCopy";
-import { participantPass, participantSessions } from "../../data/dashboards";
 import { cn } from "../../lib/cn";
+import { getParticipantSession, type ParticipantSession } from "../../lib/participantAuth";
+import { getEngagement } from "../../lib/engagements";
+import { ApiError } from "../../lib/api";
+import type { Engagement } from "../../types/engagement";
 
 const days = [
   { id: "12", label: "Thu, 12 Nov" },
   { id: "13", label: "Fri, 13 Nov" },
   { id: "14", label: "Sat, 14 Nov" },
 ];
+
+const formatDate = (value?: string) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : new Intl.DateTimeFormat("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }).format(date);
+};
+
+const formatEventDates = (engagement: Engagement | null) => {
+  if (!engagement) return "—";
+  const start = formatDate(engagement.startDate);
+  const end = formatDate(engagement.endDate);
+  return start === end ? start : `${start} – ${end}`;
+};
+
+const formatMoney = (amount?: number, currency?: string) => {
+  if (amount === undefined || amount === null || !Number.isFinite(amount)) return "—";
+  try {
+    return new Intl.NumberFormat("en", {
+      style: "currency",
+      currency: currency || "KES",
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return `${currency || "KES"} ${amount.toLocaleString()}`;
+  }
+};
+
+const displayValue = (value?: string | null) => value?.trim() || "—";
 
 const whatsNext = [
   {
@@ -111,12 +148,49 @@ export function ParticipantDashboardPage() {
   const event = useEventCopy();
   const [day, setDay] = useState("12");
 
-  const sessions =
-    day === "12"
-      ? participantSessions
-      : day === "13"
-        ? participantSessions.slice(1, 3)
-        : participantSessions.slice(2);
+  const session: ParticipantSession | null = getParticipantSession();
+  const engagementID = session?.engagementID;
+
+  const [engagement, setEngagement] = useState<Engagement | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => { 
+    let cancelled = false;
+
+    if (!session?.engagementID) {
+      setEngagement(null);
+      setError("Your participant session does not include an event ID. Please sign in again.");
+      setLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const row = await getEngagement(session?.engagementID); console.log(row);
+        if (!cancelled) setEngagement(row);
+      } catch (err) {
+        if (cancelled) return;
+        const message =
+          err instanceof ApiError
+            ? err.message
+            : err instanceof Error
+              ? err.message
+              : "Failed to load event";
+        setError(message);
+        setEngagement(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.engagementID]);
 
   return (
     <>
@@ -138,25 +212,24 @@ export function ParticipantDashboardPage() {
               "max-[640px]:text-[length:clamp(1.6rem,7vw,2rem)]",
             )}
           >
-            {participantPass.name}
+            {session?.fullName || "Participant"}
           </h1>
-          <div className="mb-[17px] text-[17px] max-[600px]:text-[13px]">{event.name} Participant</div>
+          <div className="mb-[17px] text-[17px] max-[600px]:text-[13px]">{engagement?.engagementName || event.name} Participant</div>
           <div className="flex items-center gap-4 max-[600px]:block">
             <div className="flex items-center gap-[9px] text-[11px] max-[600px]:my-[7px] max-[600px]:text-[9px]">
               <CalendarDays className={heroEventSvg} size={28} strokeWidth={2} />
-              <strong>{event.dates}</strong>
+              <strong>{formatEventDates(engagement)}</strong>
             </div>
             <div className="h-[38px] w-px bg-white max-[600px]:hidden" aria-hidden />
             <div className="flex items-center gap-[9px] text-[11px] max-[600px]:text-[9px]">
               <MapPin
                 className="h-[29px] w-[29px] flex-none max-[600px]:h-6 max-[600px]:w-6"
                 size={29}
-                strokeWidth={0}
-                fill="currentColor"
+                strokeWidth={2}
               />
               <div>
-                {event.venue}
-                <small className="mt-[2px] block text-[9px] opacity-90 max-[600px]:text-[8px]">{event.city}</small>
+                {engagement?.venue || event.venue}
+                <small className="mt-[2px] block text-[9px] opacity-90 max-[600px]:text-[8px]">{engagement?.city || event.city}</small>
               </div>
             </div>
           </div>
@@ -164,6 +237,19 @@ export function ParticipantDashboardPage() {
       </section>
 
       <section className="p-[15px] max-[850px]:p-3 max-[600px]:p-[9px]">
+        {(loading || error) && (
+          <div
+            className={cn(
+              "mb-3 rounded-lg border px-3 py-2 text-[11px]",
+              error
+                ? "border-amber-200 bg-amber-50 text-amber-800"
+                : "border-[#e2ebf5] bg-white text-[#607297]",
+            )}
+            role={error ? "alert" : "status"}
+          >
+            {error || "Loading your event details…"}
+          </div>
+        )}
         <div className="grid grid-cols-[1.25fr_1.05fr_0.78fr] gap-[10px] max-[1120px]:grid-cols-[1fr_1fr] max-[850px]:grid-cols-[1fr]">
           <section
             className={cn(
@@ -191,20 +277,20 @@ export function ParticipantDashboardPage() {
               </div>
               <div className="text-[11px] max-[600px]:grid max-[600px]:grid-cols-[1fr_1fr] max-[600px]:gap-[5px]">
                 <div className={detailBox}>
-                  <strong className={detailLabel}>Registration ID</strong>
-                  <span className="text-[#16327e]">{participantPass.registrationId}</span>
+                  <strong className={detailLabel}>Ticket Reference</strong>
+                  <span className="text-[#16327e]">{displayValue(session?.reference || session?.passCode)}</span>
                 </div>
                 <div className={detailBox}>
                   <strong className={detailLabel}>Participant Type</strong>
-                  <span className="text-[#16327e]">{participantPass.type}</span>
+                  <span className="text-[#16327e]">{displayValue(session?.participationType)}</span>
                 </div>
                 <div className={detailBox}>
                   <strong className={detailLabel}>Full Name</strong>
-                  <span className="text-[#16327e]">{participantPass.fullName}</span>
+                  <span className="text-[#16327e]">{displayValue(session?.fullName)}</span>
                 </div>
                 <div className={detailBox}>
-                  <strong className={detailLabel}>Organisation</strong>
-                  <span className="text-[#16327e]">{participantPass.organisation}</span>
+                  <strong className={detailLabel}>Event Contact</strong>
+                  <span className="text-[#16327e]">{displayValue(engagement?.contactName)}</span>
                 </div>
               </div>
             </div>
@@ -216,34 +302,31 @@ export function ParticipantDashboardPage() {
               <div className={infoRow}>
                 <CalendarDays className={infoIcon} size={23} strokeWidth={2} />
                 <b className={infoLabel}>Dates</b>
-                <span className={infoValue}>{event.dates}</span>
+                <span className={infoValue}>{formatEventDates(engagement)}</span>
               </div>
               <div className={infoRow}>
-                <MapPin className={infoIcon} size={23} strokeWidth={0} fill="currentColor" />
+                <MapPin className={infoIcon} size={23} strokeWidth={2} />
                 <b className={infoLabel}>Venue</b>
                 <span className={infoValue}>
-                  {event.venue}, {event.city}
+                  {engagement?.venue || event.venue}, {engagement?.city || event.city}
                 </span>
               </div>
               <div className={infoRow}>
                 <Users className={infoIcon} size={23} strokeWidth={2} />
                 <b className={infoLabel}>Your Participation</b>
-                <span className={infoValue}>{participantPass.type}</span>
+                <span className={infoValue}>{displayValue(session?.participationType)}</span>
               </div>
               <div className={infoRow}>
                 <Award className={infoIcon} size={23} strokeWidth={2} />
-                <b className={infoLabel}>Registration Fee</b>
+                <b className={infoLabel}>Ticket Price</b>
                 <span className={infoValue}>
-                  {participantPass.fee}{" "}
-                  <i className="ml-[5px] inline-block rounded-xl bg-[#dff6e9] px-2 py-1 text-[8px] font-bold not-italic text-[#078047]">
-                    Paid via eCitizen
-                  </i>
+                  {formatMoney(session?.ticketPrice, session?.currency)}
                 </span>
               </div>
               <div className={infoRow}>
                 <Hash className={infoIcon} size={23} strokeWidth={2} />
-                <b className={infoLabel}>Payment Reference</b>
-                <span className={infoValue}>{participantPass.paymentRef}</span>
+                <b className={infoLabel}>Ticket Reference</b>
+                <span className={infoValue}>{displayValue(session?.reference)}</span>
               </div>
               <div className={infoRow}>
                 <span
@@ -252,8 +335,8 @@ export function ParticipantDashboardPage() {
                 >
                   ✓
                 </span>
-                <b className={infoLabel}>Payment Status</b>
-                <span className="font-bold leading-[1.35] text-[#078047]">{participantPass.status}</span>
+                <b className={infoLabel}>Ticket Status</b>
+                <span className="font-bold leading-[1.35] text-[#078047]">{displayValue(session?.status)}</span>
               </div>
             </div>
           </section>
@@ -325,7 +408,7 @@ export function ParticipantDashboardPage() {
                 </button>
               ))}
             </div>
-            {sessions.map((s) => (
+            {(engagement?.programme as any[])?.map((s) => (
               <div
                 key={s.id}
                 className="grid min-h-[47px] grid-cols-[100px_1fr_75px] items-center gap-[10px] border-t border-[#e2eaf3] text-[9px] max-[600px]:grid-cols-[70px_1fr_55px] max-[600px]:text-[8px]"
@@ -357,7 +440,7 @@ export function ParticipantDashboardPage() {
               <div className="px-[15px] py-[9px]">
                 <h3 className="mb-2 text-[16px] font-extrabold text-[#092c9b]">Venue Information</h3>
                 <p className="mb-2 text-[9px] leading-[1.35] text-[#07164d]">
-                  📍 &nbsp; {event.venue}, {event.city}
+                  📍 &nbsp; {engagement?.venue || event.venue}, {engagement?.city || event.city}
                 </p>
                 <Link
                   className="inline-flex h-[29px] w-full items-center justify-center rounded-[5px] border border-[#075fe5] bg-white text-[9px] font-bold text-[#075fe5] no-underline"

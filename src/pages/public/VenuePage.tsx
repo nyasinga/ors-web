@@ -76,7 +76,7 @@ export function VenuePage() {
               >
                 <div className="mb-2 h-[39px] w-[39px] text-[#075fd8] max-[640px]:mb-1.5 max-[640px]:h-[34px] max-[640px]:w-[34px] [&_svg]:block [&_svg]:h-[39px] [&_svg]:w-[39px] max-[640px]:[&_svg]:h-[34px] max-[640px]:[&_svg]:w-[34px]">
                   {filled || index === 0 ? (
-                    <Icon size={39} strokeWidth={0} fill="currentColor" />
+                    <Icon size={39} strokeWidth={1} />
                   ) : (
                     <Icon size={39} strokeWidth={1.7} />
                   )}
@@ -193,7 +193,7 @@ export function VenuePage() {
                   </p>
                   {space.capacity ? (
                     <div className="mt-[7px] flex items-center gap-[7px] text-[10.5px] text-[#3e4b60] max-[640px]:mt-[5px] max-[640px]:text-[9.5px] [&_svg]:h-[19px] [&_svg]:w-[19px] [&_svg]:shrink-0 [&_svg]:text-[#075fd8]">
-                      <Users size={19} strokeWidth={0} fill="currentColor" />
+                      <Users size={19} strokeWidth={2} />
                       {space.capacity}
                     </div>
                   ) : null}

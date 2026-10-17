@@ -300,7 +300,7 @@ export function EventProgrammeSchedule({
                   "max-[800px]:ml-3 max-[800px]:w-full max-[800px]:justify-start",
                 )}
               >
-                <MapPin className="h-5 w-5 shrink-0 text-blue-600" size={20} fill="currentColor" strokeWidth={0} />
+                <MapPin className="h-5 w-5 shrink-0 text-blue-600" size={20} strokeWidth={2} />
                 {day.location}
               </span>
               <ChevronDown

@@ -152,7 +152,7 @@ export function ParticipantLoginPage() {
               </div>
               <div className="h-[43px] w-px bg-white max-[600px]:hidden" aria-hidden />
               <div className="flex items-center gap-[11px] text-white max-[600px]:text-[11px]">
-                <MapPin className={eventSvg} size={34} strokeWidth={0} fill="currentColor" />
+                <MapPin className={eventSvg} size={34} strokeWidth={2} />
                 <div>
                   <strong>{event.venue}</strong>
                   <small className="mt-[3px] block text-[12px] leading-[1.35] opacity-90 max-[600px]:text-[9px]">

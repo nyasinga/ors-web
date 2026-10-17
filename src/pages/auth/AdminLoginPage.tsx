@@ -192,8 +192,7 @@ export function AdminLoginPage() {
                 <MapPin
                   className="h-7 w-7 shrink-0 text-[#075fe5]"
                   size={28}
-                  strokeWidth={0}
-                  fill="currentColor"
+                  strokeWidth={2}
                 />
                 <div className="text-[14px] leading-[1.35] text-[#0b1643] max-[600px]:text-[13px]">
                   <strong className="block font-semibold">{event.city}</strong>
@@ -466,8 +465,7 @@ export function AdminLoginPage() {
               <MapPin
                 className="h-6 w-6 shrink-0 text-[#0c1747]"
                 size={24}
-                strokeWidth={0}
-                fill="currentColor"
+                strokeWidth={1.8}
               />
               <span className="text-[13px] leading-[1.4] text-[#111b3f]">
                 {event.venue}, {event.city}

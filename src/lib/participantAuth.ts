@@ -18,9 +18,16 @@ export type ParticipantSession = {
   email?: string;
   passCodeHint?: string;
   method: "passcode" | "qr";
-  /** Provisional local token until the API issues a real one */
   token: string;
   signedInAt: string;
+  passCode: string;
+  reference: string,
+  engagementID: string,
+  participationType: string,
+  ticketPrice: number,
+  currency: string,
+  status: string,
+  registeredAt: string,
 };
 
 export type ParticipantLoginInput = {
@@ -119,10 +126,18 @@ export async function participantLogin(input: ParticipantLoginInput): Promise<Pa
   const participant = ticket.participant || ticket.user || ticket;
 
   const session: ParticipantSession = {
-    id: String(participant.id || participant.userID || ticket.ticketID || `participant-${Date.now()}`),
+    id: String(ticket.ticketID || `participant-${Date.now()}`),
     fullName: participant.fullName || "Participant",
     email: participant.email || undefined,
     passCodeHint: `${passCode.slice(0, 2)}••••`,
+    passCode: ticket.passCode,
+    reference: ticket.reference,
+    engagementID: ticket.engagementID,
+    participationType: ticket.participationType,
+    ticketPrice: ticket.ticketPrice,
+    currency: ticket.currency,
+    status: ticket.status,
+    registeredAt: ticket.registeredAt,
     method: viaQr ? "qr" : "passcode",
     token: result.token || `participant.${Date.now()}`,
     signedInAt: new Date().toISOString(),
