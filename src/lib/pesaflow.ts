@@ -207,7 +207,7 @@ export type SignupIsippeInput = Record<string, unknown> & {
 
     ticket: {
       amount: number;
-      Currency: string;
+      currency: string;
     }; 
 
     eCitizen: {

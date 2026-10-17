@@ -112,7 +112,7 @@ export function RegisterPaymentPage() {
               : {},
             ticket: {
               amount: feeKes,
-              Currency: PAYMENT_CURRENCY,
+              currency: PAYMENT_CURRENCY,
             },
             eCitizen: {
               reference,
