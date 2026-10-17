@@ -89,7 +89,7 @@ export function RegisterPaymentPage() {
     setIsFinalizing(true);
     toast.info("Completing registration…");
     try {
-      await signupAfterPayment(
+      const ticket = await signupAfterPayment(
         {
           title: details.title,
           fullName: details.fullName,

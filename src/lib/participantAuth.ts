@@ -5,6 +5,8 @@
  * real API call when the endpoint is ready — keep the same session shape.
  */
 
+import { apiRequest } from "./api";
+
 const TOKEN_KEY = "ors_participant_token";
 const SESSION_KEY = "ors_participant_session";
 const REMEMBER_KEY = "ors_participant_remember";
@@ -95,6 +97,7 @@ export function hasParticipantSession(): boolean {
  * Participant sign-in.
  * TODO: replace local validation with API verification (pass code / QR).
  */
+
 export async function participantLogin(input: ParticipantLoginInput): Promise<ParticipantSession> {
   const passCode = (input.passCode || "").replace(/\D/g, "").slice(0, 6);
   const viaQr = Boolean(input.viaQr);
@@ -103,16 +106,25 @@ export async function participantLogin(input: ParticipantLoginInput): Promise<Pa
     throw new Error("Enter the 6-digit pass code from your email");
   }
 
-  // Placeholder for future:
-  // return apiRequest<ParticipantSession>("/participant-login", { method: "POST", body: { passCode, viaQr } });
+  if (!passCode) {
+    throw new Error("A valid ticket pass code is required");
+  }
+
+  const result = await apiRequest<any>("/ticketing/register", {
+    method: "POST",
+    body: { passCode },
+  });
+
+  const ticket = result.ticket || result;
+  const participant = ticket.participant || ticket.user || ticket;
 
   const session: ParticipantSession = {
-    id: `participant-${Date.now()}`,
-    fullName: viaQr ? "Registered Participant" : "ISIPPE Participant",
-    email: undefined,
-    passCodeHint: passCode ? `${passCode.slice(0, 2)}••••` : undefined,
+    id: String(participant.id || participant.userID || ticket.ticketID || `participant-${Date.now()}`),
+    fullName: participant.fullName || "Participant",
+    email: participant.email || undefined,
+    passCodeHint: `${passCode.slice(0, 2)}••••`,
     method: viaQr ? "qr" : "passcode",
-    token: `local-participant.${viaQr ? "qr" : "pass"}.${Date.now()}`,
+    token: result.token || `participant.${Date.now()}`,
     signedInAt: new Date().toISOString(),
   };
 

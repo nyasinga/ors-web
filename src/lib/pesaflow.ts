@@ -1,7 +1,8 @@
 import { API_BASE_URL } from "./api";
-import type {
-  ECitizenCheckoutFields,
-  ECitizenCheckoutSession,
+import {
+  FileUploadTypes,
+  type ECitizenCheckoutFields,
+  type ECitizenCheckoutSession,
 } from "../types/registration";
 
 const TENANT_ID = (import.meta.env.VITE_API_TENANT_ID as string | undefined)?.trim() || "ACA";
@@ -222,20 +223,30 @@ export type SignupIsippeInput = Record<string, unknown> & {
 /** Finalize registration after the user completes payment in the iframe. */
 export async function signupAfterPayment(
   input: SignupIsippeInput,
-  _files: File[] = [],
+  files: File[] = [],
 ) {
-  const formData = new FormData();
 
-  Object.entries(input).forEach(([key, value]) => {
-    if (value === undefined || value === null) return;
-    formData.append(
-      key,
-      typeof value === "object" ? JSON.stringify(value) : String(value),
-    );
-  });
-  _files.forEach((file) => formData.append("files", file, file.name));
-  // Backend only accepts application/json (multipart → 415).
-  // Profile picture upload needs a dedicated endpoint if required later.
+  const formData = new FormData();
+  const fields: [string, string | Blob][] = [];
+
+  for (const key in input) {
+    const value = input[key as keyof SignupIsippeInput];
+
+    if (value === undefined || value === null) continue;
+
+    if (value instanceof File || value instanceof Blob) {
+      fields.push([key, value]);
+    } else if (typeof value === "object") {
+      fields.push([key, JSON.stringify(value)]);
+    } else {
+      fields.push([key, String(value)]);
+    }
+  }
+
+  const name = input.userType==='sponsor'? FileUploadTypes.Logo : FileUploadTypes.Avatar;
+  fields.forEach(([key, value]) => formData.append(key, value));
+  files.forEach((file) => formData.append(name, file, file.name));
+
   const headers = paymentHeaders();
   delete (headers as Record<string, string>)["Content-Type"];
   delete (headers as Record<string, string>)["content-type"];

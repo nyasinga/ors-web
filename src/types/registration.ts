@@ -1,3 +1,12 @@
+
+export enum FileUploadTypes {
+  File = 'file',
+  Thumbnail = 'thumbnail',
+  Banner = 'banner',
+  Avatar = 'avatar',
+  Logo = 'logo'
+}
+
 /** Hidden form fields posted into the Pesaflow / eCitizen iframe. */
 export type ECitizenCheckoutFields = {
   apiClientID: string;

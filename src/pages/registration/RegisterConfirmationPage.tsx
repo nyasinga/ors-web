@@ -14,7 +14,7 @@ export function RegisterConfirmationPage() {
     participationTypes.find((item) => item.id === participationType)?.title ?? "Delegate";
   const displayName = [details.title, details.fullName].filter(Boolean).join(" ") || "Jimmy Ng'etich";
   const displayEmail = details.email || "jimmy@example.co.ke";
-  const displayOrg = details.organisation || "SlickSales Limited";
+  const displayOrg = details.organisation || "Anti-counterfeit Authority";
   const totalPaid = feeKes + 50;
 
   return (
@@ -114,8 +114,8 @@ export function RegisterConfirmationPage() {
                 <button type="button" className={r.smallBtn}>
                   Add to Calendar
                 </button>
-                <Link to="/register/details" className={r.smallBtnLink}>
-                  Update Registration
+                <Link to="/participant-login" className={r.smallBtnLink}>
+                  Access Event
                 </Link>
               </div>
             </section>
