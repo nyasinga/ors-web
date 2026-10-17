@@ -88,6 +88,8 @@ export const fieldControl = cn(
   "h-9 w-full border border-[#ccd9e8] rounded-[4px] px-[11px] text-[#687894] bg-white text-[12px]",
   "max-[760px]:h-[35px] max-[760px]:text-[11px]",
 );
+/** Select control — chevron via `.register-field-select` in index.css (centered, always visible). */
+export const fieldSelect = cn(fieldControl, "register-field-select");
 export const fieldError = "block mt-1 text-[11px] text-[#ed1c24]";
 export const phone = "grid grid-cols-[105px_1fr] gap-[5px]";
 export const optional = "mt-3 p-3 border border-[#dbe5f0] rounded-lg";

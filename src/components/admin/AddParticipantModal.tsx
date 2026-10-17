@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { participationTypes, type ParticipationType } from "../../data/registration";
 import type { RegistrationDetails } from "../../contexts/RegistrationContext";
+import { cn } from "../../lib/cn";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 
@@ -67,6 +68,7 @@ function initialsFromName(name: string) {
 
 const fieldClass =
   "h-9 w-full rounded-md border border-blue-100 bg-white px-2.5 text-[12px] text-[#07135f] outline-none focus:border-blue-400";
+const fieldSelectClass = cn(fieldClass, "register-field-select");
 const labelClass = "mb-1 block text-[11px] font-semibold text-[#26468e]";
 const errorClass = "mt-0.5 block text-[10px] text-red-600";
 
@@ -156,7 +158,7 @@ export function AddParticipantModal({ open, onClose, onAdd }: Props) {
             Participation Type <span className="text-red-500">*</span>
           </label>
           <select
-            className={fieldClass}
+            className={fieldSelectClass}
             value={participationType}
             onChange={(e) => setParticipationType(e.target.value as ParticipationType)}
           >
@@ -176,7 +178,7 @@ export function AddParticipantModal({ open, onClose, onAdd }: Props) {
                 Title <span className="text-red-500">*</span>
               </label>
               <select
-                className={fieldClass}
+                className={fieldSelectClass}
                 value={details.title}
                 onChange={(e) => patch({ title: e.target.value })}
               >
@@ -219,7 +221,7 @@ export function AddParticipantModal({ open, onClose, onAdd }: Props) {
                 Phone Number <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-[88px_1fr] gap-1.5">
-                <select className={fieldClass} defaultValue="+254" aria-label="Country code">
+                <select className={fieldSelectClass} defaultValue="+254" aria-label="Country code">
                   <option value="+254">🇰🇪 +254</option>
                 </select>
                 <input
@@ -262,7 +264,7 @@ export function AddParticipantModal({ open, onClose, onAdd }: Props) {
                 Country <span className="text-red-500">*</span>
               </label>
               <select
-                className={fieldClass}
+                className={fieldSelectClass}
                 value={details.country}
                 onChange={(e) => patch({ country: e.target.value })}
               >
@@ -300,7 +302,7 @@ export function AddParticipantModal({ open, onClose, onAdd }: Props) {
             <div>
               <label className={labelClass}>Dietary Requirements</label>
               <select
-                className={fieldClass}
+                className={fieldSelectClass}
                 value={details.dietary}
                 onChange={(e) => patch({ dietary: e.target.value })}
               >
@@ -314,7 +316,7 @@ export function AddParticipantModal({ open, onClose, onAdd }: Props) {
             <div>
               <label className={labelClass}>Accessibility Needs</label>
               <select
-                className={fieldClass}
+                className={fieldSelectClass}
                 value={details.accessibility}
                 onChange={(e) => patch({ accessibility: e.target.value })}
               >

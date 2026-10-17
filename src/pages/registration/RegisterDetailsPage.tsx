@@ -103,7 +103,7 @@ export function RegisterDetailsPage() {
                     Title <span className={r.required}>*</span>
                   </label>
                   <select
-                    className={r.fieldControl}
+                    className={r.fieldSelect}
                     value={details.title}
                     onChange={(e) => setDetails({ title: e.target.value })}
                   >
@@ -148,7 +148,7 @@ export function RegisterDetailsPage() {
                     Phone Number <span className={r.required}>*</span>
                   </label>
                   <div className={r.phone}>
-                    <select className={r.fieldControl} defaultValue="+254" aria-label="Country code">
+                    <select className={r.fieldSelect} defaultValue="+254" aria-label="Country code">
                       <option value="+254">🇰🇪 +254</option>
                     </select>
                     <input
@@ -193,7 +193,7 @@ export function RegisterDetailsPage() {
                     Country <span className={r.required}>*</span>
                   </label>
                   <select
-                    className={r.fieldControl}
+                    className={r.fieldSelect}
                     value={details.country}
                     onChange={(e) => setDetails({ country: e.target.value })}
                   >
@@ -268,7 +268,7 @@ export function RegisterDetailsPage() {
                 <div>
                   <label className={r.fieldLabel}>Dietary Requirements</label>
                   <select
-                    className={r.fieldControl}
+                    className={r.fieldSelect}
                     value={details.dietary}
                     onChange={(e) => setDetails({ dietary: e.target.value })}
                   >
@@ -282,7 +282,7 @@ export function RegisterDetailsPage() {
                 <div>
                   <label className={r.fieldLabel}>Accessibility Needs</label>
                   <select
-                    className={r.fieldControl}
+                    className={r.fieldSelect}
                     value={details.accessibility}
                     onChange={(e) => setDetails({ accessibility: e.target.value })}
                   >
