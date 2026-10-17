@@ -21,6 +21,7 @@ import {
   Pencil,
   Phone,
   Plus,
+  Printer,
   Search,
   Send,
   Settings,
@@ -32,6 +33,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { AddParticipantModal, type AddedParticipant } from "../../components/admin/AddParticipantModal";
 import { EventFaqsTab } from "../../components/admin/EventFaqsTab";
 import { EventProgrammeSchedule } from "../../components/admin/EventProgrammeSchedule";
 import { EventVenueContentTab } from "../../components/admin/EventVenueContentTab";
@@ -69,6 +71,7 @@ import {
   updateEngagement,
 } from "../../lib/engagements";
 import { cn } from "../../lib/cn";
+import { printParticipantTicket } from "../../lib/printParticipantTicket";
 import type {
   Engagement,
   EngagementAudience,
@@ -770,7 +773,16 @@ export function EventDetailsPage() {
       ) : null}
       {validTab === "participants" ? (
         <div className="mt-1">
-          <ParticipantsTab fromApi={fromApi} loading={loading} />
+          <ParticipantsTab
+            fromApi={fromApi}
+            loading={loading}
+            event={{
+              name: detail.name,
+              dates: detail.dates,
+              venue: detail.venueTitle,
+              city: detail.venueCity,
+            }}
+          />
         </div>
       ) : null}
       {validTab === "programme" ? (
@@ -1119,6 +1131,7 @@ function OverviewTab({
   fromApi: boolean;
   onChanged: () => Promise<void>;
 }) {
+  const toast = useToast();
   const [classifyOpen, setClassifyOpen] = useState(false);
   const schedule = detail.programme.map((s, i) => {
     const stamp = scheduleStamp(detail.startDate, i, s.day);
@@ -1453,18 +1466,19 @@ function OverviewTab({
                 <th className={edTh}>Organization</th>
                 <th className={edTh}>Status</th>
                 <th className={edTh}>Date</th>
+                <th className={cn(edTh, "text-center")}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {registrations.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-2 py-[18px] text-center font-medium text-[#8a9bb8]">
+                  <td colSpan={6} className="px-2 py-[18px] text-center font-medium text-[#8a9bb8]">
                     No registrations yet — new sign-ups will appear here.
                   </td>
                 </tr>
               ) : (
                 registrations.map((p) => (
-                  <tr key={p.name}>
+                  <tr key={p.id || p.name}>
                     <td className={edTd}>{p.name}</td>
                     <td className={edTd}>{p.type}</td>
                     <td className={edTd}>{p.org}</td>
@@ -1474,6 +1488,39 @@ function OverviewTab({
                       </span>
                     </td>
                     <td className={edTd}>{p.date}</td>
+                    <td className={cn(edTd, "text-center")}>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 rounded-md border border-[#d7e5f5] px-2 py-0.5 text-[8px] font-semibold text-[#0764e8] hover:bg-[#edf6ff]"
+                        aria-label={`Print ticket for ${p.name}`}
+                        onClick={() => {
+                          try {
+                            printParticipantTicket(
+                              {
+                                id: p.id,
+                                name: p.name,
+                                type: p.type,
+                                org: p.org,
+                                status: p.status,
+                              },
+                              {
+                                name: detail.name,
+                                dates: detail.dates,
+                                venue: detail.venueTitle,
+                                city: detail.venueCity,
+                              },
+                            );
+                          } catch (err) {
+                            toast.error(
+                              err instanceof Error ? err.message : "Unable to print ticket.",
+                            );
+                          }
+                        }}
+                      >
+                        <Printer size={12} />
+                        Print
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -2274,7 +2321,16 @@ function checkInPillClass(checkIn: string) {
   return "rounded-md bg-slate-100 px-2 py-1 text-[10px] text-slate-600";
 }
 
-function ParticipantsTab({ fromApi, loading }: { fromApi: boolean; loading: boolean }) {
+function ParticipantsTab({
+  fromApi,
+  loading,
+  event,
+}: {
+  fromApi: boolean;
+  loading: boolean;
+  event: { name: string; dates?: string; venue?: string; city?: string };
+}) {
+  const toast = useToast();
   const live = fromApi || loading;
   const [query, setQuery] = useState("");
   const [ticketFilter, setTicketFilter] = useState("");
@@ -2285,22 +2341,10 @@ function ParticipantsTab({ fromApi, loading }: { fromApi: boolean; loading: bool
   const [sideStatus, setSideStatus] = useState("");
   const [selectAll, setSelectAll] = useState(false);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [addOpen, setAddOpen] = useState(false);
+  const [source, setSource] = useState<AddedParticipant[]>([]);
 
-  const source: Array<{
-    id: string;
-    name: string;
-    email: string;
-    org: string;
-    type: string;
-    category: string;
-    status: string;
-    date: string;
-    time: string;
-    checkIn: string;
-    initials: string;
-    avatarTone: string;
-  }> = [];
-  const totalLabel = 0;
+  const totalLabel = source.length;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -2317,12 +2361,52 @@ function ParticipantsTab({ fromApi, loading }: { fromApi: boolean; loading: bool
     });
   }, [source, query, ticketFilter, statusFilter, categoryFilter, orgFilter, sideTicket, sideStatus]);
 
+  const confirmedCount = source.filter((p) => p.status === "Confirmed").length;
+  const pendingCount = source.filter((p) => p.status === "Pending").length;
+  const cancelledCount = source.filter((p) => p.status === "Cancelled").length;
+  const checkedInCount = source.filter((p) => p.checkIn === "Checked In").length;
+
   const kpis = [
-    { label: "Total Participants", value: "0", meta: "—", tone: "blue", stroke: "#0757ff", Icon: Users },
-    { label: "Confirmed", value: "0", meta: "—", tone: "green", stroke: "#00b65d", Icon: Check },
-    { label: "Pending", value: "0", meta: "—", tone: "amber", stroke: "#ff9200", Icon: Timer },
-    { label: "Cancelled", value: "0", meta: "—", tone: "red", stroke: "#ff303c", Icon: X },
-    { label: "On-site Check-in", value: "0", meta: "—", tone: "purple", stroke: "#ad00f5", Icon: Users },
+    {
+      label: "Total Participants",
+      value: String(source.length),
+      meta: source.length ? "Local list" : "—",
+      tone: "blue",
+      stroke: "#0757ff",
+      Icon: Users,
+    },
+    {
+      label: "Confirmed",
+      value: String(confirmedCount),
+      meta: source.length ? `${Math.round((confirmedCount / source.length) * 100)}%` : "—",
+      tone: "green",
+      stroke: "#00b65d",
+      Icon: Check,
+    },
+    {
+      label: "Pending",
+      value: String(pendingCount),
+      meta: "—",
+      tone: "amber",
+      stroke: "#ff9200",
+      Icon: Timer,
+    },
+    {
+      label: "Cancelled",
+      value: String(cancelledCount),
+      meta: "—",
+      tone: "red",
+      stroke: "#ff303c",
+      Icon: X,
+    },
+    {
+      label: "On-site Check-in",
+      value: String(checkedInCount),
+      meta: "—",
+      tone: "purple",
+      stroke: "#ad00f5",
+      Icon: Users,
+    },
   ];
 
   const iconTone: Record<string, string> = {
@@ -2370,10 +2454,21 @@ function ParticipantsTab({ fromApi, loading }: { fromApi: boolean; loading: bool
     URL.revokeObjectURL(a.href);
   };
 
-  const orgs: string[] = [];
+  const orgs = useMemo(
+    () => [...new Set(source.map((p) => p.org).filter(Boolean))].sort(),
+    [source],
+  );
 
   return (
     <div className="text-[#07135f]">
+      <AddParticipantModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onAdd={(participant) => {
+          setSource((prev) => [participant, ...prev]);
+          toast.success(`${participant.name} added as ${participant.type}.`);
+        }}
+      />
       <section className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 lg:gap-2.5">
         {kpis.map((kpi) => (
           <article
@@ -2443,6 +2538,7 @@ function ParticipantsTab({ fromApi, loading }: { fromApi: boolean; loading: bool
             </button>
             <button
               type="button"
+              onClick={() => setAddOpen(true)}
               className="flex h-[35px] items-center justify-center gap-2 rounded-md bg-blue-600 text-xs font-semibold text-white hover:bg-blue-700"
             >
               <Plus size={14} strokeWidth={3} /> Add Participant
@@ -2528,8 +2624,8 @@ function ParticipantsTab({ fromApi, loading }: { fromApi: boolean; loading: bool
                       colSpan={10}
                       className="border-b border-x border-blue-100 px-2 py-8 text-center text-slate-400"
                     >
-                      {live
-                        ? "No participants yet — registrations will appear here."
+                      {source.length === 0
+                        ? "No participants yet — add one or wait for registrations."
                         : "No participants match your filters."}
                     </td>
                   </tr>
@@ -2580,10 +2676,30 @@ function ParticipantsTab({ fromApi, loading }: { fromApi: boolean; loading: bool
                       <td className="border-b border-r border-blue-100 px-2 py-2 text-center">
                         <button
                           type="button"
-                          className="rounded-md border border-blue-100 px-2.5 py-1 text-blue-600"
-                          aria-label={`Actions for ${p.name}`}
+                          className="inline-flex items-center gap-1 rounded-md border border-blue-100 px-2.5 py-1 text-[10px] font-semibold text-blue-600 hover:bg-blue-50"
+                          aria-label={`Print ticket for ${p.name}`}
+                          onClick={() => {
+                            try {
+                              printParticipantTicket(
+                                {
+                                  id: p.id,
+                                  name: p.name,
+                                  type: p.type,
+                                  org: p.org,
+                                  email: p.email,
+                                  status: p.status,
+                                },
+                                event,
+                              );
+                            } catch (err) {
+                              toast.error(
+                                err instanceof Error ? err.message : "Unable to print ticket.",
+                              );
+                            }
+                          }}
                         >
-                          <MoreHorizontal size={14} />
+                          <Printer size={14} />
+                          Print
                         </button>
                       </td>
                     </tr>
@@ -2595,7 +2711,7 @@ function ParticipantsTab({ fromApi, loading }: { fromApi: boolean; loading: bool
 
           <div className="flex flex-wrap items-center gap-1.5 px-2.5 py-3 text-[10px] text-blue-800 sm:gap-2 sm:text-xs">
             <span>
-              {live
+              {totalLabel === 0
                 ? "Showing 0 participants"
                 : `Showing ${filtered.length ? 1 : 0} - ${filtered.length} of ${totalLabel.toLocaleString()} participants`}
             </span>
@@ -2729,7 +2845,7 @@ function ParticipantsTab({ fromApi, loading }: { fromApi: boolean; loading: bool
                 style={{ background: donutGradient }}
               >
                 <div className="relative z-10 text-center">
-                  <strong className="block text-lg">{live ? "0" : "3,245"}</strong>
+                  <strong className="block text-lg">{source.length.toLocaleString()}</strong>
                   <span className="text-[10px] text-blue-700">Participants</span>
                 </div>
               </div>

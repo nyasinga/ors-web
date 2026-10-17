@@ -44,7 +44,7 @@ export function RegisterDetailsPage() {
     sponsorEntrySource === "sponsorship"
       ? "/sponsorship"
       : sponsorEntrySource === "register"
-        ? "/register/package"
+        ? "/sponsorship"
         : "/register";
   const [errors, setErrors] = useState<Record<string, string>>({});
 
