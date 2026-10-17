@@ -12,6 +12,8 @@ import {
   Users,
 } from "lucide-react";
 import { useParticipantSession } from "../hooks/useParticipantSession";
+import { useEventCopy } from "../i18n/useEventCopy";
+import { usePublicEngagement } from "../hooks/usePublicEngagement";
 import { cn } from "../lib/cn";
 import {
   clearParticipantSession,
@@ -72,8 +74,13 @@ export function ParticipantLayout() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const session = useParticipantSession();
+  const event = useEventCopy();
+  const { engagement } = usePublicEngagement();
   const name = participantDisplayName(session);
   const initials = participantInitials(session);
+  const eventLogo = engagement?.logo?.trim() || "";
+  const eventLabel = event.name || engagement?.engagementName?.trim() || "Event";
+  const showIsippeLogo = /isippe/i.test(eventLabel);
 
   useEffect(() => {
     if (hasParticipantSession()) return;
@@ -99,10 +106,18 @@ export function ParticipantLayout() {
       <div className="min-h-dvh w-full overflow-hidden bg-white">
         <header className="relative z-20 h-[93px] border-b border-[#e3ebf4] bg-white max-[850px]:h-[75px]">
           <div className="mx-auto box-border flex h-full w-[min(calc(100%_-_38px),1480px)] max-w-full items-center max-[600px]:w-[calc(100%_-_24px)]">
-            <Link to="/" className="flex shrink-0 items-center gap-0" aria-label="ISIPPE-3">
+            <Link to="/" className="flex shrink-0 items-center gap-0" aria-label={eventLabel}>
               <img className={brandAca} src="/assets/logo-aca.png" alt="Anti Counterfeit Authority" />
               <span className="mx-[14px] h-12 w-px bg-[#aeb7c2] max-[850px]:mx-[10px] max-[850px]:h-9" aria-hidden />
-              <img className={brandIsippe} src="/assets/logo-isippe.png" alt="ISIPPE 2026" />
+              {eventLogo ? (
+                <img className={brandIsippe} src={eventLogo} alt={eventLabel} />
+              ) : showIsippeLogo ? (
+                <img className={brandIsippe} src="/assets/logo-isippe.png" alt={eventLabel} />
+              ) : (
+                <span className="max-w-[200px] text-[13px] font-extrabold leading-tight text-[#07164d] max-[850px]:max-w-[140px] max-[850px]:text-[11px]">
+                  {eventLabel}
+                </span>
+              )}
             </Link>
             <nav className="ml-auto flex items-center gap-[31px] max-[1120px]:gap-[18px] max-[850px]:hidden" aria-label="Quick links">
               {topLinks.map((l) => (

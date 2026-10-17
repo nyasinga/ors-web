@@ -319,8 +319,12 @@ export function AboutPage() {
                 </div>
                 <img
                   className="h-full min-h-[160px] w-full rounded-[7px] border border-[#d7e1ed] object-cover"
-                  src="/assets/venue-kicc.jpg"
-                  alt={about.venueTitle}
+                  src={
+                    engagement?.bannerImage?.trim() ||
+                    engagement?.logo?.trim() ||
+                    "/assets/dashboard-venue.jpg"
+                  }
+                  alt={about.venueTitle || about.name || "Event venue"}
                 />
               </div>
             </section>

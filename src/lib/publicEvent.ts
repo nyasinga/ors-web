@@ -199,8 +199,12 @@ function daySpanCount(startIso?: string, endIso?: string) {
 function homeBrand(engagement: Engagement | null) {
   const year = engagement?.startDate
     ? String(new Date(engagement.startDate).getFullYear())
-    : "2026";
-  const name = engagement?.engagementName?.trim() || "ISIPPE-3";
+    : String(new Date().getFullYear());
+  const name = engagement?.engagementName?.trim() || "";
+  if (!name) {
+    return { mark: "", year, showLogo: false as const };
+  }
+  // Only show the ISIPPE medal logo when this engagement is actually an ISIPPE event.
   if (/isippe/i.test(name)) {
     return { mark: "ISIPPE", year, showLogo: true as const };
   }
@@ -210,9 +214,7 @@ function homeBrand(engagement: Engagement | null) {
 
 function homeSubtitle(engagementName?: string) {
   const name = (engagementName || "").trim();
-  if (!name) {
-    return "3rd International Symposium on Intellectual Property Protection and Enforcement";
-  }
+  if (!name) return "";
   return name.replace(/^ISIPPE[- ]?\d*\s*[—–-]\s*/i, "").trim() || name;
 }
 

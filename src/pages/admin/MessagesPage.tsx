@@ -181,8 +181,8 @@ export function MessagesPage() {
           ‹ Events
         </Link>
         <span>›</span>
-        <Link to="/admin/events/isippe-3/overview" className="hover:text-blue-900">
-          ACA Annual Conference 2026
+        <Link to="/admin/events" className="hover:text-blue-900">
+          Events
         </Link>
         <span>›</span>
         <span className="font-semibold text-[#101b61]">Messages</span>
@@ -429,7 +429,7 @@ export function MessagesPage() {
                 <div className="flex gap-3">
                   <b className="w-16 shrink-0">Subject:</b>
                   <span className="text-blue-700">
-                    {selected.subject} - ACA Annual Conference 2026
+                    {selected.subject}
                   </span>
                 </div>
               </div>
@@ -449,11 +449,9 @@ export function MessagesPage() {
                     </div>
                   </div>
                   <div className="hidden text-right sm:block">
-                    <div className="text-xl font-extrabold text-blue-700">
-                      ISIPPE <span className="text-red-600">2026</span>
-                    </div>
+                    <div className="text-sm font-extrabold text-blue-700">Event message</div>
                     <div className="text-[10px] text-blue-800">
-                      3RD INTERNATIONAL SYMPOSIUM ON INTELLECTUAL PROPERTY
+                      Preview only — connect a messages API to send live mail.
                     </div>
                   </div>
                 </div>

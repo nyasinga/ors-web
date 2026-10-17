@@ -486,12 +486,15 @@ export function ParticipantDashboardPage() {
               <div
                 className="h-[89px] [background:url('/assets/dashboard-venue.jpg')_center/cover] max-[600px]:h-[105px]"
                 role="img"
-                aria-label="KICC venue"
+                aria-label={engagement?.venue || event.venue || "Event venue"}
               />
               <div className="px-[15px] py-[9px]">
                 <h3 className="mb-2 text-[16px] font-extrabold text-[#092c9b]">Venue Information</h3>
                 <p className="mb-2 text-[9px] leading-[1.35] text-[#07164d]">
-                  📍 &nbsp; {engagement?.venue || event.venue}, {engagement?.city || event.city}
+                  📍 &nbsp;{" "}
+                  {[engagement?.venue || event.venue, engagement?.city || event.city]
+                    .filter(Boolean)
+                    .join(", ") || "Venue to be announced"}
                 </p>
                 <Link
                   className="inline-flex h-[29px] w-full items-center justify-center rounded-[5px] border border-[#075fe5] bg-white text-[9px] font-bold text-[#075fe5] no-underline"

@@ -237,17 +237,22 @@ export function AdminDashboardPage() {
   }, [engagements]);
 
   const featured = useMemo(() => {
-    const published = engagements.find(
-      (e) => e.isPublished || e.status === "published" || e.status === "ongoing",
-    );
-    return published ?? engagements[0] ?? null;
+    const active =
+      engagements.find((e) => e.isFeatured) ||
+      engagements.find(
+        (e) => e.isPublished || e.status === "published" || e.status === "ongoing",
+      );
+    return active ?? null;
   }, [engagements]);
 
   const heroDates = formatHeroDates(featured, event.dates);
-  const heroVenue = featured?.venue?.trim() || "Kenyatta International Convention Centre (KICC)";
-  const heroCity = [featured?.city, featured?.country === "KE" ? "Kenya" : featured?.country]
-    .filter(Boolean)
-    .join(", ") || "Nairobi, Kenya";
+  const heroVenue = featured?.venue?.trim() || "Venue to be announced";
+  const heroCity =
+    [featured?.city, featured?.country === "KE" ? "Kenya" : featured?.country]
+      .filter(Boolean)
+      .join(", ") || "—";
+  const heroLogo = featured?.logo?.trim() || "";
+  const heroName = featured?.engagementName?.trim() || "Active event";
 
   const methodGradient = useMemo(() => {
     if (snapshot.paymentMethods.length === 0) {
@@ -317,11 +322,17 @@ export function AdminDashboardPage() {
           </div>
 
           <div className="absolute right-3 top-3 rounded-lg bg-white/10 px-3 py-2 sm:static sm:self-start">
-            <img
-              src="/assets/logo-isippe.png"
-              alt="ISIPPE 2026"
-              className="h-14 w-auto object-contain drop-shadow-md sm:h-16"
-            />
+            {heroLogo ? (
+              <img
+                src={heroLogo}
+                alt={heroName}
+                className="h-14 w-auto object-contain drop-shadow-md sm:h-16"
+              />
+            ) : (
+              <div className="max-w-[140px] text-right text-[11px] font-bold leading-snug text-white/95 sm:text-xs">
+                {heroName}
+              </div>
+            )}
           </div>
         </div>
       </section>

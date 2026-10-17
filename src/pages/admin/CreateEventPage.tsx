@@ -770,7 +770,11 @@ export function CreateEventPage() {
               <div>
                 <p className="mb-1.5 text-sm font-medium text-ink">Event Logo</p>
                 <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 sm:flex-row">
-                  <img src="/assets/logo-isippe.png" alt="Event logo" className="h-16 w-auto object-contain" />
+                  <img
+                    src="/assets/logo-aca.png"
+                    alt="Event logo placeholder"
+                    className="h-16 w-auto object-contain opacity-80"
+                  />
                   <div className="text-center sm:text-left">
                     <p className="text-sm font-medium text-ink">Upload event logo</p>
                     <p className="text-xs text-mute">Recommended 800×400px</p>
@@ -1120,9 +1124,13 @@ export function CreateEventPage() {
                   View Larger
                 </button>
               </div>
-              <img src="/assets/venue-kicc.jpg" alt="Venue" className="h-28 w-full object-cover" />
+              <img
+                src="/assets/dashboard-venue.jpg"
+                alt={venueName || "Venue preview"}
+                className="h-28 w-full object-cover"
+              />
               <div className="p-4">
-                <p className="font-semibold text-ink line-clamp-2">{title}</p>
+                <p className="font-semibold text-ink line-clamp-2">{title || "Untitled event"}</p>
                 <p className="mt-2 flex items-center gap-1.5 text-xs text-mute">
                   <CalendarDays size={12} /> {previewDate}
                 </p>
@@ -1130,7 +1138,7 @@ export function CreateEventPage() {
                   <Clock size={12} /> {startTime} – {endTime}
                 </p>
                 <p className="mt-1 flex items-center gap-1.5 text-xs text-mute">
-                  <MapPin size={12} /> {venueName}
+                  <MapPin size={12} /> {venueName || "Venue to be announced"}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Pill tone="green">{eventType}</Pill>
@@ -1673,7 +1681,7 @@ export function CreateEventPage() {
             <section>
               <h3 className="mb-2 font-semibold text-ink">Gallery Images (Optional)</h3>
               <div className="flex flex-wrap gap-3">
-                {["/placeholders/venue.jpg", "/assets/venue-kicc.jpg", "/assets/hero-nairobi.jpg"].map((src) => (
+                {["/placeholders/venue.jpg", "/assets/dashboard-venue.jpg", "/assets/hero-nairobi.jpg"].map((src) => (
                   <div key={src} className="relative h-20 w-28 overflow-hidden rounded-lg">
                     <img src={src} alt="" className="h-full w-full object-cover" />
                     <button
