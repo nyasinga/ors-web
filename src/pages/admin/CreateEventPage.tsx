@@ -148,6 +148,7 @@ export function CreateEventPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [eventType, setEventType] = useState("Conference");
   const [title, setTitle] = useState("");
+  const [engagementCode, setEngagementCode] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("legal");
   const [audience, setAudience] = useState("government");
@@ -282,6 +283,7 @@ export function CreateEventPage() {
   const wizardValues = (): EventWizardValues => ({
     eventType,
     title,
+    engagementCode,
     description,
     category,
     audience,
@@ -349,6 +351,7 @@ export function CreateEventPage() {
         const state = engagementToWizardState(engagement);
         setEventType(state.eventType);
         setTitle(state.title);
+        setEngagementCode(state.engagementCode);
         setDescription(state.description);
         setCategory(state.category);
         setAudience(state.audience);
@@ -508,6 +511,7 @@ export function CreateEventPage() {
       const payload = buildEngagementPayload({
         eventType,
         title,
+        engagementCode,
         description,
         category,
         audience,
@@ -739,6 +743,17 @@ export function CreateEventPage() {
                 onChange={(e) => {
                   setTitle(e.target.value);
                   clearFieldError("title");
+                }}
+              />
+              <Input
+                label="Engagement Code"
+                required
+                value={engagementCode}
+                error={fieldErrors.engagementCode}
+                placeholder="e.g. ISIPPE-2026"
+                onChange={(e) => {
+                  setEngagementCode(e.target.value.trimStart());
+                  clearFieldError("engagementCode");
                 }}
               />
               <div>

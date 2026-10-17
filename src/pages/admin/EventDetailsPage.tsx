@@ -246,6 +246,7 @@ function scheduleStamp(startIso: string | undefined, index: number, dayHint?: nu
 
 type DetailView = {
   name: string;
+  engagementCode: string;
   statusLabel: string;
   theme: string;
   type: string;
@@ -289,6 +290,7 @@ function toDetailView(engagement: Engagement | null): DetailView {
   if (!engagement) {
     return {
       name: "",
+      engagementCode: "",
       statusLabel: "—",
       theme: "",
       type: "—",
@@ -344,6 +346,7 @@ function toDetailView(engagement: Engagement | null): DetailView {
 
   return {
     name: engagement.engagementName || "Untitled event",
+    engagementCode: engagement.engagementCode || "",
     statusLabel: formatEngagementStatusLabel(engagement.status),
     theme,
     type: toUiEventType(engagement.engagementType),
@@ -638,6 +641,12 @@ export function EventDetailsPage() {
             {detail.name}
             <span className="ml-1 inline-block rounded-md bg-[#c9f2dd] px-2.5 py-[7px] align-middle text-[10px] font-bold text-[#08784a]">{detail.statusLabel}</span>
           </h1>
+          <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px]">
+            <span className="font-semibold text-[#687aa0]">Engagement Code</span>
+            <span className="rounded-md bg-[#edf6ff] px-2 py-0.5 font-bold text-[#0764e8]">
+              {detail.engagementCode || "—"}
+            </span>
+          </div>
           <div className="mb-[13px] line-clamp-2 max-w-[720px] overflow-hidden text-xs text-[#63749b]">{detail.theme}</div>
           <div className="flex flex-wrap gap-[30px] max-[500px]:flex-col max-[500px]:gap-2">
             <div className={edMi}>
@@ -1053,6 +1062,7 @@ function EventClassificationSettings({
       </div>
       <dl className="grid gap-3 text-sm sm:grid-cols-2">
         {[
+          ["Engagement Code", detail.engagementCode || "—"],
           ["Visibility", detail.visibility],
           ["Registration", detail.registration],
           ["Payment", detail.payment],
@@ -1214,6 +1224,10 @@ function OverviewTab({
             <div className={edRow}>
               <b>Event Name</b>
               <span>{detail.name}</span>
+            </div>
+            <div className={edRow}>
+              <b>Engagement Code</b>
+              <span>{detail.engagementCode || "—"}</span>
             </div>
             <div className={edRow}>
               <b>Event Type</b>

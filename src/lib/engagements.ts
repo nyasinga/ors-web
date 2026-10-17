@@ -822,6 +822,8 @@ export function combineDateTime(date: string, time: string, allDay: boolean) {
 export type WizardEngagementInput = {
   eventType: string;
   title: string;
+  /** Short public/API code for the engagement (e.g. ISIPPE-2026). */
+  engagementCode: string;
   description: string;
   category: string;
   audience: string;
@@ -976,6 +978,7 @@ export function buildEngagementPayload(input: WizardEngagementInput): NewEngagem
   return {
     engagementType: toEngagementType(input.eventType),
     engagementName: input.title.trim(),
+    engagementCode: input.engagementCode.trim(),
     category: input.category || undefined,
     shortDescription: input.description.trim().slice(0, 180) || undefined,
     description: input.description.trim() || undefined,
@@ -1099,6 +1102,7 @@ export function engagementToWizardState(engagement: Engagement) {
   return {
     eventType: toUiEventType(engagement.engagementType),
     title: engagement.engagementName || "",
+    engagementCode: engagement.engagementCode || "",
     description: engagement.description || engagement.shortDescription || "",
     category: engagement.category || "legal",
     audience: engagement.audience || "government",

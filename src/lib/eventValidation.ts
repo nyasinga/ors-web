@@ -1,6 +1,7 @@
 export type EventWizardValues = {
   eventType: string;
   title: string;
+  engagementCode: string;
   description: string;
   category: string;
   audience: string;
@@ -70,6 +71,13 @@ function validateStep2(values: EventWizardValues, errors: EventFieldErrors, stri
     errors.title = "Event title is required.";
   } else if (values.title.trim().length < 3) {
     errors.title = "Title must be at least 3 characters.";
+  }
+
+  if (!values.engagementCode.trim()) {
+    errors.engagementCode = "Engagement code is required.";
+  } else if (!/^[A-Za-z0-9][A-Za-z0-9._-]{1,47}$/.test(values.engagementCode.trim())) {
+    errors.engagementCode =
+      "Use 2–48 characters: letters, numbers, dots, underscores or hyphens.";
   }
 
   if (strict) {
@@ -197,6 +205,7 @@ export function stepForField(field: keyof EventFieldErrors): number {
     case "eventType":
       return 1;
     case "title":
+    case "engagementCode":
     case "description":
     case "category":
     case "audience":
