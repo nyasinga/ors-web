@@ -224,15 +224,29 @@ export async function signupAfterPayment(
   input: SignupIsippeInput,
   _files: File[] = [],
 ) {
+  const formData = new FormData();
+
+  Object.entries(input).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    formData.append(
+      key,
+      typeof value === "object" ? JSON.stringify(value) : String(value),
+    );
+  });
+  _files.forEach((file) => formData.append("files", file, file.name));
   // Backend only accepts application/json (multipart → 415).
   // Profile picture upload needs a dedicated endpoint if required later.
+  const headers = paymentHeaders();
+  delete (headers as Record<string, string>)["Content-Type"];
+  delete (headers as Record<string, string>)["content-type"];
+
   const res = await fetch(`${PAYMENT_API_BASE}/signup-isippe`, {
     method: "POST",
-    headers: paymentHeaders(),
-    body: JSON.stringify(input),
+    headers,
+    body: formData,
   });
 
-  const data = (await res.json()) as { error?: { message?: string } };
+  const data = await res.json();
 
   if (!res.ok) {
     throw new Error(data?.error?.message || "Registration failed after payment.");
