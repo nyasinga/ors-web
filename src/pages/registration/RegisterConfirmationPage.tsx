@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
 import { useRegistration } from "../../contexts/RegistrationContext";
 import { participationTypes } from "../../data/registration";
@@ -12,10 +12,21 @@ export function RegisterConfirmationPage() {
   const { details, participationType, feeKes, feeLabel, reference } = useRegistration();
   const typeLabel =
     participationTypes.find((item) => item.id === participationType)?.title ?? "Delegate";
-  const displayName = [details.title, details.fullName].filter(Boolean).join(" ") || "Jimmy Ng'etich";
-  const displayEmail = details.email || "jimmy@example.co.ke";
-  const displayOrg = details.organisation || "Anti-counterfeit Authority";
-  const totalPaid = feeKes + 50;
+  const displayName = [details.title, details.fullName].filter(Boolean).join(" ").trim();
+  const displayEmail = details.email.trim();
+  const displayOrg = details.organisation.trim();
+  const totalPaid = feeKes > 0 ? feeKes + 50 : 0;
+  const paidAt = new Date().toLocaleString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  if (!displayName || !displayEmail) {
+    return <Navigate to="/register" replace />;
+  }
 
   return (
     <div className={r.registerPage}>
@@ -28,7 +39,8 @@ export function RegisterConfirmationPage() {
               <div className={r.successMark}>✓</div>
               <h2 className={r.successTitle}>Registration Successful!</h2>
               <p className={r.successText}>
-                Your registration for {event.name} has been confirmed and payment has been received.
+                Your registration for {event.name || "the event"} has been confirmed and payment has
+                been received.
                 <br />
                 A confirmation email with your registration details has been sent to your email
                 address.
@@ -55,7 +67,7 @@ export function RegisterConfirmationPage() {
                     <span aria-hidden>{"\u25A3"}</span>
                     <span>
                       <b className={r.drowLabel}>Organisation</b>
-                      {displayOrg}
+                      {displayOrg || "—"}
                     </span>
                   </div>
                   <div className={r.drow}>
@@ -72,23 +84,28 @@ export function RegisterConfirmationPage() {
                     <span aria-hidden>{"\u25A3"}</span>
                     <span>
                       <b className={r.drowLabel}>Transaction Reference</b>
-                      {reference}
+                      {reference || "—"}
                     </span>
                   </div>
                   <div className={r.drow}>
                     <span aria-hidden>{"\u25A3"}</span>
                     <span>
                       <b className={r.drowLabel}>Payment Date</b>
-                      20 September 2026{" "}
-                      11:42 AM
+                      {paidAt}
                     </span>
                   </div>
                   <div className={r.drow}>
                     <span aria-hidden>{"\u25A3"}</span>
                     <span>
                       <b className={r.drowLabel}>Amount Paid</b>
-                      {formatMoney(totalPaid, "KES")}
-                      <br />({formatMoney(feeKes, "KES")} {feeLabel} + KES 50 eCitizen fee)
+                      {feeKes > 0 ? (
+                        <>
+                          {formatMoney(totalPaid, "KES")}
+                          <br />({formatMoney(feeKes, "KES")} {feeLabel} + KES 50 eCitizen fee)
+                        </>
+                      ) : (
+                        "—"
+                      )}
                     </span>
                   </div>
                   <div className={r.drow}>
@@ -123,35 +140,50 @@ export function RegisterConfirmationPage() {
             <aside>
               <div className={r.pass}>
                 <h3 className={r.passTitle}>Your Event Pass</h3>
-                <p className={r.passText}>Present this QR code at the registration counter to collect your badge.</p>
+                <p className={r.passText}>
+                  Present this QR code at the registration counter to collect your badge.
+                </p>
                 <img className={r.qr} src="/assets/qr-ticket.png" alt="Event pass QR code" />
                 <div className={r.passId}>
                   Registration ID
                   <br />
-                  {reference}
+                  {reference || "—"}
                 </div>
               </div>
               <div className={r.next}>
                 <h3 className={r.nextTitle}>{"What's Next?"}</h3>
                 <div className={r.nextRow}>
-                  <span className={r.nextIcon} aria-hidden>{"\u2709"}</span>
+                  <span className={r.nextIcon} aria-hidden>
+                    {"\u2709"}
+                  </span>
                   <div>
                     <strong className={r.nextRowTitle}>Check your email</strong>
-                    <p className={r.nextRowText}>We have sent a confirmation email with event details and updates.</p>
+                    <p className={r.nextRowText}>
+                      We have sent a confirmation email with event details and updates.
+                    </p>
                   </div>
                 </div>
                 <div className={r.nextRow}>
-                  <span className={r.nextIcon} aria-hidden>{"\u25A3"}</span>
+                  <span className={r.nextIcon} aria-hidden>
+                    {"\u25A3"}
+                  </span>
                   <div>
                     <strong className={r.nextRowTitle}>Collect your badge</strong>
-                    <p className={r.nextRowText}>Present your QR code at registration desk on arrival.</p>
+                    <p className={r.nextRowText}>
+                      Present your QR code at registration desk on arrival.
+                    </p>
                   </div>
                 </div>
                 <div className={r.nextRow}>
-                  <span className={r.nextIcon} aria-hidden>{"\u265F"}</span>
+                  <span className={r.nextIcon} aria-hidden>
+                    {"\u265F"}
+                  </span>
                   <div>
                     <strong className={r.nextRowTitle}>Join the event</strong>
-                    <p className={r.nextRowText}>Attend the sessions and networking events from 12–14 November 2026.</p>
+                    <p className={r.nextRowText}>
+                      Attend the sessions and networking events
+                      {event.datesShort ? ` (${event.datesShort})` : ""}.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -160,10 +192,18 @@ export function RegisterConfirmationPage() {
 
           <div className={r.helpful}>
             <b className={r.helpfulLabel}>Helpful Links</b>
-            <Link to="/programme" className={r.helpfulLink}>View Programme →</Link>
-            <Link to="/venue" className={r.helpfulLink}>Venue Information →</Link>
-            <Link to="/faq" className={r.helpfulLink}>Travel & Accommodation →</Link>
-            <Link to="/faq" className={r.helpfulLink}>Contact Support →</Link>
+            <Link to="/programme" className={r.helpfulLink}>
+              View Programme →
+            </Link>
+            <Link to="/venue" className={r.helpfulLink}>
+              Venue Information →
+            </Link>
+            <Link to="/faq" className={r.helpfulLink}>
+              Travel & Accommodation →
+            </Link>
+            <Link to="/faq" className={r.helpfulLink}>
+              Contact Support →
+            </Link>
           </div>
         </div>
       </main>

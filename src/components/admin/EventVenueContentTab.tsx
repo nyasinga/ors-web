@@ -6,10 +6,6 @@ import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
 import { useToast } from "../ui/Toast";
 import { ApiError } from "../../lib/api";
-import {
-  DEFAULT_VENUE_HIGHLIGHTS,
-  DEFAULT_VENUE_SPACES,
-} from "../../lib/eventContentDefaults";
 import { asVenueHighlights, asVenueSpaces, updateEngagement } from "../../lib/engagements";
 import { clearPublicEngagementCache } from "../../lib/publicEvent";
 import type {
@@ -37,12 +33,11 @@ type Props = {
 export function EventVenueContentTab({ eventId, engagement, fromApi, onChanged }: Props) {
   const toast = useToast();
   const initialHighlights = useMemo(() => {
-    const rows = asVenueHighlights(engagement?.venueHighlights);
-    return rows.length ? rows.map((r) => ({ ...r })) : DEFAULT_VENUE_HIGHLIGHTS.map((r) => ({ ...r }));
+    // Only this event's content — never seed another event's / demo venue catalog.
+    return asVenueHighlights(engagement?.venueHighlights).map((r) => ({ ...r }));
   }, [engagement]);
   const initialSpaces = useMemo(() => {
-    const rows = asVenueSpaces(engagement?.venueSpaces);
-    return rows.length ? rows.map((r) => ({ ...r })) : DEFAULT_VENUE_SPACES.map((r) => ({ ...r }));
+    return asVenueSpaces(engagement?.venueSpaces).map((r) => ({ ...r }));
   }, [engagement]);
 
   const [highlights, setHighlights] = useState(initialHighlights);
@@ -132,6 +127,11 @@ export function EventVenueContentTab({ eventId, engagement, fromApi, onChanged }
           </div>
         </div>
         <div className="grid gap-3">
+          {highlights.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-slate-200 px-3 py-6 text-center text-sm text-mute">
+              No highlights for this event yet. Add ones that match this venue.
+            </p>
+          ) : null}
           {highlights.map((row, index) => (
             <div key={row.id || index} className="grid gap-2 rounded-lg border border-slate-200 p-3 sm:grid-cols-[140px_1fr_1fr_auto]">
               <Select

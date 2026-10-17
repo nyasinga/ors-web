@@ -47,6 +47,7 @@ import { createWizardSteps, eventTypeOptions } from "../../data/adminEvents";
 import { ApiError } from "../../lib/api";
 import { resourcePublicUrl, uploadResource } from "../../lib/resources";
 import {
+  activateEngagement,
   buildEngagementPayload,
   createEngagement,
   engagementToWizardState,
@@ -552,13 +553,23 @@ export function CreateEventPage() {
       });
       if (isEdit && editId) {
         await updateEngagement(editId, payload);
-        toast.success(asDraft ? "Draft saved" : "Event updated");
+        if (!asDraft) {
+          await activateEngagement(editId);
+          toast.success("Event published — it is now the only active event.");
+        } else {
+          toast.success("Draft saved");
+        }
         navigate(`/admin/events/${editId}/overview`);
       } else {
         const created = await createEngagement(payload);
         const id = created.engagementID;
         if (!id) throw new Error("Event created but no engagementID was returned.");
-        toast.success(asDraft ? "Draft saved" : "Event published");
+        if (!asDraft) {
+          await activateEngagement(id);
+          toast.success("Event published — it is now the only active event.");
+        } else {
+          toast.success("Draft saved");
+        }
         navigate(`/admin/events/${id}/overview`);
       }
     } catch (err) {

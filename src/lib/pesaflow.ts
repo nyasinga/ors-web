@@ -204,6 +204,8 @@ export type SignupIsippeInput = Record<string, unknown> & {
     sponsorPackage: {
       id: string | number;
       name: string;
+      amount?: number;
+      price?: number;
     } | Record<string, never>; 
 
     ticket: {

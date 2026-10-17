@@ -1,8 +1,6 @@
 /**
  * Participant session helpers.
- * Until a participant auth API exists, login creates a local session after
- * client-side pass-code / QR validation. Swap `participantLogin` body for a
- * real API call when the endpoint is ready — keep the same session shape.
+ * Login and refresh both hit POST /ticketing/register; storage is a cache only.
  */
 
 import { apiRequest } from "./api";
@@ -21,13 +19,13 @@ export type ParticipantSession = {
   token: string;
   signedInAt: string;
   passCode: string;
-  reference: string,
-  engagementID: string,
-  participationType: string,
-  ticketPrice: number,
-  currency: string,
-  status: string,
-  registeredAt: string,
+  reference: string;
+  engagementID: string;
+  participationType: string;
+  ticketPrice: number;
+  currency: string;
+  status: string;
+  registeredAt: string;
 };
 
 export type ParticipantLoginInput = {
@@ -65,6 +63,10 @@ function isSession(value: unknown): value is ParticipantSession {
   );
 }
 
+function remembersSession() {
+  return localStorage.getItem(REMEMBER_KEY) === "1";
+}
+
 export function saveParticipantSession(session: ParticipantSession, remember: boolean) {
   wipeKeys();
   const store = storage(remember);
@@ -100,10 +102,34 @@ export function hasParticipantSession(): boolean {
   return Boolean(getParticipantToken() && getParticipantSession());
 }
 
-/**
- * Participant sign-in.
- * TODO: replace local validation with API verification (pass code / QR).
- */
+function sessionFromTicketResponse(
+  result: Record<string, unknown>,
+  passCode: string,
+  method: "passcode" | "qr",
+  previous?: ParticipantSession | null,
+): ParticipantSession {
+  const ticket = (result.ticket || result) as Record<string, unknown>;
+  const participant = (ticket.participant || ticket.user || ticket) as Record<string, unknown>;
+  const resolvedPass = String(ticket.passCode || passCode || previous?.passCode || "");
+
+  return {
+    id: String(ticket.ticketID || previous?.id || `participant-${Date.now()}`),
+    fullName: String(participant.fullName || previous?.fullName || "").trim() || "Participant",
+    email: participant.email ? String(participant.email) : previous?.email,
+    passCodeHint: resolvedPass ? `${resolvedPass.slice(0, 2)}••••` : previous?.passCodeHint,
+    passCode: resolvedPass,
+    reference: String(ticket.reference || previous?.reference || ""),
+    engagementID: String(ticket.engagementID || previous?.engagementID || ""),
+    participationType: String(ticket.participationType || previous?.participationType || ""),
+    ticketPrice: Number(ticket.ticketPrice ?? previous?.ticketPrice ?? NaN),
+    currency: String(ticket.currency || previous?.currency || "KES"),
+    status: String(ticket.status || previous?.status || ""),
+    registeredAt: String(ticket.registeredAt || previous?.registeredAt || ""),
+    method: previous?.method || method,
+    token: String(result.token || previous?.token || `participant.${Date.now()}`),
+    signedInAt: previous?.signedInAt || new Date().toISOString(),
+  };
+}
 
 export async function participantLogin(input: ParticipantLoginInput): Promise<ParticipantSession> {
   const passCode = (input.passCode || "").replace(/\D/g, "").slice(0, 6);
@@ -117,33 +143,29 @@ export async function participantLogin(input: ParticipantLoginInput): Promise<Pa
     throw new Error("A valid ticket pass code is required");
   }
 
-  const result = await apiRequest<any>("/ticketing/register", {
+  const result = await apiRequest<Record<string, unknown>>("/ticketing/register", {
     method: "POST",
     body: { passCode },
   });
 
-  const ticket = result.ticket || result;
-  const participant = ticket.participant || ticket.user || ticket;
-
-  const session: ParticipantSession = {
-    id: String(ticket.ticketID || `participant-${Date.now()}`),
-    fullName: participant.fullName || "Participant",
-    email: participant.email || undefined,
-    passCodeHint: `${passCode.slice(0, 2)}••••`,
-    passCode: ticket.passCode,
-    reference: ticket.reference,
-    engagementID: ticket.engagementID,
-    participationType: ticket.participationType,
-    ticketPrice: ticket.ticketPrice,
-    currency: ticket.currency,
-    status: ticket.status,
-    registeredAt: ticket.registeredAt,
-    method: viaQr ? "qr" : "passcode",
-    token: result.token || `participant.${Date.now()}`,
-    signedInAt: new Date().toISOString(),
-  };
-
+  const session = sessionFromTicketResponse(result, passCode, viaQr ? "qr" : "passcode");
   saveParticipantSession(session, Boolean(input.remember));
+  return session;
+}
+
+/** Re-fetch ticket from API and refresh the cached session. */
+export async function refreshParticipantSession(): Promise<ParticipantSession | null> {
+  const current = getParticipantSession();
+  const passCode = (current?.passCode || "").replace(/\D/g, "");
+  if (!current || passCode.length < 6) return current;
+
+  const result = await apiRequest<Record<string, unknown>>("/ticketing/register", {
+    method: "POST",
+    body: { passCode },
+  });
+
+  const session = sessionFromTicketResponse(result, passCode, current.method, current);
+  saveParticipantSession(session, remembersSession());
   return session;
 }
 

@@ -3,11 +3,6 @@ import type { Engagement, EngagementProgrammeSession, EngagementSponsor } from "
 import { engagementSpeakerToCard, type SpeakerCardData } from "../components/speakers/SpeakerCard";
 import { apiRequest } from "./api";
 import {
-  DEFAULT_FAQ_CATEGORIES,
-  DEFAULT_VENUE_HIGHLIGHTS,
-  DEFAULT_VENUE_SPACES,
-} from "./eventContentDefaults";
-import {
   asFaqs,
   asProgramme,
   asSpeakers,
@@ -84,8 +79,8 @@ function listFailureMessage(error: unknown) {
 
 /**
  * Resolve the single event shown on the public site.
- * Prefer `isFeatured`; otherwise fall back to the latest published public event.
- * No hard-coded engagement ID. Uses simple filters + client-side selection.
+ * Prefer `isFeatured` (the sole active event); otherwise the latest published
+ * public event. Never fall back to an arbitrary draft / unrelated engagement.
  */
 export async function resolvePublicEngagementId(): Promise<string> {
   const attempts: ListAttempt[] = [];
@@ -101,11 +96,6 @@ export async function resolvePublicEngagementId(): Promise<string> {
   attempts.push(published);
   const publishedId = pickPublicId(published.rows);
   if (publishedId) return publishedId;
-
-  const any = await listPublicCandidates(undefined, 50);
-  attempts.push(any);
-  const anyId = pickPublicId(any.rows);
-  if (anyId) return anyId;
 
   const lastError = [...attempts].reverse().find((a) => !a.ok)?.error;
   if (attempts.every((a) => !a.ok) && lastError) {
@@ -258,45 +248,6 @@ export type PublicAboutContent = {
   category?: string;
 };
 
-const FALLBACK: PublicAboutContent = {
-  name: "ISIPPE-3",
-  shortDescription:
-    "A global platform for dialogue, collaboration and practical solutions to strengthen intellectual property protection and enforcement.",
-  overviewParagraphs: [
-    "The 3rd International Symposium on Intellectual Property Protection and Enforcement (ISIPPE-3) brings together policymakers, regulators, industry leaders, academia, and practitioners to advance effective strategies for combating counterfeiting, piracy and other forms of intellectual property (IP) infringement.",
-    "Hosted by the Anti-Counterfeit Authority (ACA), ISIPPE-3 will provide a unique platform for knowledge sharing, policy dialogue and practical solutions towards a safer, more innovative and inclusive global marketplace.",
-  ],
-  objectives: [
-    "Facilitate dialogue on emerging IP trends and enforcement challenges.",
-    "Share best practices and case studies from different jurisdictions.",
-    "Promote multi-stakeholder collaboration to strengthen IP protection.",
-    "Support policies and initiatives that foster innovation, trade and economic growth.",
-  ],
-  audienceLabel: "Mixed audience",
-  attendIntro:
-    "ISIPPE-3 is designed for professionals shaping intellectual property protection and enforcement across Africa and beyond.",
-  attendGroups: [
-    "Policymakers and regulators",
-    "Industry leaders and rights holders",
-    "Academia and researchers",
-    "Enforcement and customs practitioners",
-  ],
-  themes: [
-    "Intellectual Property",
-    "Enforcement",
-    "Policy",
-    "Innovation",
-    "Regional Collaboration",
-  ],
-  venueTitle: "Kenyatta International Convention Centre (KICC)",
-  venueCity: "Nairobi",
-  venueCountry: "Kenya",
-  venueLine: "Kenyatta International Convention Centre (KICC), Nairobi, Kenya",
-  modeLabel: "In-Person",
-  datesLabel: "Dates to be confirmed",
-  cover: "/assets/about-overview.jpg",
-};
-
 /** Empty shell when no engagement is loaded (avoids hard-coded demo copy). */
 const EMPTY_ABOUT: PublicAboutContent = {
   name: "",
@@ -316,7 +267,7 @@ const EMPTY_ABOUT: PublicAboutContent = {
   cover: "/assets/about-overview.jpg",
 };
 
-/** Map engagement record → About page content (field-level fallbacks only). */
+/** Map engagement record → About page content (this event only — no cross-event demo copy). */
 export function engagementToAboutContent(engagement: Engagement | null): PublicAboutContent {
   if (!engagement) return EMPTY_ABOUT;
 
@@ -335,41 +286,39 @@ export function engagementToAboutContent(engagement: Engagement | null): PublicA
       ? splitDescription(engagement.description)
       : engagement.shortDescription
         ? [engagement.shortDescription]
-        : FALLBACK.overviewParagraphs;
+        : [];
 
-  const venueTitle = engagement.venue?.trim() || FALLBACK.venueTitle;
-  const venueCity = engagement.city?.trim() || FALLBACK.venueCity;
-  const venueCountry = countryLabel(engagement.country) || FALLBACK.venueCountry;
+  // Venue must come from this engagement — never inject another event's location.
+  const venueTitle = engagement.venue?.trim() || "";
+  const venueCity = engagement.city?.trim() || "";
+  const venueCountry = countryLabel(engagement.country) || "";
   const venueLine = [venueTitle, venueCity, venueCountry].filter(Boolean).join(", ");
 
   const attendGroups =
-    tags.length >= 2
-      ? tags.slice(0, 6)
-      : themes.length
-        ? themes
-        : FALLBACK.attendGroups;
+    tags.length >= 2 ? tags.slice(0, 6) : themes.length ? themes : [];
+
+  const name = engagement.engagementName?.trim() || "";
 
   return {
-    name: engagement.engagementName?.trim() || FALLBACK.name,
-    shortDescription:
-      engagement.shortDescription?.trim() ||
-      overview[0] ||
-      FALLBACK.shortDescription,
+    name,
+    shortDescription: engagement.shortDescription?.trim() || overview[0] || "",
     overviewParagraphs: overview,
-    objectives: objectives.length ? objectives : FALLBACK.objectives,
+    objectives,
     audienceLabel,
     attendIntro:
       engagement.shortDescription?.trim() ||
-      `This event welcomes a ${audienceLabel.toLowerCase()} focus, bringing together stakeholders across the IP ecosystem.`,
+      (audienceLabel
+        ? `This event welcomes a ${audienceLabel.toLowerCase()} focus.`
+        : ""),
     attendGroups,
-    themes: themes.length ? themes : FALLBACK.themes,
+    themes,
     venueTitle,
     venueCity,
     venueCountry,
     venueLine,
-    modeLabel: `${formatModeLabel(engagement.mode)} event`,
+    modeLabel: engagement.mode ? `${formatModeLabel(engagement.mode)} event` : "",
     datesLabel: formatPublicDates(engagement.startDate, engagement.endDate),
-    cover: engagement.bannerImage || engagement.logo || FALLBACK.cover,
+    cover: engagement.bannerImage || engagement.logo || EMPTY_ABOUT.cover,
     category: engagement.category,
   };
 }
@@ -856,7 +805,7 @@ export function engagementToPublicSponsors(
     });
 }
 
-/** Venue hero / about copy from engagement. */
+/** Venue hero / about copy from this engagement only (empty when unset). */
 export function engagementToPublicVenue(engagement: Engagement | null): PublicVenueContent {
   const about = engagementToAboutContent(engagement);
   const name = about.venueTitle;
@@ -866,39 +815,47 @@ export function engagementToPublicVenue(engagement: Engagement | null): PublicVe
   const mapsQuery = encodeURIComponent([name, city, country].filter(Boolean).join(", "));
   const mapsUrl =
     engagement?.mapUrl?.trim() ||
-    `https://maps.google.com/?q=${mapsQuery}`;
+    (mapsQuery ? `https://maps.google.com/?q=${mapsQuery}` : "");
   const highlights = asVenueHighlights(engagement?.venueHighlights);
   const spaces = asVenueSpaces(engagement?.venueSpaces);
+
+  const description =
+    engagement?.shortDescription?.trim() ||
+    (about.name && about.venueLine
+      ? `${about.name} will be held at ${about.venueLine}.`
+      : about.venueLine || "");
+
+  const aboutParagraphs = [
+    name
+      ? `${name}${city ? `, located in ${city}` : ""}${country ? `, ${country}` : ""}${
+          about.name ? `, hosts ${about.name}` : ""
+        }.`
+      : "",
+    about.shortDescription,
+  ].filter(Boolean);
 
   return {
     name,
     city,
     country,
-    titleLines: [shortName, [city, country].filter(Boolean).join(", ")],
-    description:
-      engagement?.shortDescription?.trim() ||
-      `${about.name} will be held at ${about.venueLine}.`,
-    aboutParagraphs: [
-      `${name}${city ? `, located in ${city}` : ""}${country ? `, ${country}` : ""}, hosts ${about.name}.`,
-      about.shortDescription,
-    ].filter(Boolean),
+    titleLines: [
+      shortName || "Venue",
+      [city, country].filter(Boolean).join(", ") || "Location to be announced",
+    ],
+    description: description || "Venue details will be published for this event soon.",
+    aboutParagraphs,
     mapsUrl,
     websiteUrl: engagement?.websiteUrl?.trim() || undefined,
     datesLabel: about.datesLabel,
     modeLabel: about.modeLabel,
     shortName,
-    highlights: engagement
-      ? highlights.length
-        ? highlights
-        : DEFAULT_VENUE_HIGHLIGHTS
-      : [],
-    spaces: engagement ? (spaces.length ? spaces : DEFAULT_VENUE_SPACES) : [],
+    highlights,
+    spaces,
   };
 }
 
-/** Public FAQ categories from engagement (defaults only when an engagement is loaded). */
+/** Public FAQ categories from engagement only — no seeded catalog. */
 export function engagementToPublicFaqs(engagement: Engagement | null): EngagementFaqCategory[] {
   if (!engagement) return [];
-  const faqs = asFaqs(engagement.faqs);
-  return faqs.length ? faqs : DEFAULT_FAQ_CATEGORIES;
+  return asFaqs(engagement.faqs);
 }

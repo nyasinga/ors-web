@@ -14,6 +14,7 @@ import {
   paymentMethodsBars,
   paymentStatusBars,
   paymentTransactions,
+  type PaymentTxStatus,
   revenueBreakdown,
   revenueBreakdownTotal,
   revenueBySource,
@@ -24,6 +25,17 @@ import { cn } from "../../lib/cn";
 
 type TxTab = "recent" | "pending" | "failed" | "refunds";
 type TrendPeriod = keyof typeof revenueTrendPeriods;
+
+export type PaymentsDashboardTx = {
+  id: string;
+  datetime: string;
+  reference: string;
+  payer: string;
+  source: string;
+  amount: string;
+  method: string;
+  status: PaymentTxStatus;
+};
 
 const kpiIcons = [Coins, Ticket, Handshake, Building2];
 const kpiIconTone = {
@@ -88,16 +100,31 @@ type PaymentsDashboardProps = {
   showTitle?: boolean;
   /** Live engagement: honest zeros / empty tables instead of design mock. */
   live?: boolean;
+  /** Optional live rows from `/transactions` (event-scoped payments tab). */
+  transactions?: PaymentsDashboardTx[];
 };
 
+function filterLiveTx(rows: PaymentsDashboardTx[], tab: TxTab) {
+  if (tab === "recent") return rows.filter((r) => r.status === "Completed");
+  if (tab === "pending") return rows.filter((r) => r.status === "Pending");
+  if (tab === "failed") return rows.filter((r) => r.status === "Failed");
+  return rows.filter((r) => r.status === "Refunded");
+}
+
 /** Screen G Payments dashboard — from aca_payments_dashboard HTML */
-export function PaymentsDashboard({ showTitle = true, live = false }: PaymentsDashboardProps) {
+export function PaymentsDashboard({
+  showTitle = true,
+  live = false,
+  transactions,
+}: PaymentsDashboardProps) {
   const [txTab, setTxTab] = useState<TxTab>("recent");
   const [trendPeriod, setTrendPeriod] = useState<TrendPeriod>("Daily");
   const [dateRange, setDateRange] = useState("15 Nov 2026 - 17 Nov 2026");
   const [notice, setNotice] = useState<string | null>(null);
 
-  const rows = live ? [] : paymentTransactions[txTab];
+  const rows = live
+    ? filterLiveTx(transactions ?? [], txTab)
+    : paymentTransactions[txTab];
 
   const kpis = live
     ? paymentKpis.map((k) => ({

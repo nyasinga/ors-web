@@ -506,26 +506,81 @@ export function toManagedEvent(engagement: Engagement): ManagedEvent {
   };
 }
 
-/** Mark one engagement as the public homepage feature (clears any previous). */
-export async function setFeaturedEngagement(id: string, featured = true) {
-  if (featured) {
-    const current = await listEngagements({
-      where: { isFeatured: true },
-      fields: { engagementID: true, isFeatured: true },
-      limit: 50,
-    });
-    await Promise.all(
-      current
-        .map((row) => String(row.engagementID || "").trim())
-        .filter((otherId) => otherId && otherId !== id)
-        .map((otherId) => updateEngagement(otherId, { isFeatured: false })),
-    );
-    await updateEngagement(id, { isFeatured: true });
-  } else {
-    await updateEngagement(id, { isFeatured: false });
-  }
+function isActivelyLive(engagement: Pick<Engagement, "isPublished" | "isFeatured" | "status">) {
+  return (
+    engagement.isPublished === true ||
+    engagement.isFeatured === true ||
+    engagement.status === "published" ||
+    engagement.status === "ongoing"
+  );
+}
+
+/** Unpublish / unfeature every live engagement except `exceptId`. */
+export async function deactivateOtherEngagements(exceptId: string) {
+  const rows = await listEngagements({
+    fields: {
+      engagementID: true,
+      isPublished: true,
+      isFeatured: true,
+      status: true,
+    },
+    limit: 500,
+  });
+  const others = rows
+    .filter((row) => {
+      const id = String(row.engagementID || "").trim();
+      return id && id !== exceptId && isActivelyLive(row);
+    })
+    .map((row) => String(row.engagementID).trim());
+
+  await Promise.all(
+    others.map((otherId) =>
+      updateEngagement(otherId, {
+        isPublished: false,
+        isFeatured: false,
+        status: "draft",
+      }),
+    ),
+  );
+}
+
+/**
+ * Make this the sole active public event: published + featured.
+ * All other live events are deactivated (draft, not featured).
+ */
+export async function activateEngagement(id: string) {
+  await deactivateOtherEngagements(id);
+  await updateEngagement(id, {
+    isPublished: true,
+    isFeatured: true,
+    status: "published",
+    publishedAt: new Date().toISOString(),
+  });
   const { clearPublicEngagementCache } = await import("./publicEvent");
   clearPublicEngagementCache();
+}
+
+/** Deactivate this engagement (no longer the public active event). */
+export async function deactivateEngagement(id: string) {
+  await updateEngagement(id, {
+    isPublished: false,
+    isFeatured: false,
+    status: "draft",
+  });
+  const { clearPublicEngagementCache } = await import("./publicEvent");
+  clearPublicEngagementCache();
+}
+
+/**
+ * Homepage feature toggle — featuring activates this event exclusively;
+ * removing deactivates it so another event can be activated.
+ */
+export async function setFeaturedEngagement(id: string, featured = true) {
+  if (featured) {
+    await activateEngagement(id);
+  } else {
+    await deactivateEngagement(id);
+  }
 }
 
 export type DashboardUpcomingItem = {

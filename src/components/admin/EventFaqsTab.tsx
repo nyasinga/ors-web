@@ -6,7 +6,6 @@ import { Input } from "../ui/Input";
 import { Select } from "../ui/Select";
 import { useToast } from "../ui/Toast";
 import { ApiError } from "../../lib/api";
-import { DEFAULT_FAQ_CATEGORIES } from "../../lib/eventContentDefaults";
 import { asFaqs, updateEngagement } from "../../lib/engagements";
 import { clearPublicEngagementCache } from "../../lib/publicEvent";
 import type { Engagement, EngagementFaqCategory, EngagementFaqItem } from "../../types/engagement";
@@ -39,8 +38,8 @@ type Props = {
 export function EventFaqsTab({ eventId, engagement, fromApi, onChanged }: Props) {
   const toast = useToast();
   const initial = useMemo(() => {
-    const fromEngagement = asFaqs(engagement?.faqs);
-    return cloneFaqs(fromEngagement.length ? fromEngagement : DEFAULT_FAQ_CATEGORIES);
+    // Only this event's FAQs — never seed a demo catalog from another event.
+    return cloneFaqs(asFaqs(engagement?.faqs));
   }, [engagement]);
 
   const [categories, setCategories] = useState(initial);
@@ -100,10 +99,7 @@ export function EventFaqsTab({ eventId, engagement, fromApi, onChanged }: Props)
   };
 
   const removeCategory = () => {
-    if (!active || categories.length <= 1) {
-      toast.error("Keep at least one FAQ category.");
-      return;
-    }
+    if (!active) return;
     const next = categories.filter((c) => c.id !== active.id);
     setCategories(next);
     setActiveId(next[0]?.id || "");

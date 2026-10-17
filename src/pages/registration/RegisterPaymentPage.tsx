@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import PaymentModal from "../../components/registration/PaymentModal";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
@@ -10,6 +10,8 @@ import { formatMoney } from "../../i18n/format";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
 import { initiateEcitizenCheckout, signupAfterPayment } from "../../lib/pesaflow";
+import { engagementToPublicSponsors } from "../../lib/publicEvent";
+import { parseKesPrice } from "../../lib/ticketAnalytics";
 import type { ECitizenCheckoutSession } from "../../types/registration";
 import * as r from "../../components/registration/registerStyles";
 
@@ -36,6 +38,45 @@ export function RegisterPaymentPage() {
   } = useRegistration();
   const typeLabel = participationTypes.find((item) => item.id === participationType)?.title ?? "Delegate";
   const engagementID = engagement?.engagementID ? String(engagement.engagementID) : null;
+  const isSponsor = participationType === "sponsor" || Boolean(selectedSponsorPackage);
+  const liveSponsorPackages = useMemo(
+    () => engagementToPublicSponsors(engagement),
+    [engagement],
+  );
+
+  /**
+   * Sponsors: live package price from engagement (refreshed before checkout/signup).
+   * Others: registration ticket fee from context.
+   */
+  const resolvedTicket = useMemo(() => {
+    if (!isSponsor) {
+      return {
+        amount: feeKes,
+        sponsor: null as null | { id: string; name: string; kes: number },
+      };
+    }
+    const live =
+      liveSponsorPackages.find(
+        (pkg) =>
+          pkg.id === selectedSponsorPackage?.id ||
+          pkg.name === selectedSponsorPackage?.name,
+      ) || null;
+    if (live) {
+      const amount = parseKesPrice(live.price);
+      if (amount > 0) {
+        return { amount, sponsor: { id: live.id, name: live.name, kes: amount } };
+      }
+    }
+    const kes = selectedSponsorPackage?.kes ?? 0;
+    return {
+      amount: kes,
+      sponsor: selectedSponsorPackage
+        ? { id: selectedSponsorPackage.id, name: selectedSponsorPackage.name, kes }
+        : null,
+    };
+  }, [isSponsor, feeKes, liveSponsorPackages, selectedSponsorPackage]);
+
+  const displayKes = resolvedTicket.amount > 0 ? resolvedTicket.amount : feeKes;
   const invoiceDescription = selectedSponsorPackage
     ? `${event.name || "Event"} — ${selectedSponsorPackage.name}`
     : `${event.name || "Event"} registration fee`;
@@ -47,8 +88,17 @@ export function RegisterPaymentPage() {
   const [isFinalizing, setIsFinalizing] = useState(false);
 
   const startPayment = async () => {
-    if (!feeKes || feeKes <= 0) {
-      toast.error("Registration fee is not available yet. Please try again once ticket prices are published.");
+    const amount = resolvedTicket.amount;
+    if (!amount || amount <= 0) {
+      toast.error(
+        isSponsor
+          ? "Sponsorship package price is not available yet. Select a package with a published price."
+          : "Registration fee is not available yet. Please try again once ticket prices are published.",
+      );
+      return;
+    }
+    if (isSponsor && !resolvedTicket.sponsor) {
+      toast.error("Select a sponsorship package before paying.");
       return;
     }
     if (!details.email || !details.fullName || !details.phone) {
@@ -60,7 +110,7 @@ export function RegisterPaymentPage() {
     toast.info("Starting eCitizen payment…");
     try {
       const session = await initiateEcitizenCheckout({
-        amount: String(feeKes),
+        amount: String(amount),
         email: details.email,
         idNumber: details.phone.replace(/\D/g, "") || reference,
         phone: details.phone,
@@ -89,7 +139,37 @@ export function RegisterPaymentPage() {
     setIsFinalizing(true);
     toast.info("Completing registration…");
     try {
-      const ticket = await signupAfterPayment(
+      // Re-read live sponsor price immediately before signup-isippe.
+      const livePackages = engagementToPublicSponsors(engagement);
+      const live =
+        livePackages.find(
+          (pkg) =>
+            pkg.id === selectedSponsorPackage?.id ||
+            pkg.name === selectedSponsorPackage?.name,
+        ) || null;
+      const amount = isSponsor
+        ? parseKesPrice(live?.price) || selectedSponsorPackage?.kes || 0
+        : feeKes;
+      const sponsor = isSponsor
+        ? {
+            id: live?.id || selectedSponsorPackage?.id || "",
+            name: live?.name || selectedSponsorPackage?.name || "",
+            kes: amount,
+          }
+        : null;
+
+      if (!amount || amount <= 0) {
+        throw new Error(
+          isSponsor
+            ? "Sponsorship package price is missing. Cannot complete registration."
+            : "Registration fee is missing. Cannot complete registration.",
+        );
+      }
+      if (isSponsor && !sponsor?.id) {
+        throw new Error("Sponsorship package is missing. Cannot complete registration.");
+      }
+
+      await signupAfterPayment(
         {
           title: details.title,
           fullName: details.fullName,
@@ -97,21 +177,23 @@ export function RegisterPaymentPage() {
           phoneNo: details.phone,
           country: details.country,
           city: details.city,
-          userType: participationType,
+          userType: isSponsor ? "sponsor" : participationType,
           extraData: {
             dietary: details.dietary,
             accessibility: details.accessibility,
             jobTitle: details.jobTitle,
             organisation: details.organisation,
             engagementID,
-            sponsorPackage: selectedSponsorPackage
+            sponsorPackage: sponsor
               ? {
-                  id: selectedSponsorPackage.id,
-                  name: selectedSponsorPackage.name,
+                  id: sponsor.id,
+                  name: sponsor.name,
+                  amount,
+                  price: amount,
                 }
               : {},
             ticket: {
-              amount: feeKes,
+              amount,
               currency: PAYMENT_CURRENCY,
             },
             eCitizen: {
@@ -155,8 +237,8 @@ export function RegisterPaymentPage() {
                 </div>
                 <b>{feeLabel}</b>
                 <div className={r.period}>{feeUntil}</div>
-                <div className={r.price}>{formatMoney(feeKes, "KES")}</div>
-                {feeUsd > 0 ? (
+                <div className={r.price}>{formatMoney(displayKes, "KES")}</div>
+                {!isSponsor && feeUsd > 0 ? (
                   <div className={r.priceSub}>{formatMoney(feeUsd, "USD")} (Approx.)</div>
                 ) : null}
               </div>
@@ -256,11 +338,11 @@ export function RegisterPaymentPage() {
               ) : null}
               <div className={r.summaryRow()}>
                 <span>{selectedSponsorPackage ? "Package Fee" : "Registration Fee"}</span>
-                <span>{formatMoney(feeKes, "KES")}</span>
+                <span>{formatMoney(displayKes, "KES")}</span>
               </div>
               <div className={r.summaryRow(true)}>
                 <span>Total Amount</span>
-                <strong className={r.summaryTotalAmount}>{formatMoney(feeKes, "KES")}</strong>
+                <strong className={r.summaryTotalAmount}>{formatMoney(displayKes, "KES")}</strong>
               </div>
             </div>
             <div className={r.infoBox}>

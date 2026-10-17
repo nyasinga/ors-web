@@ -254,6 +254,12 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
         if (parsed.participationType) {
           setParticipationTypeState(parsed.participationType);
         }
+        if (parsed.selectedSponsorPackage) {
+          setSelectedSponsorPackage(parsed.selectedSponsorPackage);
+        }
+        if (parsed.sponsorEntrySource === "sponsorship" || parsed.sponsorEntrySource === "register") {
+          setSponsorEntrySource(parsed.sponsorEntrySource);
+        }
       }
     } catch (error) {
       console.error("Failed to restore registration details:", error);
@@ -265,15 +271,28 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
   /* Persist registration details */
   useEffect(() => {
     if (!detailsLoaded) return;
-    localStorage.setItem(PERSIST_KEY, JSON.stringify({ details, participationType }));
-  }, [details, detailsLoaded, participationType]);
+    localStorage.setItem(
+      PERSIST_KEY,
+      JSON.stringify({
+        details,
+        participationType,
+        selectedSponsorPackage,
+        sponsorEntrySource,
+      }),
+    );
+  }, [details, detailsLoaded, participationType, selectedSponsorPackage, sponsorEntrySource]);
 
   const active = fees[fees.active];
-  const usingSponsor = Boolean(selectedSponsorPackage);
-  const feeKes = usingSponsor ? selectedSponsorPackage!.kes : active.kes;
-  const feeUsd = usingSponsor ? selectedSponsorPackage!.usd : active.usd;
-  const feeLabel = usingSponsor ? selectedSponsorPackage!.name : active.label;
-  const feeUntil = usingSponsor ? selectedSponsorPackage!.description : active.until;
+  /** Sponsors pay package price — never fall back to delegate ticket tiers. */
+  const usingSponsor = participationType === "sponsor" || Boolean(selectedSponsorPackage);
+  const feeKes = usingSponsor ? selectedSponsorPackage?.kes ?? 0 : active.kes;
+  const feeUsd = usingSponsor ? selectedSponsorPackage?.usd ?? 0 : active.usd;
+  const feeLabel = usingSponsor
+    ? selectedSponsorPackage?.name || "Sponsorship package"
+    : active.label;
+  const feeUntil = usingSponsor
+    ? selectedSponsorPackage?.description || "—"
+    : active.until;
 
   const value = useMemo<RegistrationContextValue>(
     () => ({

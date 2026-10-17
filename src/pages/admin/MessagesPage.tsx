@@ -17,12 +17,74 @@ import {
   Send,
   Users,
 } from "lucide-react";
-import {
-  inboxMessages,
-  messageFolders,
-  messageKpis,
-} from "../../data/adminOps";
 import { cn } from "../../lib/cn";
+
+const messageFolders = [
+  { id: "all", label: "All Messages", count: 0 },
+  { id: "unread", label: "Unread", count: 0, badge: "red" as const },
+  { id: "sent", label: "Sent", count: 0 },
+  { id: "scheduled", label: "Scheduled", count: 0 },
+  { id: "drafts", label: "Drafts", count: 0 },
+  { id: "templates", label: "Templates", count: 0 },
+  { id: "archived", label: "Archived", count: 0 },
+] as const;
+
+const messageKpis = [
+  {
+    label: "Total Recipients",
+    value: "0",
+    trend: "—",
+    tone: "blue" as const,
+    sparkFill: "#edf4ff",
+    sparkStroke: "#94a3b8",
+    sparkPath: "M0 39 L100 39",
+  },
+  {
+    label: "Messages Sent",
+    value: "0",
+    trend: "—",
+    tone: "green" as const,
+    sparkFill: "#edf4ff",
+    sparkStroke: "#94a3b8",
+    sparkPath: "M0 39 L100 39",
+  },
+  {
+    label: "Open Rate",
+    value: "0%",
+    trend: "—",
+    tone: "orange" as const,
+    sparkFill: "#edf4ff",
+    sparkStroke: "#94a3b8",
+    sparkPath: "M0 39 L100 39",
+  },
+  {
+    label: "Click Rate",
+    value: "0%",
+    trend: "—",
+    tone: "purple" as const,
+    sparkFill: "#edf4ff",
+    sparkStroke: "#94a3b8",
+    sparkPath: "M0 39 L100 39",
+  },
+];
+
+type InboxMessage = {
+  id: string;
+  initials: string;
+  color: "blue" | "green" | "red" | "orange";
+  name: string;
+  subject: string;
+  preview: string;
+  time: string;
+  date: string;
+  status: "Sent" | "Delivered" | "Pending";
+  email: string;
+  intro: string;
+  main: string;
+  extra: string;
+};
+
+const inboxMessages: InboxMessage[] = [];
 
 type FolderId = (typeof messageFolders)[number]["id"];
 
@@ -69,13 +131,15 @@ function statusBadge(status: string) {
 /** Screen H Messages — from aca_messages_dashboard HTML */
 export function MessagesPage() {
   const [folder, setFolder] = useState<FolderId>("all");
-  const [selectedId, setSelectedId] = useState(inboxMessages[0]?.id ?? "");
+  const [selectedId, setSelectedId] = useState("");
   const [query, setQuery] = useState("");
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeTo, setComposeTo] = useState("");
   const [composeSubject, setComposeSubject] = useState("");
   const [composeBody, setComposeBody] = useState("");
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(
+    "Messages are not connected to an API yet — inbox stays empty until messaging storage is available.",
+  );
 
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -247,7 +311,9 @@ export function MessagesPage() {
               <p className="p-5 text-sm text-slate-500">
                 {folder === "templates"
                   ? "Connect your template service to load saved templates."
-                  : "No messages match your search."}
+                  : query.trim()
+                    ? "No messages match your search."
+                    : "Inbox is empty — messages API not connected yet."}
               </p>
             ) : (
               list.map((m) => (
@@ -490,7 +556,7 @@ export function MessagesPage() {
                 onClick={() => {
                   setComposeOpen(false);
                   setNotice(
-                    "Draft saved in this demo session. Connect backend storage for persistent drafts.",
+                    "Drafts are not saved yet. Connect a messages API for persistent drafts.",
                   );
                 }}
               >

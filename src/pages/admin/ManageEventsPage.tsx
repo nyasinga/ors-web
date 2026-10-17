@@ -678,7 +678,7 @@ export function ManageEventsPage() {
                           {row.isFeatured ? (
                             <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-[3px] text-[10px] font-semibold text-amber-800">
                               <Star size={10} strokeWidth={2.5} aria-hidden />
-                              Homepage
+                              Active
                             </span>
                           ) : null}
                         </div>
@@ -803,7 +803,7 @@ export function ManageEventsPage() {
                                   aria-hidden
                                   className={row.isFeatured ? "fill-amber-400 text-amber-500" : undefined}
                                 />
-                                {row.isFeatured ? "Remove from homepage" : "Show on homepage"}
+                                {row.isFeatured ? "Deactivate event" : "Activate event"}
                               </button>
                               <button
                                 type="button"

@@ -37,7 +37,11 @@ import { AddParticipantModal, type AddedParticipant } from "../../components/adm
 import { EventFaqsTab } from "../../components/admin/EventFaqsTab";
 import { EventProgrammeSchedule } from "../../components/admin/EventProgrammeSchedule";
 import { EventVenueContentTab } from "../../components/admin/EventVenueContentTab";
-import { PaymentsDashboard } from "../../components/admin/PaymentsDashboard";
+import {
+  PaymentsDashboard,
+  type PaymentsDashboardTx,
+} from "../../components/admin/PaymentsDashboard";
+import type { PaymentTxStatus } from "../../data/adminOps";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Modal } from "../../components/ui/Modal";
@@ -72,6 +76,10 @@ import {
 } from "../../lib/engagements";
 import { cn } from "../../lib/cn";
 import { printParticipantTicket } from "../../lib/printParticipantTicket";
+import {
+  fetchEventTransactions,
+  type PaymentTransaction,
+} from "../../lib/ticketAnalytics";
 import type {
   Engagement,
   EngagementAudience,
@@ -858,7 +866,12 @@ export function EventDetailsPage() {
       ) : null}
       {validTab === "payments" ? (
         <div className="mt-1">
-          <EventPaymentsTab fromApi={fromApi} loading={loading} />
+          <EventPaymentsTab
+            fromApi={fromApi}
+            loading={loading}
+            eventId={id}
+            eventName={detail.name}
+          />
         </div>
       ) : null}
       {validTab === "settings" ? (
@@ -1034,8 +1047,8 @@ function EventClassificationSettings({
       push({
         tone: "success",
         message: detail.isFeatured
-          ? "Removed from homepage — this event is no longer featured."
-          : "Shown on homepage — this is now the only public event.",
+          ? "Deactivated — this event is no longer the active public event."
+          : "Activated — this is now the only active public event. Others were deactivated.",
       });
     } catch (err) {
       setFeatureError(
@@ -1066,7 +1079,7 @@ function EventClassificationSettings({
           ["Visibility", detail.visibility],
           ["Registration", detail.registration],
           ["Payment", detail.payment],
-          ["Homepage", detail.isFeatured ? "Featured" : "Not featured"],
+          ["Active event", detail.isFeatured ? "Active" : "Inactive"],
           ["Mode", detail.mode],
           ["Category", detail.category],
           ["Target Audience", detail.audience],
@@ -1085,10 +1098,10 @@ function EventClassificationSettings({
         <div className="mt-4 rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-ink">Show on homepage</p>
+              <p className="text-sm font-semibold text-ink">Active public event</p>
               <p className="mt-0.5 text-[12px] leading-snug text-mute">
-                Only one published event appears on the public site. Enabling this
-                clears the previous featured event.
+                Only one event can be active. Activating this one publishes it on the
+                homepage and deactivates every other live event.
               </p>
             </div>
             <Button
@@ -1100,8 +1113,8 @@ function EventClassificationSettings({
               {featureBusy
                 ? "Saving…"
                 : detail.isFeatured
-                  ? "Remove from homepage"
-                  : "Show on homepage"}
+                  ? "Deactivate event"
+                  : "Activate event"}
             </Button>
           </div>
           {featureError ? (
@@ -2639,7 +2652,7 @@ function ParticipantsTab({
                       className="border-b border-x border-blue-100 px-2 py-8 text-center text-slate-400"
                     >
                       {source.length === 0
-                        ? "No participants yet — add one or wait for registrations."
+                        ? "No participants yet — Add Participant is local-only until a participants API exists."
                         : "No participants match your filters."}
                     </td>
                   </tr>
@@ -2739,25 +2752,6 @@ function ParticipantsTab({
             >
               1
             </button>
-            {!live ? (
-              <>
-                {[2, 3, 4, 5].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    className="grid h-7 w-7 place-items-center rounded-md border border-blue-100"
-                  >
-                    {n}
-                  </button>
-                ))}
-                <button type="button" className="grid h-7 w-7 place-items-center rounded-md border border-blue-100">
-                  …
-                </button>
-                <button type="button" className="grid h-7 w-7 place-items-center rounded-md border border-blue-100">
-                  325
-                </button>
-              </>
-            ) : null}
             <button type="button" className="grid h-7 w-7 place-items-center rounded-md border border-blue-100">
               ›
             </button>
@@ -3037,9 +3031,78 @@ function formatKesCompact(n: number) {
   return String(n);
 }
 
-function EventPaymentsTab({ fromApi, loading }: { fromApi: boolean; loading: boolean }) {
+function mapPaymentTxStatus(tx: PaymentTransaction): PaymentTxStatus {
+  const hay = `${tx.completed || ""} ${tx.reconciled || ""} ${tx.description || ""}`.toLowerCase();
+  if (/refund/.test(hay)) return "Refunded";
+  if (/fail|void|cancel/.test(hay)) return "Failed";
+  if (/pend|hold|await/.test(hay)) return "Pending";
+  const raw = String(tx.completed ?? "").trim().toLowerCase();
+  if (["false", "0", "no", "pending"].includes(raw)) return "Pending";
+  return "Completed";
+}
+
+function formatPaymentDatetime(value?: string) {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatPaymentAmount(amount?: number) {
+  const n = Math.abs(Number(amount) || 0);
+  return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
+function toDashboardTx(tx: PaymentTransaction, index: number): PaymentsDashboardTx {
+  return {
+    id: String(tx.transactionID || tx.receiptNo || tx.transactionReference || `tx-${index + 1}`),
+    datetime: formatPaymentDatetime(tx.paymentDate),
+    reference: String(tx.receiptNo || tx.transactionReference || tx.accountReference || "—"),
+    payer: String(tx.payerName || tx.phoneNumber || "—"),
+    source: String(tx.description || "Registration"),
+    amount: formatPaymentAmount(tx.amount),
+    method: String(tx.paymentMethod || "—"),
+    status: mapPaymentTxStatus(tx),
+  };
+}
+
+function EventPaymentsTab({
+  fromApi,
+  loading,
+  eventId,
+  eventName,
+}: {
+  fromApi: boolean;
+  loading: boolean;
+  eventId: string;
+  eventName: string;
+}) {
   const live = fromApi || loading;
-  return <PaymentsDashboard showTitle={false} live={live} />;
+  const [transactions, setTransactions] = useState<PaymentsDashboardTx[]>([]);
+
+  useEffect(() => {
+    if (!fromApi || !eventId) {
+      setTransactions([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const rows = await fetchEventTransactions(eventId, eventName);
+      if (cancelled) return;
+      setTransactions(rows.map(toDashboardTx));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fromApi, eventId, eventName]);
+
+  return <PaymentsDashboard showTitle={false} live={live} transactions={transactions} />;
 }
 
 function SponsorsTab({
@@ -4094,7 +4157,7 @@ function CommunicationsTab({
                           : "border-blue-100",
                       )}
                     >
-                      {tab} ({live ? 0 : count})
+                      {tab} ({count})
                     </button>
                   );
                 })}
@@ -4144,8 +4207,8 @@ function CommunicationsTab({
                         colSpan={10}
                         className="border-b border-x border-blue-100 px-2 py-8 text-center text-blue-500"
                       >
-                        {live
-                          ? "No campaigns yet — create one to reach your participants."
+                        {source.length === 0
+                          ? "No campaigns yet — messaging API not connected."
                           : "No campaigns match these filters."}
                       </td>
                     </tr>
@@ -4259,7 +4322,7 @@ function CommunicationsTab({
                   style={{ background: donutGradient }}
                 >
                   <div className="relative z-10 text-center">
-                    <strong className="block text-lg">{live ? "0" : "3,245"}</strong>
+                    <strong className="block text-lg">0</strong>
                     <span className="text-[10px] text-blue-700">Recipients</span>
                   </div>
                 </div>
@@ -4346,13 +4409,11 @@ function CommunicationsTab({
                       </td>
                     </tr>
                   ))}
-                  {live ? (
-                    <tr>
-                      <td colSpan={3} className="border-b border-x border-blue-100 px-2 py-6 text-center text-blue-400">
-                        No templates yet.
-                      </td>
-                    </tr>
-                  ) : null}
+                  <tr>
+                    <td colSpan={3} className="border-b border-x border-blue-100 px-2 py-6 text-center text-blue-400">
+                      No templates yet.
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>

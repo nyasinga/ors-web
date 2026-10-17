@@ -12,16 +12,14 @@ import {
 } from "lucide-react";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
-import { getParticipantSession, type ParticipantSession } from "../../lib/participantAuth";
+import {
+  getParticipantSession,
+  refreshParticipantSession,
+  type ParticipantSession,
+} from "../../lib/participantAuth";
 import { getEngagement } from "../../lib/engagements";
 import { ApiError } from "../../lib/api";
 import type { Engagement } from "../../types/engagement";
-
-const days = [
-  { id: "12", label: "Thu, 12 Nov" },
-  { id: "13", label: "Fri, 13 Nov" },
-  { id: "14", label: "Sat, 14 Nov" },
-];
 
 const formatDate = (value?: string) => {
   if (!value) return "—";
@@ -34,6 +32,30 @@ const formatDate = (value?: string) => {
         year: "numeric",
       }).format(date);
 };
+
+function programmeDayTabs(engagement: Engagement | null) {
+  if (!engagement?.startDate) return [] as Array<{ id: string; label: string }>;
+  const start = new Date(engagement.startDate);
+  const end = new Date(engagement.endDate || engagement.startDate);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [];
+  const days: Array<{ id: string; label: string }> = [];
+  const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  let i = 1;
+  while (cursor <= last && i <= 14) {
+    days.push({
+      id: String(i),
+      label: new Intl.DateTimeFormat("en-GB", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      }).format(cursor),
+    });
+    cursor.setDate(cursor.getDate() + 1);
+    i += 1;
+  }
+  return days;
+}
 
 const formatEventDates = (engagement: Engagement | null) => {
   if (!engagement) return "—";
@@ -146,21 +168,39 @@ const detailBox = "mb-3 max-[600px]:mb-[7px]";
 /** Participant dashboard — Tailwind port of the former participant-dashboard.css (pd-*) */
 export function ParticipantDashboardPage() {
   const event = useEventCopy();
-  const [day, setDay] = useState("12");
-
-  const session: ParticipantSession | null = getParticipantSession();
-  const engagementID = session?.engagementID;
-
+  const [session, setSession] = useState<ParticipantSession | null>(() => getParticipantSession());
+  const [day, setDay] = useState("1");
   const [engagement, setEngagement] = useState<Engagement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const dayTabs = programmeDayTabs(engagement);
 
-  useEffect(() => { 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const refreshed = await refreshParticipantSession();
+        if (!cancelled && refreshed) setSession(refreshed);
+      } catch {
+        // Keep cached session if revalidation fails (offline / API blip).
+        if (!cancelled) setSession(getParticipantSession());
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
     if (!session?.engagementID) {
       setEngagement(null);
-      setError("Your participant session does not include an event ID. Please sign in again.");
+      setError(
+        session
+          ? "Your participant session does not include an event ID. Please sign in again."
+          : null,
+      );
       setLoading(false);
       return () => {
         cancelled = true;
@@ -171,7 +211,7 @@ export function ParticipantDashboardPage() {
       setLoading(true);
       setError(null);
       try {
-        const row = await getEngagement(session?.engagementID); console.log(row);
+        const row = await getEngagement(session.engagementID);
         if (!cancelled) setEngagement(row);
       } catch (err) {
         if (cancelled) return;
@@ -191,6 +231,11 @@ export function ParticipantDashboardPage() {
       cancelled = true;
     };
   }, [session?.engagementID]);
+
+  useEffect(() => {
+    if (!dayTabs.length) return;
+    if (!dayTabs.some((d) => d.id === day)) setDay(dayTabs[0].id);
+  }, [dayTabs, day]);
 
   return (
     <>
@@ -394,21 +439,27 @@ export function ParticipantDashboardPage() {
               </Link>
             </div>
             <div className="mb-2 mt-[11px] flex gap-2 max-[600px]:overflow-auto">
-              {days.map((d) => (
-                <button
-                  key={d.id}
-                  type="button"
-                  className={cn(
-                    "grid h-[31px] min-w-[125px] cursor-pointer place-items-center rounded-[7px] text-[9px] font-semibold [font-family:inherit] max-[600px]:min-w-[100px]",
-                    day === d.id ? "bg-[#075fe5] text-white" : "bg-[#f1f6fc] text-[#07164d]",
-                  )}
-                  onClick={() => setDay(d.id)}
-                >
-                  {d.label}
-                </button>
-              ))}
+              {dayTabs.length === 0 ? (
+                <span className="text-[10px] text-[#657698]">No programme days published yet.</span>
+              ) : (
+                dayTabs.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    className={cn(
+                      "grid h-[31px] min-w-[125px] cursor-pointer place-items-center rounded-[7px] text-[9px] font-semibold [font-family:inherit] max-[600px]:min-w-[100px]",
+                      day === d.id ? "bg-[#075fe5] text-white" : "bg-[#f1f6fc] text-[#07164d]",
+                    )}
+                    onClick={() => setDay(d.id)}
+                  >
+                    {d.label}
+                  </button>
+                ))
+              )}
             </div>
-            {(engagement?.programme as any[])?.map((s) => (
+            {(engagement?.programme as any[])
+              ?.filter((s) => String(s.day ?? "1") === day)
+              ?.map((s) => (
               <div
                 key={s.id}
                 className="grid min-h-[47px] grid-cols-[100px_1fr_75px] items-center gap-[10px] border-t border-[#e2eaf3] text-[9px] max-[600px]:grid-cols-[70px_1fr_55px] max-[600px]:text-[8px]"
