@@ -5,19 +5,22 @@ import { PrivacyBar, RegisterHero } from "../../components/registration/Register
 import { useToast } from "../../components/ui/Toast";
 import { useRegistration } from "../../contexts/RegistrationContext";
 import { participationTypes } from "../../data/registration";
+import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { formatMoney } from "../../i18n/format";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
 import { initiateEcitizenCheckout, signupAfterPayment } from "../../lib/pesaflow";
 import type { ECitizenCheckoutSession } from "../../types/registration";
 import * as r from "../../components/registration/registerStyles";
-import { Currency } from "lucide-react";
+
+const PAYMENT_CURRENCY = "KES";
 
 /** Registration step 3 — initiate-checkout → eCitizen iframe → signup-isippe. */
 export function RegisterPaymentPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const event = useEventCopy();
+  const { engagement } = usePublicEngagement();
   const {
     files,
     participationType,
@@ -32,6 +35,7 @@ export function RegisterPaymentPage() {
     selectedSponsorPackage,
   } = useRegistration();
   const typeLabel = participationTypes.find((item) => item.id === participationType)?.title ?? "Delegate";
+  const engagementID = engagement?.engagementID ? String(engagement.engagementID) : null;
   const invoiceDescription = selectedSponsorPackage
     ? `${event.name || "Event"} — ${selectedSponsorPackage.name}`
     : `${event.name || "Event"} registration fee`;
@@ -55,7 +59,6 @@ export function RegisterPaymentPage() {
     setLoading(true);
     toast.info("Starting eCitizen payment…");
     try {
-
       const session = await initiateEcitizenCheckout({
         amount: String(feeKes),
         email: details.email,
@@ -63,7 +66,7 @@ export function RegisterPaymentPage() {
         phone: details.phone,
         name: details.fullName,
         itemDescription: invoiceDescription,
-        currency: "KES",
+        currency: PAYMENT_CURRENCY,
         callbackURL: window.location.href,
       });
 
@@ -86,38 +89,40 @@ export function RegisterPaymentPage() {
     setIsFinalizing(true);
     toast.info("Completing registration…");
     try {
-      await signupAfterPayment({
-        title: details.title,
-        fullName: details.fullName,
-        email: details.email,
-        phoneNo: details.phone,
-        country: details.country,
-        city: details.city,
-        userType: participationType,
-        extraData: {
-          dietary: details.dietary,
-          accessibility: details.accessibility,
-          jobTitle: details.jobTitle,
-          organisation: details.organisation,
-          engagementID: null,
-
-          sponsorPackage:(selectedSponsorPackage? {
-            id: selectedSponsorPackage.id,
-            name: selectedSponsorPackage.name
-          } : {}),
-
-          ticket: {
-            amount: 
-            Currency: 
-          }, 
-
-          eCitizen: {
-            reference,
-            currency,
-            invoiceRef
-          }
+      await signupAfterPayment(
+        {
+          title: details.title,
+          fullName: details.fullName,
+          email: details.email,
+          phoneNo: details.phone,
+          country: details.country,
+          city: details.city,
+          userType: participationType,
+          extraData: {
+            dietary: details.dietary,
+            accessibility: details.accessibility,
+            jobTitle: details.jobTitle,
+            organisation: details.organisation,
+            engagementID,
+            sponsorPackage: selectedSponsorPackage
+              ? {
+                  id: selectedSponsorPackage.id,
+                  name: selectedSponsorPackage.name,
+                }
+              : {},
+            ticket: {
+              amount: feeKes,
+              Currency: PAYMENT_CURRENCY,
+            },
+            eCitizen: {
+              reference,
+              currency: PAYMENT_CURRENCY,
+              invoiceRef,
+            },
+          },
         },
-      }, files);
+        files,
+      );
 
       setIsModalOpen(false);
       toast.success("Payment confirmed — registration complete.");

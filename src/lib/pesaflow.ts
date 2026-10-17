@@ -222,31 +222,17 @@ export type SignupIsippeInput = Record<string, unknown> & {
 /** Finalize registration after the user completes payment in the iframe. */
 export async function signupAfterPayment(
   input: SignupIsippeInput,
-  files: File[] = [],
+  _files: File[] = [],
 ) {
-  const formData = new FormData();
-
-  Object.entries(input).forEach(([key, value]) => {
-    if (value === undefined || value === null) return;
-    formData.append(
-      key,
-      typeof value === "object" ? JSON.stringify(value) : String(value),
-    );
-  });
-
-  files.forEach((file) => formData.append("files", file, file.name));
-
-  const headers = paymentHeaders();
-  delete (headers as Record<string, string>)["Content-Type"];
-  delete (headers as Record<string, string>)["content-type"];
-
+  // Backend only accepts application/json (multipart → 415).
+  // Profile picture upload needs a dedicated endpoint if required later.
   const res = await fetch(`${PAYMENT_API_BASE}/signup-isippe`, {
     method: "POST",
-    headers,
-    body: formData,
+    headers: paymentHeaders(),
+    body: JSON.stringify(input),
   });
 
-  const data = await res.json();
+  const data = (await res.json()) as { error?: { message?: string } };
 
   if (!res.ok) {
     throw new Error(data?.error?.message || "Registration failed after payment.");
