@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Handshake, Mic2, Monitor, Users } from "lucide-react";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
 import { useRegistration } from "../../contexts/RegistrationContext";
@@ -6,6 +6,7 @@ import { participationTypes, type ParticipationType } from "../../data/registrat
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
 import * as r from "../../components/registration/registerStyles";
+import { useEffect } from "react";
 
 const icons = {
   delegate: Users,
@@ -32,9 +33,14 @@ const includedLabel: Record<ParticipationType, string> = {
 export function RegisterParticipationPage() {
   const navigate = useNavigate();
   const event = useEventCopy();
-  const { participationType, setParticipationType } = useRegistration();
+  const { participationType, setParticipationType, sponsorEntrySource } = useRegistration();
   const selected = participationTypes.find((t) => t.id === participationType)!;
   const SelectedIcon = icons[selected.id];
+
+  useEffect(() => {
+    if(sponsorEntrySource === 'sponsorship') setParticipationType('delegate');
+  }, [sponsorEntrySource]);
+
 
   return (
     <div className={r.registerPage}>

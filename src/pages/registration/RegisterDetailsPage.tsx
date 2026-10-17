@@ -27,7 +27,6 @@ export function RegisterDetailsPage() {
   const { engagement } = usePublicEngagement();
   
   const {
-    files, 
     setFiles,
     profilePicturePreview,
     setProfilePicturePreview,
@@ -224,7 +223,8 @@ export function RegisterDetailsPage() {
               </div>
               <div className="mt-4 pt-4">
                 <label className={r.fieldLabel}>
-                  Profile Picture <span className="text-gray-400">(Optional)</span>
+                  { sponsorEntrySource === "sponsorship"? 'Organization Logo' : 'Profile Picture'} 
+                  <span className="text-gray-400">(Optional)</span>
                 </label>
 
                 <p className="mb-3 text-xs text-[#60708b]">
