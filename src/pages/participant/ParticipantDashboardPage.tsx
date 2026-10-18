@@ -1,17 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Award,
   CalendarDays,
+  Download,
   Hash,
   Mail,
   MapPin,
   Plane,
+  Printer,
   Users,
 } from "lucide-react";
 import { ProgrammeSchedule } from "../../components/programme/ProgrammeSchedule";
 import { SpeakersDirectory } from "../../components/speakers/SpeakersDirectory";
-import { TicketQrImage } from "../../components/participant/TicketQrImage";
+import { Button } from "../../components/ui/Button";
+import { Modal } from "../../components/ui/Modal";
+import { useToast } from "../../components/ui/Toast";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
 import {
@@ -20,6 +24,7 @@ import {
   type ParticipantSession,
 } from "../../lib/participantAuth";
 import { getEngagement } from "../../lib/engagements";
+import { fetchEventPassPdfUrl } from "../../lib/printParticipantTicket";
 import { engagementToPublicProgramme, engagementToPublicSpeakers } from "../../lib/publicEvent";
 import { API_BASE_URL, ApiError, TENANT_ID } from "../../lib/api";
 import type { Engagement } from "../../types/engagement";
@@ -144,14 +149,67 @@ const detailBox = "mb-3 max-[600px]:mb-[7px]";
 /** Participant dashboard — Tailwind port of the former participant-dashboard.css (pd-*) */
 export function ParticipantDashboardPage() {
   const event = useEventCopy();
+  const toast = useToast();
   const [session, setSession] = useState<ParticipantSession | null>(() => getParticipantSession());
-  const { passCode } = session as ParticipantSession;
+  const passCode = session?.passCode;
   const [engagement, setEngagement] = useState<Engagement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DashboardTab>("programme");
+  const [passLoading, setPassLoading] = useState(false);
+  const [passPreview, setPassPreview] = useState<{ url: string; passCode: string } | null>(null);
+  const passIframeRef = useRef<HTMLIFrameElement>(null);
   const programme = useMemo(() => engagementToPublicProgramme(engagement), [engagement]);
   const speakers = useMemo(() => engagementToPublicSpeakers(engagement), [engagement]);
+
+  const closePassPreview = () => {
+    setPassPreview((prev) => {
+      if (prev?.url) URL.revokeObjectURL(prev.url);
+      return null;
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (passPreview?.url) URL.revokeObjectURL(passPreview.url);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const openEventPass = async () => {
+    if (!passCode) {
+      toast.error("No pass code available for this ticket.");
+      return;
+    }
+    setPassLoading(true);
+    try {
+      closePassPreview();
+      const { url, passCode: code } = await fetchEventPassPdfUrl(passCode);
+      setPassPreview({ url, passCode: code });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Unable to load event pass.");
+    } finally {
+      setPassLoading(false);
+    }
+  };
+
+  const downloadEventPass = () => {
+    if (!passPreview) return;
+    const link = document.createElement("a");
+    link.href = passPreview.url;
+    link.download = `ticket-${passPreview.passCode}.pdf`;
+    link.click();
+  };
+
+  const printEventPass = () => {
+    const frame = passIframeRef.current;
+    try {
+      frame?.contentWindow?.focus();
+      frame?.contentWindow?.print();
+    } catch {
+      toast.error("Unable to print from preview. Try downloading the PDF.");
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -290,16 +348,13 @@ export function ParticipantDashboardPage() {
                 </div>
                 <button
                   type="button"
-                  className="mt-[9px] h-[38px] w-[150px] cursor-pointer rounded-[5px] bg-[#edf6ff] text-[11px] font-semibold text-[#0755d2] [font-family:inherit] max-[600px]:w-full"
+                  disabled={!passCode || passLoading}
+                  className="mt-[9px] h-[38px] w-[150px] cursor-pointer rounded-[5px] bg-[#edf6ff] text-[11px] font-semibold text-[#0755d2] [font-family:inherit] disabled:cursor-not-allowed disabled:opacity-50 max-[600px]:w-full"
                   onClick={() => {
-                    if (!passCode) return;
-                    const link = document.createElement("a");
-                    link.href = `${API_BASE_URL}/ticketing/${passCode}/event-pass?tenant-id=${TENANT_ID}`;
-                    link.target="_blank"
-                    link.download = `ticket-${passCode}.pdf`;
-                    link.click();
-                  }}>
-                  ⇩ &nbsp; Download Event Pass
+                    void openEventPass();
+                  }}
+                >
+                  {passLoading ? "Loading…" : "⇩  Download Event Pass"}
                 </button>
               </div>
               <div className="text-[11px] max-[600px]:grid max-[600px]:grid-cols-[1fr_1fr] max-[600px]:gap-[5px]">
@@ -504,6 +559,38 @@ export function ParticipantDashboardPage() {
           </section>
         </div>
       </section>
+
+      <Modal
+        open={Boolean(passPreview)}
+        onClose={closePassPreview}
+        title="Your Event Pass"
+        bottomSheetOnMobile={false}
+        className="!max-w-3xl md:!max-w-3xl"
+        footer={
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={closePassPreview}>
+              Close
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={downloadEventPass}>
+              <Download size={14} className="mr-1.5" />
+              Download
+            </Button>
+            <Button type="button" size="sm" onClick={printEventPass}>
+              <Printer size={14} className="mr-1.5" />
+              Print
+            </Button>
+          </div>
+        }
+      >
+        {passPreview ? (
+          <iframe
+            ref={passIframeRef}
+            title={`Event pass ${passPreview.passCode}`}
+            src={passPreview.url}
+            className="h-[min(70vh,640px)] w-full rounded-md border border-[#e0e9f3] bg-slate-50"
+          />
+        ) : null}
+      </Modal>
     </>
   );
 }
