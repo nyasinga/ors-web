@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
 import { IMAGE_KEY, IMAGE_PERSIST_KEY, useRegistration } from "../../contexts/RegistrationContext";
+import { SearchableSelect } from "../../components/ui/SearchableSelect";
+import { COUNTRY_NAME_OPTIONS } from "../../data/countries";
 import { participationTypes } from "../../data/registration";
 import { formatMoney } from "../../i18n/format";
 import { useEventCopy } from "../../i18n/useEventCopy";
@@ -192,20 +194,18 @@ export function RegisterDetailsPage() {
                   <label className={r.fieldLabel}>
                     Country <span className={r.required}>*</span>
                   </label>
-                  <select
-                    className={r.fieldSelect}
+                  <SearchableSelect
+                    compact
+                    aria-label="Country"
                     value={details.country}
-                    onChange={(e) => setDetails({ country: e.target.value })}
-                  >
-                    <option value="">Select country</option>
-                    <option value="Kenya">Kenya</option>
-                    <option value="United Kingdom">United Kingdom</option>
-                    <option value="United States">United States</option>
-                    <option value="Nigeria">Nigeria</option>
-                    <option value="South Africa">South Africa</option>
-                    <option value="Uganda">Uganda</option>
-                    <option value="Other">Other</option>
-                  </select>
+                    onChange={(country) => setDetails({ country })}
+                    placeholder="Select country"
+                    searchPlaceholder="Search countries…"
+                    options={COUNTRY_NAME_OPTIONS.map((name) => ({
+                      value: name,
+                      label: name,
+                    }))}
+                  />
                   {errors.country ? <span className={r.fieldError}>{errors.country}</span> : null}
                 </div>
                 <div>

@@ -38,12 +38,14 @@ import { Card } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import { Pill } from "../../components/ui/Pill";
+import { SearchableSelect } from "../../components/ui/SearchableSelect";
 import { Select } from "../../components/ui/Select";
 import { Stepper } from "../../components/ui/Stepper";
 import { Tabs } from "../../components/ui/Tabs";
 import { useToast } from "../../components/ui/Toast";
 import { Toggle } from "../../components/ui/Toggle";
 import { createWizardSteps, eventTypeOptions } from "../../data/adminEvents";
+import { COUNTRY_CODE_OPTIONS } from "../../data/countries";
 import { ApiError } from "../../lib/api";
 import { resourcePublicUrl, uploadResource } from "../../lib/resources";
 import {
@@ -1064,21 +1066,30 @@ export function CreateEventPage() {
                       clearFieldError("city");
                     }}
                   />
-                  <Select
-                    label="Country"
-                    required={venueMode === "in-person" || venueMode === "hybrid"}
-                    value={country}
-                    error={fieldErrors.country}
-                    onChange={(e) => {
-                      setCountry(e.target.value);
-                      clearFieldError("country");
-                    }}
-                    options={[
-                      { value: "KE", label: "Kenya" },
-                      { value: "UG", label: "Uganda" },
-                      { value: "TZ", label: "Tanzania" },
-                    ]}
-                  />
+                  <label className="grid gap-1.5 text-sm">
+                    <span className="font-medium text-ink">
+                      Country
+                      {venueMode === "in-person" || venueMode === "hybrid" ? (
+                        <span className="text-red"> *</span>
+                      ) : null}
+                    </span>
+                    <SearchableSelect
+                      value={country}
+                      onChange={(next) => {
+                        setCountry(next);
+                        clearFieldError("country");
+                      }}
+                      options={COUNTRY_CODE_OPTIONS}
+                      placeholder="Select country"
+                      searchPlaceholder="Search countries…"
+                      aria-label="Country"
+                    />
+                    {fieldErrors.country ? (
+                      <span className="text-xs text-red" role="alert">
+                        {fieldErrors.country}
+                      </span>
+                    ) : null}
+                  </label>
                   <Input
                     label="Capacity"
                     type="number"

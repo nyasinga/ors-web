@@ -4,6 +4,7 @@ export { EmptyState } from "./EmptyState";
 export { Field } from "./Field";
 export { Input } from "./Input";
 export { Select } from "./Select";
+export { SearchableSelect, type SearchableSelectOption } from "./SearchableSelect";
 export { Toggle } from "./Toggle";
 export { Pill } from "./Pill";
 export { Tabs, type TabItem } from "./Tabs";

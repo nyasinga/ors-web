@@ -1,4 +1,5 @@
 import type { EventStatus, EventType, ManagedEvent } from "../data/adminEvents";
+import { countryDisplayName } from "../data/countries";
 import type {
   Engagement,
   EngagementFaqCategory,
@@ -643,25 +644,11 @@ export type EngagementKpiSummary = {
   currency: string;
 };
 
-const COUNTRY_META: Record<string, { name: string; flag: string }> = {
-  KE: { name: "Kenya", flag: "🇰🇪" },
-  UG: { name: "Uganda", flag: "🇺🇬" },
-  TZ: { name: "Tanzania", flag: "🇹🇿" },
-  RW: { name: "Rwanda", flag: "🇷🇼" },
-  NG: { name: "Nigeria", flag: "🇳🇬" },
-  ZA: { name: "South Africa", flag: "🇿🇦" },
-  GH: { name: "Ghana", flag: "🇬🇭" },
-  US: { name: "USA", flag: "🇺🇸" },
-  GB: { name: "UK", flag: "🇬🇧" },
-  UK: { name: "UK", flag: "🇬🇧" },
-};
-
 function countryMeta(codeOrName?: string) {
   const raw = String(codeOrName ?? "").trim();
   if (!raw) return { name: "Unspecified", flag: "🌍" };
-  const upper = raw.toUpperCase();
-  if (COUNTRY_META[upper]) return COUNTRY_META[upper];
-  return { name: raw, flag: "🌍" };
+  const name = countryDisplayName(raw);
+  return { name: name || raw, flag: "🌍" };
 }
 
 function parseTicketPrice(price?: string) {
@@ -772,15 +759,12 @@ export function buildDashboardSnapshot(rows: Engagement[]): DashboardSnapshot {
   const countries: DashboardCountryRow[] = [...countryCounts.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8)
-    .map(([name, count]) => {
-      const match = Object.values(COUNTRY_META).find((c) => c.name === name);
-      return {
-        name,
-        flag: match?.flag ?? "🌍",
-        count,
-        pct: Math.round((count / maxCountry) * 100),
-      };
-    });
+    .map(([name, count]) => ({
+      name,
+      flag: "🌍",
+      count,
+      pct: Math.round((count / maxCountry) * 100),
+    }));
 
   const recentEvents: DashboardRecentEvent[] = [...rows]
     .sort((a, b) => {

@@ -49,6 +49,7 @@ import { ScrollableNav } from "../../components/ui/ScrollableNav";
 import { Select } from "../../components/ui/Select";
 import { useToast } from "../../components/ui/Toast";
 import { eventDetailTabs } from "../../data/adminEvents";
+import { COUNTRY_NAME_OPTIONS } from "../../data/countries";
 import {
   engagementSpeakerToCard,
   SpeakerCardGrid,
@@ -2818,11 +2819,12 @@ function ParticipantsTab({
               <label className="text-[10px]">
                 Country
                 <select className="mt-1 h-[29px] w-full rounded-md border border-blue-100 bg-white px-2 text-[11px]">
-                  <option>All Countries</option>
-                  <option>Kenya</option>
-                  <option>Nigeria</option>
-                  <option>South Africa</option>
-                  <option>Uganda</option>
+                  <option value="">All Countries</option>
+                  {COUNTRY_NAME_OPTIONS.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="text-[10px]">

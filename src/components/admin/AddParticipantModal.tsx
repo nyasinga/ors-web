@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { SearchableSelect } from "../ui/SearchableSelect";
+import { COUNTRY_NAME_OPTIONS } from "../../data/countries";
 import { participationTypes, type ParticipationType } from "../../data/registration";
 import type { RegistrationDetails } from "../../contexts/RegistrationContext";
 import { cn } from "../../lib/cn";
@@ -263,20 +265,18 @@ export function AddParticipantModal({ open, onClose, onAdd }: Props) {
               <label className={labelClass}>
                 Country <span className="text-red-500">*</span>
               </label>
-              <select
-                className={fieldSelectClass}
+              <SearchableSelect
+                compact
+                aria-label="Country"
                 value={details.country}
-                onChange={(e) => patch({ country: e.target.value })}
-              >
-                <option value="">Select country</option>
-                <option value="Kenya">Kenya</option>
-                <option value="United Kingdom">United Kingdom</option>
-                <option value="United States">United States</option>
-                <option value="Nigeria">Nigeria</option>
-                <option value="South Africa">South Africa</option>
-                <option value="Uganda">Uganda</option>
-                <option value="Other">Other</option>
-              </select>
+                onChange={(country) => patch({ country })}
+                placeholder="Select country"
+                searchPlaceholder="Search countries…"
+                options={COUNTRY_NAME_OPTIONS.map((name) => ({
+                  value: name,
+                  label: name,
+                }))}
+              />
               {errors.country ? <span className={errorClass}>{errors.country}</span> : null}
             </div>
             <div>

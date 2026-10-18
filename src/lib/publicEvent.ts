@@ -1,4 +1,5 @@
 import type { ProgrammeSession } from "../data/publicContent";
+import { countryDisplayName } from "../data/countries";
 import type { Engagement, EngagementProgrammeSession, EngagementSponsor } from "../types/engagement";
 import { engagementSpeakerToCard, type SpeakerCardData } from "../components/speakers/SpeakerCard";
 import { apiRequest } from "./api";
@@ -129,14 +130,7 @@ export async function getPublicEngagement(id?: string) {
 }
 
 function countryLabel(code?: string) {
-  if (!code) return "";
-  const map: Record<string, string> = {
-    KE: "Kenya",
-    UG: "Uganda",
-    TZ: "Tanzania",
-    RW: "Rwanda",
-  };
-  return map[code.toUpperCase()] || code;
+  return countryDisplayName(code);
 }
 
 function ordinalDay(n: number) {
