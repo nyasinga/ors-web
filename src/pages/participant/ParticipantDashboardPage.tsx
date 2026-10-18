@@ -1,20 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Award,
   CalendarDays,
-  Download,
   Hash,
   Mail,
   MapPin,
   Plane,
-  Printer,
   Users,
 } from "lucide-react";
 import { ProgrammeSchedule } from "../../components/programme/ProgrammeSchedule";
 import { SpeakersDirectory } from "../../components/speakers/SpeakersDirectory";
-import { Button } from "../../components/ui/Button";
-import { Modal } from "../../components/ui/Modal";
+import { EventPassPreviewModal } from "../../components/tickets/EventPassPreviewModal";
 import { useToast } from "../../components/ui/Toast";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
@@ -158,7 +155,6 @@ export function ParticipantDashboardPage() {
   const [activeTab, setActiveTab] = useState<DashboardTab>("programme");
   const [passLoading, setPassLoading] = useState(false);
   const [passPreview, setPassPreview] = useState<{ url: string; passCode: string } | null>(null);
-  const passIframeRef = useRef<HTMLIFrameElement>(null);
   const programme = useMemo(() => engagementToPublicProgramme(engagement), [engagement]);
   const speakers = useMemo(() => engagementToPublicSpeakers(engagement), [engagement]);
 
@@ -190,24 +186,6 @@ export function ParticipantDashboardPage() {
       toast.error(err instanceof Error ? err.message : "Unable to load event pass.");
     } finally {
       setPassLoading(false);
-    }
-  };
-
-  const downloadEventPass = () => {
-    if (!passPreview) return;
-    const link = document.createElement("a");
-    link.href = passPreview.url;
-    link.download = `ticket-${passPreview.passCode}.pdf`;
-    link.click();
-  };
-
-  const printEventPass = () => {
-    const frame = passIframeRef.current;
-    try {
-      frame?.contentWindow?.focus();
-      frame?.contentWindow?.print();
-    } catch {
-      toast.error("Unable to print from preview. Try downloading the PDF.");
     }
   };
 
@@ -560,37 +538,13 @@ export function ParticipantDashboardPage() {
         </div>
       </section>
 
-      <Modal
+      <EventPassPreviewModal
         open={Boolean(passPreview)}
+        url={passPreview?.url ?? null}
+        passCode={passPreview?.passCode}
         onClose={closePassPreview}
-        title="Your Event Pass"
-        bottomSheetOnMobile={false}
-        className="!max-w-3xl md:!max-w-3xl"
-        footer={
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button type="button" variant="ghost" size="sm" onClick={closePassPreview}>
-              Close
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={downloadEventPass}>
-              <Download size={14} className="mr-1.5" />
-              Download
-            </Button>
-            <Button type="button" size="sm" onClick={printEventPass}>
-              <Printer size={14} className="mr-1.5" />
-              Print
-            </Button>
-          </div>
-        }
-      >
-        {passPreview ? (
-          <iframe
-            ref={passIframeRef}
-            title={`Event pass ${passPreview.passCode}`}
-            src={passPreview.url}
-            className="h-[min(70vh,640px)] w-full rounded-md border border-[#e0e9f3] bg-slate-50"
-          />
-        ) : null}
-      </Modal>
+        onError={(message) => toast.error(message)}
+      />
     </>
   );
 }

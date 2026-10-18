@@ -87,7 +87,6 @@ export function ParticipantLoginPage() {
   const location = useLocation();
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
-  const [scanned, setScanned] = useState(false);
   const [busy, setBusy] = useState(false);
   const returnTo =
     (location.state as { from?: string } | null)?.from &&
@@ -140,7 +139,7 @@ export function ParticipantLoginPage() {
     setError("");
     setBusy(true);
     try {
-      await participantLogin({ passCode: code, viaQr: scanned, remember: true });
+      await participantLogin({ passCode: code, viaQr: false, remember: true });
       navigate(returnTo, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to sign in. Try again.");
@@ -260,14 +259,10 @@ export function ParticipantLoginPage() {
                   <ScanLine className="h-[31px] w-[31px] flex-none text-[#075fe5]" size={31} strokeWidth={1.8} />
                   <div>
                     <strong className="block text-left text-[13px] text-[#082da0] max-[600px]:text-[11px]">
-                      {scanned
-                        ? busy
-                          ? "Signing in…"
-                          : "QR ready — click to continue"
-                        : "Click to scan QR code"}
+                      {cameraOpen || busy ? "Scanning…" : "Click to scan QR code"}
                     </strong>
                     <span className="mt-1 block text-left text-[11px] text-[#637397] max-[600px]:text-[9px]">
-                      {scanned ? "Pass code optional when QR is ready" : "or drag and drop an image"}
+                      Point your camera at the QR on your ticket
                     </span>
                   </div>
                 </button>
@@ -323,7 +318,7 @@ export function ParticipantLoginPage() {
                     maxLength={6}
                     inputMode="numeric"
                     placeholder="Enter 6-digit pass code"
-                    required={!scanned}
+                    required
                     disabled={busy}
                     aria-invalid={Boolean(error) || undefined}
                   />

@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
+import ImagePicker from "../../components/ui/ImagePicker";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import { Pill } from "../../components/ui/Pill";
@@ -263,7 +264,6 @@ export function CreateEventPage() {
   const [newSpeakerCountry, setNewSpeakerCountry] = useState("");
   const [newSpeakerPhotoFile, setNewSpeakerPhotoFile] = useState<File | null>(null);
   const [newSpeakerPhotoPreview, setNewSpeakerPhotoPreview] = useState("");
-  const [newSpeakerPhotoName, setNewSpeakerPhotoName] = useState("");
   const [uploadingSpeakerPhoto, setUploadingSpeakerPhoto] = useState(false);
   const [pkgName, setPkgName] = useState("");
   const [pkgPrice, setPkgPrice] = useState("");
@@ -280,7 +280,6 @@ export function CreateEventPage() {
       return "";
     });
     setNewSpeakerPhotoFile(null);
-    setNewSpeakerPhotoName("");
   };
 
   const wizardValues = (): EventWizardValues => ({
@@ -2164,9 +2163,9 @@ export function CreateEventPage() {
                 setUploadingSpeakerPhoto(true);
                 try {
                   const uploaded = await uploadResource(newSpeakerPhotoFile);
-                  const photoUrl = resourcePublicUrl(uploaded);
-                  if (!photoUrl) {
-                    toast.error("Upload succeeded but no photo URL was returned.");
+                  const photoId = uploaded.resourceID?.trim();
+                  if (!photoId) {
+                    toast.error("Upload succeeded but no photo id was returned.");
                     return;
                   }
                   setSpeakers((prev) => [
@@ -2182,7 +2181,7 @@ export function CreateEventPage() {
                       badge: badgeMap[category] || "Speaker",
                       country: newSpeakerCountry.trim() || "",
                       flag: "",
-                      photo: photoUrl,
+                      photo: photoId,
                       bio: "",
                     },
                   ]);
@@ -2218,70 +2217,25 @@ export function CreateEventPage() {
             <p className="mb-1.5 text-sm font-medium text-ink">
               Passport photo <span className="text-red">*</span>
             </p>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-              <div className="grid h-[120px] w-[90px] shrink-0 place-items-center overflow-hidden rounded-lg border border-dashed border-slate-300 bg-slate-50">
-                {newSpeakerPhotoPreview ? (
-                  <img
-                    src={newSpeakerPhotoPreview}
-                    alt="Passport preview"
-                    className="h-full w-full object-cover object-top"
-                  />
-                ) : (
-                  <span className="px-2 text-center text-[10px] font-medium leading-snug text-mute">
-                    3 × 4 cm
-                    <br />
-                    portrait
-                  </span>
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-ink hover:border-blue/40 hover:bg-soft/40">
-                  <Upload size={14} className="text-blue" />
-                  {newSpeakerPhotoFile ? "Change photo" : "Choose photo"}
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="sr-only"
-                    disabled={uploadingSpeakerPhoto}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      e.target.value = "";
-                      if (!file) return;
-                      if (!file.type.startsWith("image/")) {
-                        toast.error("Choose a JPG, PNG, or WebP image.");
-                        return;
-                      }
-                      if (file.size > 2 * 1024 * 1024) {
-                        toast.error("Passport photo must be 2 MB or smaller.");
-                        return;
-                      }
-                      setNewSpeakerPhotoFile(file);
-                      setNewSpeakerPhotoName(file.name);
-                      setNewSpeakerPhotoPreview((prev) => {
-                        if (prev.startsWith("blob:")) URL.revokeObjectURL(prev);
-                        return URL.createObjectURL(file);
-                      });
-                    }}
-                  />
-                </label>
-                <p className="mt-2 text-xs text-mute">
-                  Clear front-facing passport-style photo. JPG or PNG, max 2 MB.
-                </p>
-                {newSpeakerPhotoName ? (
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-mute">
-                    <span className="truncate font-medium text-ink">{newSpeakerPhotoName}</span>
-                    <button
-                      type="button"
-                      className="font-semibold text-red hover:underline"
-                      disabled={uploadingSpeakerPhoto}
-                      onClick={() => clearSpeakerPhoto()}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            </div>
+            <ImagePicker
+              imageKey="speaker-passport.jpg"
+              value={newSpeakerPhotoPreview}
+              onChange={(file) => {
+                if (!file) {
+                  clearSpeakerPhoto();
+                  return;
+                }
+                const previewUrl = URL.createObjectURL(file);
+                setNewSpeakerPhotoPreview((prev) => {
+                  if (prev.startsWith("blob:")) URL.revokeObjectURL(prev);
+                  return previewUrl;
+                });
+                setNewSpeakerPhotoFile(file);
+              }}
+            />
+            <p className="mt-2 text-xs text-mute">
+              Clear front-facing passport-style photo. Crop to frame the face before saving.
+            </p>
           </div>
           <Input
             label="Full name"

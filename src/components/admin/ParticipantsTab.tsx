@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, Download, Plus, Printer, Search, Timer, Users, X } from "lucide-react";
 import { AddParticipantModal, type AddedParticipant } from "./AddParticipantModal";
-import { Button } from "../ui/Button";
-import { Modal } from "../ui/Modal";
+import { EventPassPreviewModal } from "../tickets/EventPassPreviewModal";
 import { useToast } from "../ui/Toast";
 import { ApiError } from "../../lib/api";
 import { cn } from "../../lib/cn";
@@ -58,7 +57,6 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     passCode: string;
     name: string;
   } | null>(null);
-  const passIframeRef = useRef<HTMLIFrameElement>(null);
 
   const closePassPreview = () => {
     setPassPreview((prev) => {
@@ -193,45 +191,14 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
         }}
       />
 
-      <Modal
+      <EventPassPreviewModal
         open={Boolean(passPreview)}
-        onClose={closePassPreview}
+        url={passPreview?.url ?? null}
+        passCode={passPreview?.passCode}
         title={passPreview ? `Event pass — ${passPreview.name}` : "Event pass"}
-        bottomSheetOnMobile={false}
-        className="!max-w-3xl md:!max-w-3xl"
-        footer={
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button type="button" variant="ghost" size="sm" onClick={closePassPreview}>
-              Close
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => {
-                const frame = passIframeRef.current;
-                try {
-                  frame?.contentWindow?.focus();
-                  frame?.contentWindow?.print();
-                } catch {
-                  toast.error("Unable to print from preview. Try downloading the PDF.");
-                }
-              }}
-            >
-              <Printer size={14} className="mr-1.5" />
-              Print
-            </Button>
-          </div>
-        }
-      >
-        {passPreview ? (
-          <iframe
-            ref={passIframeRef}
-            title={`Event pass ${passPreview.passCode}`}
-            src={passPreview.url}
-            className="h-[min(70vh,640px)] w-full rounded-md border border-blue-100 bg-slate-50"
-          />
-        ) : null}
-      </Modal>
+        onClose={closePassPreview}
+        onError={(message) => toast.error(message)}
+      />
 
       <section className="mb-2.5 grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-5">
         {kpis.map((kpi) => (
