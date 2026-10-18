@@ -27,9 +27,6 @@ const sideLinks = [
   { to: "/me", label: "My Registration", icon: ClipboardCheck, end: true },
   { to: "/programme", label: "Programme", icon: CalendarDays },
   { to: "/speakers", label: "Speakers", icon: Users },
-  { to: "/venue", label: "Venue & Travel", icon: MapPin },
-  { to: "/faq", label: "Documents", icon: FileText },
-  { to: "/faq", label: "Updates", icon: Megaphone },
   { to: "/faq", label: "Help & Support", icon: Headset },
 ];
 

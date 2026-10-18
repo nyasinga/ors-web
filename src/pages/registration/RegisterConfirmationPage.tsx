@@ -6,6 +6,7 @@ import { formatMoney } from "../../i18n/format";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import * as r from "../../components/registration/registerStyles";
 import { API_BASE_URL, TENANT_ID } from "../../lib/api";
+import type { EngagementTicketStatus } from "../../types/ticket";
 
 /** Registration step 4 — structure & CSS from HTML package */
 export function RegisterConfirmationPage() {
@@ -16,7 +17,7 @@ export function RegisterConfirmationPage() {
   const displayEmail = details.email.trim();
   const displayOrg = details.organisation.trim();
   const totalPaid = feeKes > 0 ? feeKes + 50 : 0;
-  const { googleCalendarURL, passCodeQR, passCode } = details;
+  const { googleCalendarURL, passCodeQR, passCode, status: paymentStatus} = details;
 
   const paidAt = new Date().toLocaleString("en-GB", {
     day: "numeric",
@@ -52,13 +53,14 @@ export function RegisterConfirmationPage() {
             <div className={r.detailBox}>
               <h4 className={r.detailTitle}>Registration Details</h4>
               <div className={r.drow}>
+                <span aria-hidden>{"\u25A3"}</span>
                 <span>
                   <b className={r.drowLabel}>Full Name</b>
                   {displayName}
                 </span>
               </div>
               <div className={r.drow}>
-                <span aria-hidden>{"\u2709"}</span>
+                <span aria-hidden>{"\u25A3"}</span>
                 <span>
                   <b className={r.drowLabel}>Email Address</b>
                   {displayEmail}
@@ -72,7 +74,7 @@ export function RegisterConfirmationPage() {
                 </span>
               </div>
               <div className={r.drow}>
-                <span aria-hidden>{"\u265F"}</span>
+                <span aria-hidden>{"\u25A3"}</span>
                 <span>
                   <b className={r.drowLabel}>Participation Type</b>
                   {typeLabel}
@@ -112,10 +114,10 @@ export function RegisterConfirmationPage() {
                 </span>
               </div>
               <div className={r.drow}>
-                <span aria-hidden>{"\u25CF"}</span>
+                <span aria-hidden>{"\u25A3"}</span>
                 <span>
                   <b className={r.drowLabel}>Payment Status</b>
-                  <span className="text-[#078047]">Successful</span>
+                  <span className="text-[#078047]">{ paymentStatus as EngagementTicketStatus}</span>
                 </span>
               </div>
             </div>
@@ -174,7 +176,7 @@ export function RegisterConfirmationPage() {
             {passCodeQR && (
               <img
                 className={r.qr}
-                src={passCode? `${API_BASE_URL}/ticketing/${passCode}/qrcode?tenant-id=${TENANT_ID}` : '/assets/qr-ticket.png'}
+                src={passCode? `data:image/png;base64,${passCodeQR}` : '/assets/qr-ticket.png'}
                 alt="Event pass QR code"
               />
             )}
