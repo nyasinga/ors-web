@@ -3,12 +3,9 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import {
   CalendarDays,
   ClipboardCheck,
-  FileText,
   Headset,
   Home,
   LogOut,
-  MapPin,
-  Megaphone,
   Users,
 } from "lucide-react";
 import { useParticipantSession } from "../hooks/useParticipantSession";
@@ -18,6 +15,7 @@ import { cn } from "../lib/cn";
 import {
   clearParticipantSession,
   hasParticipantSession,
+  participantAvatar,
   participantDisplayName,
   participantInitials,
 } from "../lib/participantAuth";
@@ -75,6 +73,7 @@ export function ParticipantLayout() {
   const { engagement } = usePublicEngagement();
   const name = participantDisplayName(session);
   const initials = participantInitials(session);
+  const photo = participantAvatar(session?.photo);
   const eventLogo = engagement?.logo?.trim() || "";
   const eventLabel = event.name || engagement?.engagementName?.trim() || "Event";
   const showIsippeLogo = /isippe/i.test(eventLabel);
@@ -124,8 +123,16 @@ export function ParticipantLayout() {
               ))}
             </nav>
             <div className="ml-[22px] flex h-[51px] min-w-[180px] items-center gap-[10px] rounded-[25px] bg-[#f2f7fd] px-4 max-[1120px]:ml-[10px] max-[1120px]:min-w-[160px] max-[850px]:hidden">
-              <div className="grid h-[35px] w-[35px] flex-none place-items-center rounded-[50%] bg-[#075fe5] text-[11px] font-extrabold text-white">
-                {initials}
+              <div className="grid h-[35px] w-[35px] flex-none place-items-center overflow-hidden rounded-[50%] bg-[#075fe5] text-[11px] font-extrabold text-white">
+                {photo ? (
+                  <img
+                    src={photo}
+                    alt={name || "Participant"}
+                    className="h-full w-full rounded-[50%] object-cover"
+                  />
+                ) : (
+                  initials
+                )}
               </div>
               <div>
                 <strong className="block text-[12px]">{name}</strong>

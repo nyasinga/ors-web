@@ -3,7 +3,7 @@
  * Login and refresh both hit POST /ticketing/register; storage is a cache only.
  */
 
-import { apiRequest } from "./api";
+import { API_BASE_URL, apiRequest, TENANT_ID } from "./api";
 
 const TOKEN_KEY = "ors_participant_token";
 const SESSION_KEY = "ors_participant_session";
@@ -25,6 +25,7 @@ export type ParticipantSession = {
   ticketPrice: number;
   currency: string;
   status: string;
+  photo: string;
   registeredAt: string;
 };
 
@@ -128,6 +129,7 @@ function sessionFromTicketResponse(
     method: previous?.method || method,
     token: String(result.token || previous?.token || `participant.${Date.now()}`),
     signedInAt: previous?.signedInAt || new Date().toISOString(),
+    photo: String(ticket.photo || previous?.photo || ""),
   };
 }
 
@@ -171,6 +173,14 @@ export async function refreshParticipantSession(): Promise<ParticipantSession | 
 
 export function participantDisplayName(session: ParticipantSession | null | undefined, fallback = "Participant") {
   return session?.fullName?.trim() || fallback;
+}
+
+export function participantAvatar(
+  resourceID: string | undefined | null,
+): string | undefined {
+  return resourceID
+    ? `${API_BASE_URL}/resources/download/${resourceID}?tenant-id=${TENANT_ID}`
+    : undefined;
 }
 
 export function participantInitials(session: ParticipantSession | null | undefined) {
