@@ -23,6 +23,9 @@ const tabs = [
   { id: "venue", label: "Venue", target: "venue" },
 ] as const;
 
+/** Mock highlight strip — kept for future API wiring; off so it is not shown as live content. */
+const SHOW_ABOUT_FEATURE_STRIP = false;
+
 const features = [
   {
     icon: Users,
@@ -179,27 +182,29 @@ export function AboutPage() {
               />
             </div>
 
-            <div className="mt-[17px] grid grid-cols-4 overflow-hidden rounded-lg bg-[linear-gradient(110deg,#f1f8ff,#f8fbff)] max-[760px]:grid-cols-2">
-              {features.map((item) => (
-                <article
-                  key={item.title}
-                  className="min-h-[162px] border-r border-[#e2eaf3] px-4 py-[21px] text-center last:border-r-0 max-[760px]:min-h-[145px] max-[760px]:px-2.5 max-[760px]:py-[18px] max-[760px]:[&:nth-child(-n+2)]:border-b max-[760px]:[&:nth-child(2)]:border-r-0"
-                >
-                  <div
-                    className="mx-auto mb-2.5 grid h-11 w-11 place-items-center max-[760px]:h-[38px] max-[760px]:w-[38px] [&_svg]:block [&_svg]:h-11 [&_svg]:w-11 max-[760px]:[&_svg]:h-[38px] max-[760px]:[&_svg]:w-[38px]"
-                    style={{ color: item.color }}
+            {SHOW_ABOUT_FEATURE_STRIP ? (
+              <div className="mt-[17px] grid grid-cols-4 overflow-hidden rounded-lg bg-[linear-gradient(110deg,#f1f8ff,#f8fbff)] max-[760px]:grid-cols-2">
+                {features.map((item) => (
+                  <article
+                    key={item.title}
+                    className="min-h-[162px] border-r border-[#e2eaf3] px-4 py-[21px] text-center last:border-r-0 max-[760px]:min-h-[145px] max-[760px]:px-2.5 max-[760px]:py-[18px] max-[760px]:[&:nth-child(-n+2)]:border-b max-[760px]:[&:nth-child(2)]:border-r-0"
                   >
-                    <item.icon size={44} strokeWidth={1.7} />
-                  </div>
-                  <h3 className="mb-[7px] text-[13px] font-extrabold text-[#10236f] max-[760px]:text-[11px]">
-                    {item.title}
-                  </h3>
-                  <p className="text-[11px] leading-[1.45] text-[#53617a] max-[760px]:text-[9.5px]">
-                    {item.text}
-                  </p>
-                </article>
-              ))}
-            </div>
+                    <div
+                      className="mx-auto mb-2.5 grid h-11 w-11 place-items-center max-[760px]:h-[38px] max-[760px]:w-[38px] [&_svg]:block [&_svg]:h-11 [&_svg]:w-11 max-[760px]:[&_svg]:h-[38px] max-[760px]:[&_svg]:w-[38px]"
+                      style={{ color: item.color }}
+                    >
+                      <item.icon size={44} strokeWidth={1.7} />
+                    </div>
+                    <h3 className="mb-[7px] text-[13px] font-extrabold text-[#10236f] max-[760px]:text-[11px]">
+                      {item.title}
+                    </h3>
+                    <p className="text-[11px] leading-[1.45] text-[#53617a] max-[760px]:text-[9.5px]">
+                      {item.text}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            ) : null}
 
             <section className="mt-[25px] scroll-mt-16 max-[760px]:mt-[19px]" id="objectives">
               <h2 className="mb-2 text-[28px] font-black text-[#10236f] max-[760px]:text-[24px]">
