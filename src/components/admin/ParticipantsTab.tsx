@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Download, Plus, Printer, Search, Timer, Users, X } from "lucide-react";
 import { AddParticipantModal, type AddedParticipant } from "./AddParticipantModal";
+import { Button } from "../ui/Button";
+import { Modal } from "../ui/Modal";
 import { useToast } from "../ui/Toast";
 import { ApiError } from "../../lib/api";
 import { cn } from "../../lib/cn";
 import { listEventParticipants } from "../../lib/eventParticipants";
-import { printParticipantTicket } from "../../lib/printParticipantTicket";
+import { fetchEventPassPdfUrl } from "../../lib/printParticipantTicket";
 
 const avatarToneClass: Record<string, string> = {
   blue: "bg-blue-200 text-blue-700",
@@ -51,6 +53,28 @@ export function ParticipantsTab({ eventId, fromApi, loading, event }: Props) {
   const [listError, setListError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [printingId, setPrintingId] = useState<string | null>(null);
+  const [passPreview, setPassPreview] = useState<{
+    url: string;
+    passCode: string;
+    name: string;
+  } | null>(null);
+  const passIframeRef = useRef<HTMLIFrameElement>(null);
+
+  const closePassPreview = () => {
+    setPassPreview((prev) => {
+      if (prev?.url) URL.revokeObjectURL(prev.url);
+      return null;
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (passPreview?.url) URL.revokeObjectURL(passPreview.url);
+    };
+    // Only revoke on unmount; closePassPreview handles dismiss.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!eventId || !fromApi) {
@@ -169,6 +193,46 @@ export function ParticipantsTab({ eventId, fromApi, loading, event }: Props) {
           toast.success(`${participant.name} added as ${participant.type}.`);
         }}
       />
+
+      <Modal
+        open={Boolean(passPreview)}
+        onClose={closePassPreview}
+        title={passPreview ? `Event pass — ${passPreview.name}` : "Event pass"}
+        bottomSheetOnMobile={false}
+        className="!max-w-3xl md:!max-w-3xl"
+        footer={
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={closePassPreview}>
+              Close
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                const frame = passIframeRef.current;
+                try {
+                  frame?.contentWindow?.focus();
+                  frame?.contentWindow?.print();
+                } catch {
+                  toast.error("Unable to print from preview. Try downloading the PDF.");
+                }
+              }}
+            >
+              <Printer size={14} className="mr-1.5" />
+              Print
+            </Button>
+          </div>
+        }
+      >
+        {passPreview ? (
+          <iframe
+            ref={passIframeRef}
+            title={`Event pass ${passPreview.passCode}`}
+            src={passPreview.url}
+            className="h-[min(70vh,640px)] w-full rounded-md border border-blue-100 bg-slate-50"
+          />
+        ) : null}
+      </Modal>
 
       <section className="mb-2.5 grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-5">
         {kpis.map((kpi) => (
@@ -337,28 +401,29 @@ export function ParticipantsTab({ eventId, fromApi, loading, event }: Props) {
                     <td className="border-b border-blue-50 px-2 py-1.5 text-center">
                       <button
                         type="button"
-                        className="inline-flex items-center gap-1 rounded-md border border-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-600 hover:bg-blue-50"
+                        disabled={printingId === p.id || !p.passCode}
+                        className="inline-flex items-center gap-1 rounded-md border border-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
                         aria-label={`Print ticket for ${p.name}`}
+                        title={p.passCode ? "Open event pass PDF" : "No pass code on this registration"}
                         onClick={() => {
-                          try {
-                            printParticipantTicket(
-                              {
-                                id: p.id,
-                                name: p.name,
-                                type: p.type,
-                                org: p.org,
-                                email: p.email,
-                                status: p.status,
-                              },
-                              event,
-                            );
-                          } catch (err) {
-                            toast.error(err instanceof Error ? err.message : "Unable to print ticket.");
-                          }
+                          void (async () => {
+                            setPrintingId(p.id);
+                            try {
+                              closePassPreview();
+                              const { url, passCode } = await fetchEventPassPdfUrl(p.passCode || "");
+                              setPassPreview({ url, passCode, name: p.name });
+                            } catch (err) {
+                              toast.error(
+                                err instanceof Error ? err.message : "Unable to load event pass.",
+                              );
+                            } finally {
+                              setPrintingId(null);
+                            }
+                          })();
                         }}
                       >
                         <Printer size={12} />
-                        Print
+                        {printingId === p.id ? "…" : "Print"}
                       </button>
                     </td>
                   </tr>

@@ -147,6 +147,8 @@ function toAddedParticipant(ticket: EngagementParticipantTicket): AddedParticipa
   const validWhen = when && !Number.isNaN(when.getTime()) ? when : null;
   const typeKey = pickString(ticket.participationType).toLowerCase() || "delegate";
 
+  const passCode = pickString(ticket.passCode).replace(/\D/g, "").slice(0, 6);
+
   return {
     id: pickString(ticket.ticketID, ticket.reference, ticket.passCode, email, name) || `p-${Date.now()}`,
     name,
@@ -172,6 +174,8 @@ function toAddedParticipant(ticket: EngagementParticipantTicket): AddedParticipa
     dietary: pickString(ticket.dietary, extra?.dietary),
     accessibility: pickString(ticket.accessibility, extra?.accessibility),
     participationType: participationTypeOf(ticket),
+    passCode: passCode.length >= 6 ? passCode : undefined,
+    reference: pickString(ticket.reference),
   };
 }
 

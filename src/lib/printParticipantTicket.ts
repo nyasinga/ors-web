@@ -1,3 +1,5 @@
+import { API_BASE_URL, TENANT_ID } from "./api";
+
 export type PrintableParticipant = {
   id?: string;
   name: string;
@@ -5,6 +7,7 @@ export type PrintableParticipant = {
   org?: string;
   email?: string;
   status?: string;
+  passCode?: string;
 };
 
 export type PrintableEventInfo = {
@@ -13,6 +16,49 @@ export type PrintableEventInfo = {
   venue?: string;
   city?: string;
 };
+
+/**
+ * Fetch the official event-pass PDF as a blob URL for iframe preview / print.
+ * Caller must revoke the URL when done (`URL.revokeObjectURL`).
+ * @see https://ciprop.mustsacco.co.ke/explorer/#/EngagementTicketController/EngagementTicketController.getEventPass
+ */
+export async function fetchEventPassPdfUrl(passCode: string): Promise<{ url: string; passCode: string }> {
+  const code = String(passCode || "").replace(/\D/g, "").slice(0, 6);
+  if (code.length < 6) {
+    throw new Error("This participant has no ticket pass code to print.");
+  }
+
+  const url = `${API_BASE_URL}/ticketing/${encodeURIComponent(code)}/event-pass?tenant-id=${encodeURIComponent(TENANT_ID)}`;
+  const res = await fetch(url, {
+    headers: {
+      Accept: "application/pdf",
+      "x-tenant-id": TENANT_ID,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Could not load event pass (${res.status}).`);
+  }
+
+  const blob = await res.blob();
+  return {
+    url: URL.createObjectURL(blob),
+    passCode: code,
+  };
+}
+
+/** @deprecated Prefer fetchEventPassPdfUrl + iframe modal. */
+export async function openEventPassPdf(passCode: string) {
+  const { url } = await fetchEventPassPdfUrl(passCode);
+  const win = window.open(url, "_blank", "noopener,noreferrer");
+  if (!win) {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `ticket-${passCode}.pdf`;
+    link.click();
+  }
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
 
 function escapeHtml(value: string) {
   return value

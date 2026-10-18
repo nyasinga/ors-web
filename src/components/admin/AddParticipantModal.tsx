@@ -28,6 +28,9 @@ export type AddedParticipant = {
   dietary: string;
   accessibility: string;
   participationType: ParticipationType;
+  /** Ticket pass code — used for GET /ticketing/{passCode}/event-pass */
+  passCode?: string;
+  reference?: string;
 };
 
 const emptyDetails: RegistrationDetails = {
