@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { SearchableSelect } from "../ui/SearchableSelect";
 import { COUNTRY_NAME_OPTIONS } from "../../data/countries";
 import { participationTypes, type ParticipationType } from "../../data/registration";
-import type { RegistrationDetails } from "../../contexts/RegistrationContext";
+import type { RegistrationDetails } from "../../contexts/registrationShared";
 import { cn } from "../../lib/cn";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";

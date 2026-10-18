@@ -5,25 +5,19 @@ import { useTranslation } from "react-i18next";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
 import { pageContainer } from "../../lib/pageContainer";
+import {
+  RegistrationStep,
+  type RegistrationStep as RegistrationStepValue,
+} from "./registrationSteps";
 
-export const RegistrationStep = {
-  PARTICIPATION: 1,
-  DETAILS: 2,
-  PAYMENT: 3,
-  CONFIRMATION: 4,
-} as const;
-
-export type RegistrationStep =
-  (typeof RegistrationStep)[keyof typeof RegistrationStep];
-
-const stepLabels: Record<RegistrationStep, string> = {
+const stepLabels: Record<RegistrationStepValue, string> = {
   [RegistrationStep.PARTICIPATION]: "Participation",
   [RegistrationStep.DETAILS]: "Details",
   [RegistrationStep.PAYMENT]: "Payment",
   [RegistrationStep.CONFIRMATION]: "Confirmation",
 };
 
-const registrationSteps: RegistrationStep[] = [
+const registrationSteps: RegistrationStepValue[] = [
   RegistrationStep.PARTICIPATION,
   RegistrationStep.DETAILS,
   RegistrationStep.PAYMENT,
@@ -38,14 +32,14 @@ type InitialRegistrationSelection = {
 };
 
 type HeroProps = {
-  current?: RegistrationStep;
-  defaultStep?: RegistrationStep;
+  current?: RegistrationStepValue;
+  defaultStep?: RegistrationStepValue;
   title?: string;
   subtitle?: string;
   crumb?: string;
   onNext?: () => void;
   onPrevious?: () => void;
-  onStepChange?: (step: RegistrationStep) => void;
+  onStepChange?: (step: RegistrationStepValue) => void;
   onInitialSelection?: (
     selection: InitialRegistrationSelection,
   ) => void;
@@ -74,7 +68,7 @@ export function RegisterHero({
   const initialized = useRef(false);
   const startedFromUrl = useRef(false);
 
-  const [internalStep] = useState<RegistrationStep>(() => {
+  const [internalStep] = useState<RegistrationStepValue>(() => {
       const type = searchParams.get("type");
       const packageName = searchParams.get("package");
 

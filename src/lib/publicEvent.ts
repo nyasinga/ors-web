@@ -61,15 +61,24 @@ async function listPublicCandidates(where?: Record<string, unknown>, limit = 25)
 function isPubliclyListed(engagement: Engagement) {
   const visibility = String(engagement.visibility || "public").toLowerCase();
   if (visibility === "private") return false;
+  const status = String(engagement.status || "").toLowerCase();
+  // Never treat drafts / cancelled / archived as the public registration event.
+  if (status === "draft" || status === "cancelled" || status === "archived" || status === "completed") {
+    return false;
+  }
   return (
     engagement.isPublished === true ||
-    engagement.status === "published" ||
-    engagement.status === "ongoing"
+    status === "published" ||
+    status === "ongoing"
   );
 }
 
+/** Pick a published public engagement only — never fall back to a draft. */
 function pickPublicId(rows: Engagement[]) {
-  const hit = rows.find(isPubliclyListed) || rows.find((row) => row.engagementID);
+  const listed = rows.filter(isPubliclyListed);
+  if (!listed.length) return null;
+  const featured = listed.find((row) => row.isFeatured === true);
+  const hit = featured || listed[0];
   return hit?.engagementID ? String(hit.engagementID) : null;
 }
 
@@ -79,13 +88,14 @@ function listFailureMessage(error: unknown) {
 }
 
 /**
- * Resolve the single event shown on the public site.
- * Prefer `isFeatured` (the sole active event); otherwise the latest published
- * public event. Never fall back to an arbitrary draft / unrelated engagement.
+ * Resolve the single event shown on the public site / registration.
+ * Prefer featured **and** published; otherwise the latest published public event.
+ * Never fall back to a draft — even if a draft still has isFeatured=true.
  */
 export async function resolvePublicEngagementId(): Promise<string> {
   const attempts: ListAttempt[] = [];
 
+  // Featured first, but pickPublicId still requires published/ongoing.
   const featured = await listPublicCandidates({ isFeatured: true });
   attempts.push(featured);
   const featuredId = pickPublicId(featured.rows);
@@ -97,6 +107,12 @@ export async function resolvePublicEngagementId(): Promise<string> {
   attempts.push(published);
   const publishedId = pickPublicId(published.rows);
   if (publishedId) return publishedId;
+
+  // Last resort: scan recent engagements client-side (filter APIs can be unreliable).
+  const recent = await listPublicCandidates(undefined, 50);
+  attempts.push(recent);
+  const recentId = pickPublicId(recent.rows);
+  if (recentId) return recentId;
 
   const lastError = [...attempts].reverse().find((a) => !a.ok)?.error;
   if (attempts.every((a) => !a.ok) && lastError) {
@@ -110,7 +126,15 @@ export async function resolvePublicEngagementId(): Promise<string> {
 export async function getPublicEngagement(id?: string) {
   const cacheKey = id?.trim() || FEATURED_CACHE_KEY;
   const hit = engagementCache.get(cacheKey);
-  if (hit) return hit;
+  if (hit) {
+    // Drop cached drafts so registration cannot reuse a stale draft engagement.
+    if (!id?.trim() && !isPubliclyListed(hit)) {
+      engagementCache.delete(cacheKey);
+      if (hit.engagementID) engagementCache.delete(String(hit.engagementID));
+    } else {
+      return hit;
+    }
+  }
 
   const pending = engagementInflight.get(cacheKey);
   if (pending) return pending;
@@ -118,6 +142,9 @@ export async function getPublicEngagement(id?: string) {
   const request = (async () => {
     const resolvedId = id?.trim() || (await resolvePublicEngagementId());
     const data = await fetchEngagementById(resolvedId);
+    if (!id?.trim() && !isPubliclyListed(data)) {
+      throw new Error("No published public event is available to display.");
+    }
     engagementCache.set(cacheKey, data);
     engagementCache.set(resolvedId, data);
     return data;

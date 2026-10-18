@@ -1,10 +1,11 @@
 const DEFAULT_BASE = "https://ciprop.mustsacco.co.ke";
 export const TENANT_ID = (import.meta.env.VITE_API_TENANT_ID as string | undefined)?.trim() || "ACA";
 
+/** In Vite dev, default to `/api` (proxied) so browsers never hit cross-origin CORS on 502s. */
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(
   /\/$/,
   "",
-) || DEFAULT_BASE;
+) || (import.meta.env.DEV ? "/api" : DEFAULT_BASE);
 
 export class ApiError extends Error {
   status: number;

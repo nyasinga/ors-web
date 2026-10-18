@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
-import { IMAGE_KEY, IMAGE_PERSIST_KEY, useRegistration } from "../../contexts/RegistrationContext";
+import { IMAGE_KEY, IMAGE_PERSIST_KEY } from "../../contexts/registrationShared";
+import { useRegistration } from "../../hooks/useRegistration";
 import { SearchableSelect } from "../../components/ui/SearchableSelect";
 import { COUNTRY_NAME_OPTIONS } from "../../data/countries";
 import { participationTypes } from "../../data/registration";

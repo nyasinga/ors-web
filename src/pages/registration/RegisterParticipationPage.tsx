@@ -1,7 +1,7 @@
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Handshake, Mic2, Monitor, Users } from "lucide-react";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
-import { useRegistration } from "../../contexts/RegistrationContext";
+import { useRegistration } from "../../hooks/useRegistration";
 import { participationTypes, type ParticipationType } from "../../data/registration";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";

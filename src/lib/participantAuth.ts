@@ -161,10 +161,8 @@ export async function refreshParticipantSession(): Promise<ParticipantSession | 
   const passCode = (current?.passCode || "").replace(/\D/g, "");
   if (!current || passCode.length < 6) return current;
 
-  const result = await apiRequest<Record<string, unknown>>("/ticketing/register", {
-    method: "POST",
-    body: { passCode },
-  });
+  // Prefer GET /ticketing/{passCode} — lighter than POST /ticketing/register for revalidate.
+  const result = await apiRequest<Record<string, unknown>>(`/ticketing/${passCode}`);
 
   const session = sessionFromTicketResponse(result, passCode, current.method, current);
   saveParticipantSession(session, remembersSession());

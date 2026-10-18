@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
 import { useToast } from "../../components/ui/Toast";
-import { useRegistration } from "../../contexts/RegistrationContext";
+import { useRegistration } from "../../hooks/useRegistration";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { cn } from "../../lib/cn";
 import { engagementToPublicSponsors } from "../../lib/publicEvent";

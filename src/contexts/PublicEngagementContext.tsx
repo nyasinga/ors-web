@@ -1,26 +1,16 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
-import type { Engagement } from "../types/engagement";
 import {
   clearPublicEngagementCache,
   getPublicEngagement,
 } from "../lib/publicEvent";
-
-type PublicEngagementState = {
-  engagement: Engagement | null;
-  loading: boolean;
-  error: string | null;
-  reload: () => Promise<void>;
-};
-
-const PublicEngagementContext = createContext<PublicEngagementState | null>(null);
+import type { Engagement } from "../types/engagement";
+import { PublicEngagementContext } from "./publicEngagementShared";
 
 /** One shared public engagement fetch for layout + all public pages. */
 export function PublicEngagementProvider({ children }: { children: ReactNode }) {
@@ -61,8 +51,4 @@ export function PublicEngagementProvider({ children }: { children: ReactNode }) 
       {children}
     </PublicEngagementContext.Provider>
   );
-}
-
-export function usePublicEngagementContext() {
-  return useContext(PublicEngagementContext);
 }

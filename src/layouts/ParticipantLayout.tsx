@@ -1,13 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import {
-  CalendarDays,
-  ClipboardCheck,
-  Headset,
-  Home,
-  LogOut,
-  Users,
-} from "lucide-react";
+import { Headset, Home } from "lucide-react";
 import { useParticipantSession } from "../hooks/useParticipantSession";
 import { useEventCopy } from "../i18n/useEventCopy";
 import { usePublicEngagement } from "../hooks/usePublicEngagement";
@@ -22,11 +15,9 @@ import {
 
 const sideLinks = [
   { to: "/me", label: "Dashboard", icon: Home, end: true },
-  { to: "/me", label: "My Registration", icon: ClipboardCheck, end: true },
-  { to: "/programme", label: "Programme", icon: CalendarDays },
-  { to: "/speakers", label: "Speakers", icon: Users },
-  { to: "/faq", label: "Help & Support", icon: Headset },
 ];
+
+const sideFooterLink = { to: "/faq", label: "Help & Support", icon: Headset };
 
 const topLinks = [
   { to: "/", label: "Home" },
@@ -191,48 +182,30 @@ export function ParticipantLayout() {
             className="relative isolate flex flex-col overflow-hidden border-r border-[#e1e9f2] bg-[linear-gradient(180deg,#f8fcff_0%,#f3f8fd_42%,#edf5fb_100%)] px-[10px] py-[17px] before:pointer-events-none before:absolute before:inset-x-0 before:bottom-0 before:top-auto before:z-0 before:h-[min(48%,360px)] before:content-[''] before:[background:url('/assets/admin-sidebar-waves.svg')_left_bottom/100%_100%_no-repeat] max-[850px]:hidden [&>*]:relative [&>*]:z-[1]"
             aria-label="Participant"
           >
-            {sideLinks.map((item) => {
-              const linkBody = (
-                <>
-                  <span className="grid h-[22px] w-[22px] flex-none place-items-center">
-                    <item.icon className="block h-[21px] w-[21px]" size={21} strokeWidth={1.8} />
-                  </span>
-                  {item.label}
-                </>
-              );
-              // Only Dashboard owns /me active state (My Registration shares the route for now)
-              if (item.label === "My Registration") {
-                return (
-                  <Link key={item.label} to={item.to} className={cn(sideLinkBase, sideLinkIdle)}>
-                    {linkBody}
-                  </Link>
-                );
+            {sideLinks.map((item) => (
+              <NavLink
+                key={item.label}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) => cn(sideLinkBase, isActive ? sideLinkActive : sideLinkIdle)}
+              >
+                <span className="grid h-[22px] w-[22px] flex-none place-items-center">
+                  <item.icon className="block h-[21px] w-[21px]" size={21} strokeWidth={1.8} />
+                </span>
+                {item.label}
+              </NavLink>
+            ))}
+            <NavLink
+              to={sideFooterLink.to}
+              className={({ isActive }) =>
+                cn(sideLinkBase, "mt-auto", isActive ? sideLinkActive : sideLinkIdle)
               }
-              return (
-                <NavLink
-                  key={item.label}
-                  to={item.to}
-                  end={item.end}
-                  className={({ isActive }) => cn(sideLinkBase, isActive ? sideLinkActive : sideLinkIdle)}
-                >
-                  {linkBody}
-                </NavLink>
-              );
-            })}
-            <button
-              type="button"
-              onClick={signOut}
-              className={cn(
-                sideLinkBase,
-                sideLinkIdle,
-                "mt-auto w-full cursor-pointer border-0 bg-transparent text-left [font:inherit]",
-              )}
             >
               <span className="grid h-[22px] w-[22px] flex-none place-items-center">
-                <LogOut className="block h-[21px] w-[21px]" size={21} strokeWidth={1.8} />
+                <sideFooterLink.icon className="block h-[21px] w-[21px]" size={21} strokeWidth={1.8} />
               </span>
-              Sign out
-            </button>
+              {sideFooterLink.label}
+            </NavLink>
           </aside>
 
           <main className="min-w-0">

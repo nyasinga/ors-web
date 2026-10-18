@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHero } from "../../components/public/PageHero";
 import { PublicEventGate } from "../../components/public/PublicEventGate";
-import { useRegistration } from "../../contexts/RegistrationContext";
+import { useRegistration } from "../../hooks/useRegistration";
 import { cn } from "../../lib/cn";
 import {
   engagementToPublicSponsors,

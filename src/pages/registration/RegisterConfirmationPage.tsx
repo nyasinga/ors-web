@@ -1,6 +1,6 @@
 import { Link, Navigate } from "react-router-dom";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
-import { useRegistration } from "../../contexts/RegistrationContext";
+import { useRegistration } from "../../hooks/useRegistration";
 import { participationTypes } from "../../data/registration";
 import { formatMoney } from "../../i18n/format";
 import { useEventCopy } from "../../i18n/useEventCopy";

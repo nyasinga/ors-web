@@ -28,6 +28,10 @@ export type AuthUser = {
   suspended?: string;
   loginAttempts?: number;
   twoFactorAttempts?: number;
+  country?: string;
+  city?: string;
+  /** Signup / registration payload (e.g. engagementID, organisation). */
+  extraData?: Record<string, unknown> | null;
 };
 
 export type LoginResponse = AuthUser & {

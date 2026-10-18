@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -10,91 +8,16 @@ import {
 import type { ParticipationType } from "../data/registration";
 import { useEventCopy, useRegistrationFees } from "../i18n/useEventCopy";
 import type { PublicSponsorPackage } from "../lib/publicEvent";
-
-export const IMAGE_KEY = 'avatar.jpg';
-export const PERSIST_KEY = 'isippe-registration-details';
-export const IMAGE_PERSIST_KEY = `${PERSIST_KEY}-avatar`;
-
-export type PersistedImage = {
-  dataUrl: string;
-  name: string;
-  type: string;
-  size: number;
-  lastModified: number;
-};
-
-export type RegistrationDetails = {
-  title: string;
-  fullName: string;
-  email: string;
-  phone: string;
-  organisation: string;
-  jobTitle: string;
-  country: string;
-  city: string;
-  dietary: string;
-  accessibility: string;
-  googleCalendarURL?: string;
-  passCodeQR?: string;
-  reference?: string;
-  status?: string;
-  passCode?: string;
-  engagementID?: string;
-};
-
-export type SelectedSponsorPackage = {
-  id: string;
-  name: string;
-  price: string;
-  description: string;
-  benefits: string[];
-  medal: string;
-  kes: number;
-  usd: number;
-};
-
-type RegistrationContextValue = {
-  files: File[];
-  setFiles: (files: File[] | ((prev: File[]) => File[])) => void;
-  profilePicturePreview: string;
-  setProfilePicturePreview: (value: string) => void;
-  participationType: ParticipationType;
-  setParticipationType: (t: ParticipationType) => void;
-  details: RegistrationDetails;
-  setDetails: (patch: Partial<RegistrationDetails>) => void;
-  clearDetails: () => void;
-  reference: string;
-  feeKes: number;
-  feeUsd: number;
-  feeLabel: string;
-  feeUntil: string;
-  /** @deprecated Prefer feeLabel */
-  feeLabelKey: string;
-  earlyBird: {
-    label: string;
-    until: string;
-    kes: number;
-    usd: number;
-  };
-  late: {
-    label: string;
-    until: string;
-    kes: number;
-    usd: number;
-  };
-  
-  /** Set when a sponsorship package has been chosen. */
-  selectedSponsorPackage: SelectedSponsorPackage | null;
-  /** Where the package was chosen from — drives Back navigation. */
-  sponsorEntrySource: "sponsorship" | "register" | null;
-  selectSponsorPackage: (
-    pkg: PublicSponsorPackage,
-    source?: "sponsorship" | "register",
-  ) => void;
-  clearSponsorPackage: () => void;
-  /** True when a sponsorship package is active for this registration. */
-  fromSponsorship: boolean;
-};
+import {
+  IMAGE_KEY,
+  IMAGE_PERSIST_KEY,
+  PERSIST_KEY,
+  RegistrationContext,
+  type PersistedImage,
+  type RegistrationContextValue,
+  type RegistrationDetails,
+  type SelectedSponsorPackage,
+} from "./registrationShared";
 
 const defaultDetails: RegistrationDetails = {
   title: "",
@@ -127,10 +50,8 @@ function parsePackageAmounts(price?: string | number) {
   };
 }
 
-const RegistrationContext = createContext<RegistrationContextValue | null>(null);
-
+/** Registration draft provider — component-only export for Fast Refresh. */
 export function RegistrationProvider({ children }: { children: ReactNode }) {
-  
   const [files, setFiles] = useState<File[]>([]);
   const [profilePicturePreview, setProfilePicturePreview] = useState("");
   const [pictureLoaded, setPictureLoaded] = useState(false);
@@ -184,13 +105,11 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
     setFiles([]);
     setProfilePicturePreview("");
     clearSponsorPackage();
-  
+
     localStorage.removeItem(PERSIST_KEY);
     localStorage.removeItem(IMAGE_PERSIST_KEY);
   }, [clearSponsorPackage]);
 
-
-  /* Restore profile picture */
   useEffect(() => {
     const restoreImage = async () => {
       try {
@@ -205,10 +124,7 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
           lastModified: image.lastModified,
         });
 
-        setFiles((prev) => [
-          ...prev.filter((f) => f.name !== IMAGE_KEY),
-          file,
-        ]);
+        setFiles((prev) => [...prev.filter((f) => f.name !== IMAGE_KEY), file]);
         setProfilePicturePreview(image.dataUrl);
       } catch (error) {
         console.error("Failed to restore profile picture:", error);
@@ -220,7 +136,6 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
     void restoreImage();
   }, []);
 
-  /* Persist profile picture */
   useEffect(() => {
     if (!pictureLoaded) return;
     const file = files.find((f) => f.name === IMAGE_KEY);
@@ -250,7 +165,6 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
     reader.readAsDataURL(file);
   }, [files, pictureLoaded]);
 
-  /* Restore registration details */
   useEffect(() => {
     try {
       const saved = localStorage.getItem(PERSIST_KEY);
@@ -274,7 +188,6 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  /* Persist registration details */
   useEffect(() => {
     if (!detailsLoaded) return;
     localStorage.setItem(
@@ -289,7 +202,6 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
   }, [details, detailsLoaded, participationType, selectedSponsorPackage, sponsorEntrySource]);
 
   const active = fees[fees.active];
-  /** Sponsors pay package price — never fall back to delegate ticket tiers. */
   const usingSponsor = participationType === "sponsor" || Boolean(selectedSponsorPackage);
   const feeKes = usingSponsor ? selectedSponsorPackage?.kes ?? 0 : active.kes;
   const feeUsd = usingSponsor ? selectedSponsorPackage?.usd ?? 0 : active.usd;
@@ -352,16 +264,11 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
       usingSponsor,
       files,
       clearDetails,
+      profilePicturePreview,
     ],
   );
 
   return (
     <RegistrationContext.Provider value={value}>{children}</RegistrationContext.Provider>
   );
-}
-
-export function useRegistration() {
-  const ctx = useContext(RegistrationContext);
-  if (!ctx) throw new Error("useRegistration must be used within RegistrationProvider");
-  return ctx;
 }

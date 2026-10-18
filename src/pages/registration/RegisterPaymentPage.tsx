@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import PaymentModal from "../../components/registration/PaymentModal";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
 import { useToast } from "../../components/ui/Toast";
-import { useRegistration } from "../../contexts/RegistrationContext";
+import { useRegistration } from "../../hooks/useRegistration";
 import { participationTypes } from "../../data/registration";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { formatMoney } from "../../i18n/format";

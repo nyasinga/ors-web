@@ -1,15 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Award,
   CalendarDays,
-  FileText,
   Hash,
   Mail,
   MapPin,
   Plane,
   Users,
 } from "lucide-react";
+import { ProgrammeSchedule } from "../../components/programme/ProgrammeSchedule";
+import { SpeakersDirectory } from "../../components/speakers/SpeakersDirectory";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
 import {
@@ -18,6 +19,7 @@ import {
   type ParticipantSession,
 } from "../../lib/participantAuth";
 import { getEngagement } from "../../lib/engagements";
+import { engagementToPublicProgramme, engagementToPublicSpeakers } from "../../lib/publicEvent";
 import { ApiError } from "../../lib/api";
 import type { Engagement } from "../../types/engagement";
 
@@ -32,30 +34,6 @@ const formatDate = (value?: string) => {
         year: "numeric",
       }).format(date);
 };
-
-function programmeDayTabs(engagement: Engagement | null) {
-  if (!engagement?.startDate) return [] as Array<{ id: string; label: string }>;
-  const start = new Date(engagement.startDate);
-  const end = new Date(engagement.endDate || engagement.startDate);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [];
-  const days: Array<{ id: string; label: string }> = [];
-  const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-  const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
-  let i = 1;
-  while (cursor <= last && i <= 14) {
-    days.push({
-      id: String(i),
-      label: new Intl.DateTimeFormat("en-GB", {
-        weekday: "short",
-        day: "numeric",
-        month: "short",
-      }).format(cursor),
-    });
-    cursor.setDate(cursor.getDate() + 1);
-    i += 1;
-  }
-  return days;
-}
 
 const formatEventDates = (engagement: Engagement | null) => {
   if (!engagement) return "—";
@@ -102,34 +80,31 @@ const whatsNext = [
   },
 ];
 
-const quickActions = [
+type DashboardTab = "programme" | "speakers" | "venue";
+
+const dashboardTabs: Array<{
+  id: DashboardTab;
+  title: string;
+  text: string;
+  icon: typeof CalendarDays;
+}> = [
   {
-    to: "/programme",
+    id: "programme",
     title: "View Programme",
     text: "Explore sessions and schedules",
     icon: CalendarDays,
-    primary: true,
   },
   {
-    to: "/speakers",
+    id: "speakers",
     title: "Meet the Speakers",
     text: "View speaker profiles",
     icon: Users,
-    primary: false,
   },
   {
-    to: "/venue",
+    id: "venue",
     title: "Venue Information",
     text: "Venue details and travel tips",
     icon: MapPin,
-    primary: false,
-  },
-  {
-    to: "/faq",
-    title: "Download Documents",
-    text: "Tickets, receipts and more",
-    icon: FileText,
-    primary: false,
   },
 ];
 
@@ -169,11 +144,12 @@ const detailBox = "mb-3 max-[600px]:mb-[7px]";
 export function ParticipantDashboardPage() {
   const event = useEventCopy();
   const [session, setSession] = useState<ParticipantSession | null>(() => getParticipantSession());
-  const [day, setDay] = useState("1");
   const [engagement, setEngagement] = useState<Engagement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const dayTabs = programmeDayTabs(engagement);
+  const [activeTab, setActiveTab] = useState<DashboardTab>("programme");
+  const programme = useMemo(() => engagementToPublicProgramme(engagement), [engagement]);
+  const speakers = useMemo(() => engagementToPublicSpeakers(engagement), [engagement]);
 
   useEffect(() => {
     let cancelled = false;
@@ -231,11 +207,6 @@ export function ParticipantDashboardPage() {
       cancelled = true;
     };
   }, [session?.engagementID]);
-
-  useEffect(() => {
-    if (!dayTabs.length) return;
-    if (!dayTabs.some((d) => d.id === day)) setDay(dayTabs[0].id);
-  }, [dayTabs, day]);
 
   return (
     <>
@@ -400,122 +371,126 @@ export function ParticipantDashboardPage() {
           </section>
         </div>
 
-        <div className="mt-[14px] grid grid-cols-[repeat(4,1fr)] gap-[9px] max-[1120px]:grid-cols-[repeat(2,1fr)] max-[850px]:grid-cols-[1fr_1fr] max-[640px]:grid-cols-[1fr] max-[600px]:gap-[7px]">
-          {quickActions.map((a) => (
-            <Link
-              key={a.title}
-              to={a.to}
-              className={cn(
-                "flex min-h-[73px] items-center gap-[13px] rounded-[7px] px-[14px] py-[11px] max-[600px]:min-h-[69px] max-[600px]:p-[9px]",
-                a.primary
-                  ? "text-white [background:linear-gradient(135deg,#0766f0,#0750d5)]"
-                  : "bg-[#edf6ff]",
-              )}
-            >
-              <span className="grid h-[34px] w-[34px] flex-none place-items-center text-[#075fe5] max-[600px]:h-7 max-[600px]:w-7">
-                <a.icon
-                  className={cn("block h-7 w-7 max-[600px]:h-6 max-[600px]:w-6", a.primary && "text-white")}
-                  size={28}
-                  strokeWidth={1.8}
-                />
-              </span>
-              <span>
-                <strong className="block text-[10px] max-[600px]:text-[9px]">{a.title}</strong>
-                <p className="mt-1 text-[8px] leading-[1.3] opacity-90 max-[600px]:text-[7px]">{a.text}</p>
-              </span>
-              <span className="ml-auto text-[20px]" aria-hidden>
-                →
-              </span>
-            </Link>
-          ))}
+        <div
+          className="mt-[14px] grid grid-cols-[repeat(3,1fr)] gap-[9px] max-[850px]:grid-cols-[1fr] max-[600px]:gap-[7px]"
+          role="tablist"
+          aria-label="Dashboard sections"
+        >
+          {dashboardTabs.map((tab) => {
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                className={cn(
+                  "flex min-h-[73px] cursor-pointer items-center gap-[13px] rounded-[7px] border-0 px-[14px] py-[11px] text-left [font-family:inherit] max-[600px]:min-h-[69px] max-[600px]:p-[9px]",
+                  active
+                    ? "text-white [background:linear-gradient(135deg,#0766f0,#0750d5)]"
+                    : "bg-[#edf6ff] text-[#07164d]",
+                )}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <span
+                  className={cn(
+                    "grid h-[34px] w-[34px] flex-none place-items-center max-[600px]:h-7 max-[600px]:w-7",
+                    active ? "text-white" : "text-[#075fe5]",
+                  )}
+                >
+                  <tab.icon
+                    className="block h-7 w-7 max-[600px]:h-6 max-[600px]:w-6"
+                    size={28}
+                    strokeWidth={1.8}
+                  />
+                </span>
+                <span>
+                  <strong className="block text-[10px] max-[600px]:text-[9px]">{tab.title}</strong>
+                  <p className="mt-1 text-[8px] leading-[1.3] opacity-90 max-[600px]:text-[7px]">{tab.text}</p>
+                </span>
+                <span className="ml-auto text-[20px]" aria-hidden>
+                  →
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        <div className="mt-[13px] grid grid-cols-[1.55fr_0.85fr] gap-3 max-[1120px]:grid-cols-[1fr]">
-          <section className={cn(card, "px-[17px] py-[14px]", "max-[600px]:p-3")}>
-            <div className="flex items-center justify-between gap-[10px]">
-              <h2 className="text-[17px] font-extrabold text-[#092c9b] max-[600px]:text-[14px]">▣ &nbsp;Event Programme</h2>
+        {activeTab === "programme" ? (
+          <section className={cn(card, "mt-[13px] overflow-hidden px-[17px] pt-[14px]", "max-[600px]:px-3 max-[600px]:pt-3")}>
+            <div className="mb-1 flex items-center justify-between gap-[10px]">
+              <h2 className="text-[17px] font-extrabold text-[#092c9b] max-[600px]:text-[14px]">
+                <CalendarDays className="mr-1.5 inline-block h-[18px] w-[18px] align-[-3px] text-[#075fe5]" />
+                Event Programme
+              </h2>
               <Link className="whitespace-nowrap text-[10px] font-bold text-[#075fe5]" to="/programme">
                 View Full Programme &nbsp;→
               </Link>
             </div>
-            <div className="mb-2 mt-[11px] flex gap-2 max-[600px]:overflow-auto">
-              {dayTabs.length === 0 ? (
-                <span className="text-[10px] text-[#657698]">No programme days published yet.</span>
-              ) : (
-                dayTabs.map((d) => (
-                  <button
-                    key={d.id}
-                    type="button"
-                    className={cn(
-                      "grid h-[31px] min-w-[125px] cursor-pointer place-items-center rounded-[7px] text-[9px] font-semibold [font-family:inherit] max-[600px]:min-w-[100px]",
-                      day === d.id ? "bg-[#075fe5] text-white" : "bg-[#f1f6fc] text-[#07164d]",
-                    )}
-                    onClick={() => setDay(d.id)}
-                  >
-                    {d.label}
-                  </button>
-                ))
-              )}
-            </div>
-            {(engagement?.programme as any[])
-              ?.filter((s) => String(s.day ?? "1") === day)
-              ?.map((s) => (
-              <div
-                key={s.id}
-                className="grid min-h-[47px] grid-cols-[100px_1fr_75px] items-center gap-[10px] border-t border-[#e2eaf3] text-[9px] max-[600px]:grid-cols-[70px_1fr_55px] max-[600px]:text-[8px]"
-              >
-                <span className="text-[#25448d]">{s.time}</span>
-                <span>
-                  <strong className="block text-[10px] font-medium text-[#07164d] max-[600px]:text-[9px]">{s.title}</strong>
-                  <small className="mt-[3px] block text-[#657698] max-[600px]:text-[7px]">{s.place}</small>
-                </span>
-                <span
-                  className={cn(
-                    "justify-self-end rounded-[7px] px-3 py-[5px] text-[8px] font-bold max-[600px]:px-[7px] max-[600px]:py-1",
-                    s.tone === "green" ? "bg-[#dcf6e7] text-[#087747]" : "bg-[#e5f0ff] text-[#0757d1]",
-                  )}
-                >
-                  {s.badge}
-                </span>
-              </div>
-            ))}
+            <ProgrammeSchedule
+              programme={programme}
+              containerClassName="w-full"
+              emptyMessage="No programme sessions have been published for this event yet."
+            />
           </section>
+        ) : null}
 
-          <div className="flex flex-col gap-[11px] max-[600px]:block">
-            <section className={cn(card, "overflow-hidden max-[600px]:mt-[10px]")}>
-              <div
-                className="h-[89px] [background:url('/assets/dashboard-venue.jpg')_center/cover] max-[600px]:h-[105px]"
-                role="img"
-                aria-label={engagement?.venue || event.venue || "Event venue"}
-              />
-              <div className="px-[15px] py-[9px]">
-                <h3 className="mb-2 text-[16px] font-extrabold text-[#092c9b]">Venue Information</h3>
-                <p className="mb-2 text-[9px] leading-[1.35] text-[#07164d]">
-                  📍 &nbsp;{" "}
-                  {[engagement?.venue || event.venue, engagement?.city || event.city]
-                    .filter(Boolean)
-                    .join(", ") || "Venue to be announced"}
-                </p>
-                <Link
-                  className="inline-flex h-[29px] w-full items-center justify-center rounded-[5px] border border-[#075fe5] bg-white text-[9px] font-bold text-[#075fe5] no-underline"
-                  to="/venue"
-                >
-                  View Venue Details &nbsp; →
-                </Link>
-              </div>
-            </section>
-            <section className="rounded-lg bg-[#edf6ff] px-[15px] py-[13px] max-[600px]:mt-[10px]">
-              <h3 className="mb-[5px] text-[13px] font-extrabold">Need Assistance?</h3>
-              <p className="mb-[6px] text-[9px] text-[#657698]">For support, please contact us:</p>
-              <a className="mt-1 inline-block text-[10px] text-[#075fe5]" href={`mailto:${event.supportEmail}`}>
-                ✉ &nbsp; {event.supportEmail}
-              </a>
-              <br />
-              <a className="mt-1 inline-block text-[10px] text-[#075fe5]" href={`tel:${event.supportPhone}`}>
-                ☎ &nbsp; {event.supportPhone}
-              </a>
-            </section>
-          </div>
+        {activeTab === "speakers" ? (
+          <section className={cn(card, "mt-[13px] overflow-hidden px-[17px] pt-[14px]", "max-[600px]:px-3 max-[600px]:pt-3")}>
+            <div className="mb-1 flex items-center justify-between gap-[10px]">
+              <h2 className="text-[17px] font-extrabold text-[#092c9b] max-[600px]:text-[14px]">
+                <Users className="mr-1.5 inline-block h-[18px] w-[18px] align-[-3px] text-[#075fe5]" />
+                Speakers
+              </h2>
+              <Link className="whitespace-nowrap text-[10px] font-bold text-[#075fe5]" to="/speakers">
+                View All Speakers &nbsp;→
+              </Link>
+            </div>
+            <SpeakersDirectory speakers={speakers} containerClassName="w-full" columns={3} />
+          </section>
+        ) : null}
+
+        {activeTab === "venue" ? (
+          <section className={cn(card, "mt-[13px] overflow-hidden")}>
+            <div
+              className="h-[140px] [background:url('/assets/dashboard-venue.jpg')_center/cover] max-[600px]:h-[120px]"
+              role="img"
+              aria-label={engagement?.venue || event.venue || "Event venue"}
+            />
+            <div className="px-[17px] py-[14px] max-[600px]:p-3">
+              <h2 className="mb-2 text-[17px] font-extrabold text-[#092c9b] max-[600px]:text-[14px]">
+                Venue Information
+              </h2>
+              <p className="mb-3 text-[11px] leading-[1.4] text-[#07164d]">
+                {[engagement?.venue || event.venue, engagement?.city || event.city, engagement?.country]
+                  .filter(Boolean)
+                  .join(", ") || "Venue to be announced"}
+              </p>
+              {engagement?.venueAddress ? (
+                <p className="mb-3 text-[10px] text-[#657698]">{engagement.venueAddress}</p>
+              ) : null}
+              <Link
+                className="inline-flex h-[33px] items-center justify-center rounded-[5px] border border-[#075fe5] bg-white px-4 text-[10px] font-bold text-[#075fe5] no-underline"
+                to="/venue"
+              >
+                View Venue Details &nbsp; →
+              </Link>
+            </div>
+          </section>
+        ) : null}
+
+        <div className="mt-3">
+          <section className="rounded-lg bg-[#edf6ff] px-[15px] py-[13px]">
+            <h3 className="mb-[5px] text-[13px] font-extrabold">Need Assistance?</h3>
+            <p className="mb-[6px] text-[9px] text-[#657698]">For support, please contact us:</p>
+            <a className="mt-1 inline-block text-[10px] text-[#075fe5]" href={`mailto:${event.supportEmail}`}>
+              ✉ &nbsp; {event.supportEmail}
+            </a>
+            <br />
+            <a className="mt-1 inline-block text-[10px] text-[#075fe5]" href={`tel:${event.supportPhone}`}>
+              ☎ &nbsp; {event.supportPhone}
+            </a>
+          </section>
         </div>
       </section>
     </>

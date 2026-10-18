@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { usePublicEngagementContext } from "../contexts/PublicEngagementContext";
+import { useContext, useEffect, useState } from "react";
+import { PublicEngagementContext } from "../contexts/publicEngagementShared";
 import type { Engagement } from "../types/engagement";
 import { getPublicEngagement } from "../lib/publicEvent";
 
@@ -9,6 +9,10 @@ type PublicEngagementResult = {
   error: string | null;
   reload?: () => Promise<void>;
 };
+
+export function usePublicEngagementContext() {
+  return useContext(PublicEngagementContext);
+}
 
 /**
  * Public featured engagement — prefers the shared provider (one network load),
