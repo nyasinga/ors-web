@@ -1,4 +1,4 @@
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Handshake, Mic2, Monitor, Users } from "lucide-react";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
 import { useRegistration } from "../../hooks/useRegistration";

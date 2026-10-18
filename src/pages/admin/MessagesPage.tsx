@@ -275,7 +275,7 @@ export function MessagesPage() {
                   <span
                     className={cn(
                       "rounded-lg px-2 py-0.5 text-[11px] font-bold",
-                      f.badge === "red"
+                      "badge" in f && f.badge === "red"
                         ? "bg-red-500 text-white"
                         : "bg-[#edf4ff] text-[#0755f5]",
                     )}

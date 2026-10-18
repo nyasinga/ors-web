@@ -788,17 +788,7 @@ export function EventDetailsPage() {
       ) : null}
       {validTab === "participants" ? (
         <div className="mt-1">
-          <ParticipantsTab
-            eventId={id}
-            fromApi={fromApi}
-            loading={loading}
-            event={{
-              name: detail.name,
-              dates: detail.dates,
-              venue: detail.venueTitle,
-              city: detail.venueCity,
-            }}
-          />
+          <ParticipantsTab eventId={id} fromApi={fromApi} loading={loading} />
         </div>
       ) : null}
       {validTab === "programme" ? (

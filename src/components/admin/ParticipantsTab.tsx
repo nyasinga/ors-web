@@ -36,10 +36,9 @@ type Props = {
   eventId: string;
   fromApi: boolean;
   loading: boolean;
-  event: { name: string; dates?: string; venue?: string; city?: string };
 };
 
-export function ParticipantsTab({ eventId, fromApi, loading, event }: Props) {
+export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
   const toast = useToast();
   const [query, setQuery] = useState("");
   const [ticketFilter, setTicketFilter] = useState("");
