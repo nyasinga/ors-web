@@ -17,6 +17,7 @@ import {
   hasParticipantSession,
   participantLogin,
 } from "../../lib/participantAuth";
+import { scanQRCode } from "../../lib/scanQRCode";
 
 /* ── Shared Tailwind class groups (values ported 1:1 from the former participant-login.css) ── */
 
@@ -99,6 +100,7 @@ export function ParticipantLoginPage() {
     ?.trim() ?? "";
 
   const autoLoginAttempted = useRef<string | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
 
   useEffect(() => {
     if (hasParticipantSession()) {
@@ -157,7 +159,7 @@ export function ParticipantLoginPage() {
       <section className="relative h-[285px] overflow-hidden text-white max-[850px]:h-auto max-[850px]:min-h-[330px] max-[600px]:min-h-[300px]">
         <div className={heroBg} aria-hidden />
         <div className={cn(pageContainer, "relative flex h-full items-center max-[850px]:py-[30px] max-[600px]:py-[22px]")}>
-          <div className="w-[65%] pt-[2px] max-[850px]:w-full">
+          <div className="w-[65%] pt-[2px] max-[850px]:w-full ml-3">
             <div className="mb-[15px] text-[14px] text-white max-[600px]:mb-[11px] max-[600px]:text-[11px]">
               <Link className="hover:underline" to="/">
                 {t("nav.home")}
@@ -230,13 +232,29 @@ export function ParticipantLoginPage() {
                   type="button"
                   disabled={busy}
                   className="mb-[17px] flex h-[76px] w-full cursor-pointer items-center justify-center gap-[15px] rounded-[7px] border border-[#cfe0f3] bg-[#f1f8ff] px-3 text-inherit [font:inherit] disabled:opacity-60 max-[600px]:h-[62px]"
-                  onClick={() => {
-                    if (scanned) {
-                      void login();
-                      return;
-                    }
-                    setScanned(true);
+                  onClick={async () => {
                     setError("");
+                  
+                    if (cameraOpen) return;
+                  
+                    setCameraOpen(true);
+                  
+                    try {
+                      const result = await scanQRCode("participant-qr-reader");
+                      setCode(result.passCode);
+                      await participantLogin({
+                        passCode: result.passCode,
+                        viaQr: true,
+                        remember: true,
+                      });
+                      navigate(returnTo, { replace: true });
+                    } catch (err) {
+                      setError(
+                        err instanceof Error ? err.message : "Unable to scan QR code.",
+                      );
+                    } finally {
+                      setCameraOpen(false);
+                    }
                   }}
                 >
                   <ScanLine className="h-[31px] w-[31px] flex-none text-[#075fe5]" size={31} strokeWidth={1.8} />
