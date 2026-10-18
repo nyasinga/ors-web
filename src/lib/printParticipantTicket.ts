@@ -1,4 +1,5 @@
 import { API_BASE_URL, TENANT_ID } from "./api";
+import { generateTicketQrDataUrl, ticketQrPayload } from "./ticketQr";
 
 export type PrintableParticipant = {
   id?: string;

@@ -1558,7 +1558,7 @@ function OverviewTab({
             <p className="text-sm text-mute">No sessions yet.</p>
           ) : (
             <div className="grid gap-[5px]">
-              {schedule.map((s) => (
+              {schedule.slice(0, 5).map((s) => (
                 <Link
                   key={s.key}
                   to={`/admin/events/${id}/programme`}
@@ -1578,6 +1578,14 @@ function OverviewTab({
                   <span className="font-bold text-[#0764e8]">›</span>
                 </Link>
               ))}
+              {schedule.length > 5 ? (
+                <p className="pt-1 text-center text-[8px] font-semibold text-[#687aa0]">
+                  +{schedule.length - 5} more sessions —{" "}
+                  <Link to={`/admin/events/${id}/programme`} className="text-[#0764e8] no-underline">
+                    View All
+                  </Link>
+                </p>
+              ) : null}
             </div>
           )}
         </article>

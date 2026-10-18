@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { ProgrammeSchedule } from "../../components/programme/ProgrammeSchedule";
 import { SpeakersDirectory } from "../../components/speakers/SpeakersDirectory";
+import { TicketQrImage } from "../../components/participant/TicketQrImage";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
 import {
