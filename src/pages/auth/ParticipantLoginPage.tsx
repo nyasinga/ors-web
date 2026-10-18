@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   CalendarDays,
@@ -79,6 +79,7 @@ const supportSvg = "h-[22px] w-[22px] flex-none max-[600px]:h-[18px] max-[600px]
 
 /** Participant login — Tailwind port of the former participant-login.css (pl-* / participant-login-page) */
 export function ParticipantLoginPage() {
+
   const { t } = useTranslation("common");
   const event = useEventCopy();
   const navigate = useNavigate();
@@ -93,11 +94,44 @@ export function ParticipantLoginPage() {
       ? String((location.state as { from?: string }).from)
       : "/me";
 
+  const urlPassCode = new URLSearchParams(location.search)
+    .get("passCode")
+    ?.trim() ?? "";
+
+  const autoLoginAttempted = useRef<string | null>(null);
+
   useEffect(() => {
     if (hasParticipantSession()) {
       navigate(returnTo, { replace: true });
+      return;
     }
-  }, [navigate, returnTo]);
+  
+    if (!urlPassCode || autoLoginAttempted.current === urlPassCode) {
+      return;
+    }
+  
+    autoLoginAttempted.current = urlPassCode;
+    setCode(urlPassCode);
+    setError("");
+    setBusy(true);
+  
+    participantLogin({
+      passCode: urlPassCode,
+      viaQr: false,
+      remember: true,
+    })
+      .then(() => {
+        navigate(returnTo, { replace: true });
+      })
+      .catch((err) => {
+        setError(
+          err instanceof Error ? err.message : "Unable to sign in. Try again.",
+        );
+      })
+      .finally(() => {
+        setBusy(false);
+      });
+  }, [navigate, returnTo, urlPassCode]);
 
   const login = async (e?: React.FormEvent) => {
     e?.preventDefault();
