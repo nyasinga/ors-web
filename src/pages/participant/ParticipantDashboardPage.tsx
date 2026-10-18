@@ -20,7 +20,7 @@ import {
 } from "../../lib/participantAuth";
 import { getEngagement } from "../../lib/engagements";
 import { engagementToPublicProgramme, engagementToPublicSpeakers } from "../../lib/publicEvent";
-import { ApiError } from "../../lib/api";
+import { API_BASE_URL, ApiError, TENANT_ID } from "../../lib/api";
 import type { Engagement } from "../../types/engagement";
 
 const formatDate = (value?: string) => {
@@ -144,6 +144,7 @@ const detailBox = "mb-3 max-[600px]:mb-[7px]";
 export function ParticipantDashboardPage() {
   const event = useEventCopy();
   const [session, setSession] = useState<ParticipantSession | null>(() => getParticipantSession());
+  const { passCode } = session as ParticipantSession;
   const [engagement, setEngagement] = useState<Engagement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -278,17 +279,26 @@ export function ParticipantDashboardPage() {
             <div className="mt-[13px] grid grid-cols-[155px_1fr] gap-[15px] max-[850px]:grid-cols-[145px_1fr] max-[600px]:grid-cols-[1fr] max-[600px]:gap-[10px]">
               <div>
                 <div className="grid h-[137px] w-[150px] place-items-center rounded-lg border border-[#e0e9f3] bg-white max-[600px]:h-[160px] max-[600px]:w-full">
-                  <img
-                    className="block h-[112px] w-[112px] [image-rendering:pixelated] max-[600px]:h-[130px] max-[600px]:w-[130px]"
-                    src="/assets/qr-ticket.png"
-                    alt="Event QR ticket"
-                  />
+                  {passCode && (
+                    <img
+                      className="block h-[112px] w-[112px] [image-rendering:pixelated] max-[600px]:h-[130px] max-[600px]:w-[130px]"
+                      src={passCode? `${API_BASE_URL}/ticketing/${passCode}/qrcode?tenant-id=${TENANT_ID}` : '/assets/qr-ticket.png'}
+                      alt="Event pass QR code"
+                    />
+                  )}
                 </div>
                 <button
                   type="button"
                   className="mt-[9px] h-[38px] w-[150px] cursor-pointer rounded-[5px] bg-[#edf6ff] text-[11px] font-semibold text-[#0755d2] [font-family:inherit] max-[600px]:w-full"
-                >
-                  ⇩ &nbsp; Download QR Ticket
+                  onClick={() => {
+                    if (!passCode) return;
+                    const link = document.createElement("a");
+                    link.href = `${API_BASE_URL}/ticketing/${passCode}/event-pass?tenant-id=${TENANT_ID}`;
+                    link.target="_blank"
+                    link.download = `ticket-${passCode}.pdf`;
+                    link.click();
+                  }}>
+                  ⇩ &nbsp; Download Event Pass
                 </button>
               </div>
               <div className="text-[11px] max-[600px]:grid max-[600px]:grid-cols-[1fr_1fr] max-[600px]:gap-[5px]">
