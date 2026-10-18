@@ -1,5 +1,5 @@
 const DEFAULT_BASE = "https://ciprop.mustsacco.co.ke";
-const TENANT_ID = (import.meta.env.VITE_API_TENANT_ID as string | undefined)?.trim() || "ACA";
+export const TENANT_ID = (import.meta.env.VITE_API_TENANT_ID as string | undefined)?.trim() || "ACA";
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(
   /\/$/,

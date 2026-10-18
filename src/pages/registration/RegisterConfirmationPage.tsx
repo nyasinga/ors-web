@@ -5,17 +5,19 @@ import { participationTypes } from "../../data/registration";
 import { formatMoney } from "../../i18n/format";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import * as r from "../../components/registration/registerStyles";
+import { API_BASE_URL, TENANT_ID } from "../../lib/api";
 
 /** Registration step 4 — structure & CSS from HTML package */
 export function RegisterConfirmationPage() {
   const event = useEventCopy();
   const { details, participationType, feeKes, feeLabel, reference } = useRegistration();
-  const typeLabel =
-    participationTypes.find((item) => item.id === participationType)?.title ?? "Delegate";
+  const typeLabel = participationTypes.find((item) => item.id === participationType)?.title ?? "Delegate";
   const displayName = [details.title, details.fullName].filter(Boolean).join(" ").trim();
   const displayEmail = details.email.trim();
   const displayOrg = details.organisation.trim();
   const totalPaid = feeKes > 0 ? feeKes + 50 : 0;
+  const { googleCalendarURL, passCodeQR, passCode } = details;
+
   const paidAt = new Date().toLocaleString("en-GB", {
     day: "numeric",
     month: "long",
@@ -32,181 +34,214 @@ export function RegisterConfirmationPage() {
     <div className={r.registerPage}>
       <RegisterHero current={4} />
 
-      <main className={r.main}>
-        <div className={r.container}>
-          <div className={r.confirmLayout}>
-            <section className={r.success}>
-              <div className={r.successMark}>✓</div>
-              <h2 className={r.successTitle}>Registration Successful!</h2>
-              <p className={r.successText}>
-                Your registration for {event.name || "the event"} has been confirmed and payment has
-                been received.
-                <br />
-                A confirmation email with your registration details has been sent to your email
-                address.
-              </p>
+  <main className={r.main}>
+    <div className={r.container}>
+      <div className={r.confirmLayout}>
+        <section className={r.success}>
+          <div className={r.successMark}>✓</div>
+          <h2 className={r.successTitle}>Registration Successful!</h2>
+          <p className={r.successText}>
+            Your registration for {event.name || "the event"} has been confirmed and payment has
+            been received.
+            <br />
+            A confirmation email with your registration details has been sent to your email
+            address.
+          </p>
 
-              <div className={r.detailColumns}>
-                <div className={r.detailBox}>
-                  <h4 className={r.detailTitle}>Registration Details</h4>
-                  <div className={r.drow}>
-                    <span aria-hidden>{"\U0001F464"}</span>
-                    <span>
-                      <b className={r.drowLabel}>Full Name</b>
-                      {displayName}
-                    </span>
-                  </div>
-                  <div className={r.drow}>
-                    <span aria-hidden>{"\u2709"}</span>
-                    <span>
-                      <b className={r.drowLabel}>Email Address</b>
-                      {displayEmail}
-                    </span>
-                  </div>
-                  <div className={r.drow}>
-                    <span aria-hidden>{"\u25A3"}</span>
-                    <span>
-                      <b className={r.drowLabel}>Organisation</b>
-                      {displayOrg || "—"}
-                    </span>
-                  </div>
-                  <div className={r.drow}>
-                    <span aria-hidden>{"\u265F"}</span>
-                    <span>
-                      <b className={r.drowLabel}>Participation Type</b>
-                      {typeLabel}
-                    </span>
-                  </div>
-                </div>
-                <div className={r.detailBox}>
-                  <h4 className={r.detailTitle}>Payment Details</h4>
-                  <div className={r.drow}>
-                    <span aria-hidden>{"\u25A3"}</span>
-                    <span>
-                      <b className={r.drowLabel}>Transaction Reference</b>
-                      {reference || "—"}
-                    </span>
-                  </div>
-                  <div className={r.drow}>
-                    <span aria-hidden>{"\u25A3"}</span>
-                    <span>
-                      <b className={r.drowLabel}>Payment Date</b>
-                      {paidAt}
-                    </span>
-                  </div>
-                  <div className={r.drow}>
-                    <span aria-hidden>{"\u25A3"}</span>
-                    <span>
-                      <b className={r.drowLabel}>Amount Paid</b>
-                      {feeKes > 0 ? (
-                        <>
-                          {formatMoney(totalPaid, "KES")}
-                          <br />({formatMoney(feeKes, "KES")} {feeLabel} + KES 50 eCitizen fee)
-                        </>
-                      ) : (
-                        "—"
-                      )}
-                    </span>
-                  </div>
-                  <div className={r.drow}>
-                    <span aria-hidden>{"\u25CF"}</span>
-                    <span>
-                      <b className={r.drowLabel}>Payment Status</b>
-                      <span className="text-[#078047]">Successful</span>
-                    </span>
-                  </div>
-                </div>
+          <div className={r.detailColumns}>
+            <div className={r.detailBox}>
+              <h4 className={r.detailTitle}>Registration Details</h4>
+              <div className={r.drow}>
+                <span>
+                  <b className={r.drowLabel}>Full Name</b>
+                  {displayName}
+                </span>
               </div>
-
-              <div className={r.confirmActions}>
-                <button type="button" className={r.smallBtn}>
-                  Download Confirmation Letter
-                </button>
-                <button type="button" className={r.smallBtn}>
-                  Download Receipt
-                </button>
-                <button type="button" className={r.smallBtn}>
-                  Download QR Ticket
-                </button>
-                <button type="button" className={r.smallBtn}>
-                  Add to Calendar
-                </button>
-                <Link to="/participant-login" className={r.smallBtnLink}>
-                  Access Event
-                </Link>
+              <div className={r.drow}>
+                <span aria-hidden>{"\u2709"}</span>
+                <span>
+                  <b className={r.drowLabel}>Email Address</b>
+                  {displayEmail}
+                </span>
               </div>
-            </section>
+              <div className={r.drow}>
+                <span aria-hidden>{"\u25A3"}</span>
+                <span>
+                  <b className={r.drowLabel}>Organisation</b>
+                  {displayOrg || "—"}
+                </span>
+              </div>
+              <div className={r.drow}>
+                <span aria-hidden>{"\u265F"}</span>
+                <span>
+                  <b className={r.drowLabel}>Participation Type</b>
+                  {typeLabel}
+                </span>
+              </div>
+            </div>
 
-            <aside>
-              <div className={r.pass}>
-                <h3 className={r.passTitle}>Your Event Pass</h3>
-                <p className={r.passText}>
-                  Present this QR code at the registration counter to collect your badge.
-                </p>
-                <img className={r.qr} src="/assets/qr-ticket.png" alt="Event pass QR code" />
-                <div className={r.passId}>
-                  Registration ID
-                  <br />
+            <div className={r.detailBox}>
+              <h4 className={r.detailTitle}>Payment Details</h4>
+              <div className={r.drow}>
+                <span aria-hidden>{"\u25A3"}</span>
+                <span>
+                  <b className={r.drowLabel}>Transaction Reference</b>
                   {reference || "—"}
-                </div>
+                </span>
               </div>
-              <div className={r.next}>
-                <h3 className={r.nextTitle}>{"What's Next?"}</h3>
-                <div className={r.nextRow}>
-                  <span className={r.nextIcon} aria-hidden>
-                    {"\u2709"}
-                  </span>
-                  <div>
-                    <strong className={r.nextRowTitle}>Check your email</strong>
-                    <p className={r.nextRowText}>
-                      We have sent a confirmation email with event details and updates.
-                    </p>
-                  </div>
-                </div>
-                <div className={r.nextRow}>
-                  <span className={r.nextIcon} aria-hidden>
-                    {"\u25A3"}
-                  </span>
-                  <div>
-                    <strong className={r.nextRowTitle}>Collect your badge</strong>
-                    <p className={r.nextRowText}>
-                      Present your QR code at registration desk on arrival.
-                    </p>
-                  </div>
-                </div>
-                <div className={r.nextRow}>
-                  <span className={r.nextIcon} aria-hidden>
-                    {"\u265F"}
-                  </span>
-                  <div>
-                    <strong className={r.nextRowTitle}>Join the event</strong>
-                    <p className={r.nextRowText}>
-                      Attend the sessions and networking events
-                      {event.datesShort ? ` (${event.datesShort})` : ""}.
-                    </p>
-                  </div>
-                </div>
+              <div className={r.drow}>
+                <span aria-hidden>{"\u25A3"}</span>
+                <span>
+                  <b className={r.drowLabel}>Payment Date</b>
+                  {paidAt}
+                </span>
               </div>
-            </aside>
+              <div className={r.drow}>
+                <span aria-hidden>{"\u25A3"}</span>
+                <span>
+                  <b className={r.drowLabel}>Amount Paid</b>
+                  {feeKes > 0 ? (
+                    <>
+                      {formatMoney(totalPaid, "KES")}
+                      <br />
+                      ({formatMoney(feeKes, "KES")} {feeLabel} + KES 50 eCitizen fee)
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </span>
+              </div>
+              <div className={r.drow}>
+                <span aria-hidden>{"\u25CF"}</span>
+                <span>
+                  <b className={r.drowLabel}>Payment Status</b>
+                  <span className="text-[#078047]">Successful</span>
+                </span>
+              </div>
+            </div>
           </div>
 
-          <div className={r.helpful}>
-            <b className={r.helpfulLabel}>Helpful Links</b>
-            <Link to="/programme" className={r.helpfulLink}>
-              View Programme →
-            </Link>
-            <Link to="/venue" className={r.helpfulLink}>
-              Venue Information →
-            </Link>
-            <Link to="/faq" className={r.helpfulLink}>
-              Travel & Accommodation →
-            </Link>
-            <Link to="/faq" className={r.helpfulLink}>
-              Contact Support →
+          <div className={r.confirmActions}>
+            <button 
+              type="button" 
+              className={ `${r.smallBtn} hidden` }
+              onClick={() => {
+                if (!passCodeQR) return;
+                const link = document.createElement("a");
+                link.href = `${API_BASE_URL}/ticketing/${passCode}/ecitizen?tenant-id=${TENANT_ID}`;
+                link.target="_blank"
+                link.download = `receipt-${passCode}.pdf`;
+                link.click();
+              }}>
+              Download Receipt
+            </button>
+            <button
+              type="button"
+              className={r.smallBtn}
+              onClick={() => {
+                if (!passCodeQR) return;
+                const link = document.createElement("a");
+                link.href = `${API_BASE_URL}/ticketing/${passCode}/event-pass?tenant-id=${TENANT_ID}`;
+                link.target="_blank"
+                link.download = `ticket-${passCode}.pdf`;
+                link.click();
+              }}
+            >
+              Download QR Ticket
+            </button>
+            {googleCalendarURL && (
+              <a
+                href={googleCalendarURL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={r.smallBtn}
+              >
+                Add to Calendar
+              </a>
+            )}
+            <Link to="/participant-login" className={r.smallBtnLink}>
+              Access Event
             </Link>
           </div>
-        </div>
-      </main>
+        </section>
+
+        <aside>
+          <div className={r.pass}>
+            <h3 className={r.passTitle}>Your Event Pass</h3>
+            <p className={r.passText}>
+              Present this QR code at the registration counter to collect your badge.
+            </p>
+            {passCodeQR && (
+              <img
+                className={r.qr}
+                src={passCode? `${API_BASE_URL}/ticketing/${passCode}/qrcode?tenant-id=${TENANT_ID}` : '/assets/qr-ticket.png'}
+                alt="Event pass QR code"
+              />
+            )}
+            <div className={r.passId}>
+              Pass Code
+              <br />
+              {passCode || "—"}
+            </div>
+          </div>
+
+          <div className={r.next}>
+            <h3 className={r.nextTitle}>{"What's Next?"}</h3>
+            <div className={r.nextRow}>
+              <span className={r.nextIcon} aria-hidden>
+                {"\u2709"}
+              </span>
+              <div>
+                <strong className={r.nextRowTitle}>Check your email</strong>
+                <p className={r.nextRowText}>
+                  We have sent a confirmation email with event details and updates.
+                </p>
+              </div>
+            </div>
+            <div className={r.nextRow}>
+              <span className={r.nextIcon} aria-hidden>
+                {"\u25A3"}
+              </span>
+              <div>
+                <strong className={r.nextRowTitle}>Collect your badge</strong>
+                <p className={r.nextRowText}>
+                  Present your QR code at registration desk on arrival.
+                </p>
+              </div>
+            </div>
+            <div className={r.nextRow}>
+              <span className={r.nextIcon} aria-hidden>
+                {"\u265F"}
+              </span>
+              <div>
+                <strong className={r.nextRowTitle}>Join the event</strong>
+                <p className={r.nextRowText}>
+                  Attend the sessions and networking events
+                  {event.datesShort ? ` (${event.datesShort})` : ""}.
+                </p>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div className={r.helpful}>
+        <b className={r.helpfulLabel}>Helpful Links</b>
+        <Link to="/programme" className={r.helpfulLink}>
+          View Programme →
+        </Link>
+        <Link to="/venue" className={r.helpfulLink}>
+          Venue Information →
+        </Link>
+        <Link to="/faq" className={r.helpfulLink}>
+          Travel & Accommodation →
+        </Link>
+        <Link to="/faq" className={r.helpfulLink}>
+          Contact Support →
+        </Link>
+      </div>
+    </div>
+  </main>
 
       <PrivacyBar />
     </div>

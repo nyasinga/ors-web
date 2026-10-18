@@ -27,6 +27,7 @@ export function RegisterPaymentPage() {
     files,
     participationType,
     details,
+    setDetails,
     reference,
     feeKes,
     feeUsd,
@@ -36,6 +37,7 @@ export function RegisterPaymentPage() {
     late,
     selectedSponsorPackage,
   } = useRegistration();
+
   const typeLabel = participationTypes.find((item) => item.id === participationType)?.title ?? "Delegate";
   const engagementID = engagement?.engagementID ? String(engagement.engagementID) : null;
   const isSponsor = participationType === "sponsor" || Boolean(selectedSponsorPackage);
@@ -169,7 +171,7 @@ export function RegisterPaymentPage() {
         throw new Error("Sponsorship package is missing. Cannot complete registration.");
       }
 
-      await signupAfterPayment(
+      const { ticket, googleCalendarURL, passCodeQR }: any = await signupAfterPayment(
         {
           title: details.title,
           fullName: details.fullName,
@@ -205,6 +207,15 @@ export function RegisterPaymentPage() {
         },
         files,
       );
+
+      setDetails({
+        googleCalendarURL, 
+        passCodeQR,
+        passCode: ticket.passCode, 
+        status: ticket.status,
+        reference: ticket.reference,
+        engagementID: ticket.engagementID
+      })
 
       setIsModalOpen(false);
       toast.success("Payment confirmed — registration complete.");

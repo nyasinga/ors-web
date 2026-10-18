@@ -34,6 +34,12 @@ export type RegistrationDetails = {
   city: string;
   dietary: string;
   accessibility: string;
+  googleCalendarURL?: string;
+  passCodeQR?: string;
+  reference?: string;
+  status?: string;
+  passCode?: string;
+  engagementID?: string;
 };
 
 export type SelectedSponsorPackage = {

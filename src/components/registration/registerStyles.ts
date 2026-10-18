@@ -147,6 +147,7 @@ export const confirmActions = "flex gap-[7px] mt-3 flex-wrap";
 export const smallBtn = cn(
   "flex-1 min-w-[140px] h-[34px] rounded-[4px] bg-[#074dbb] text-white text-[10px] font-bold",
   "cursor-pointer max-[760px]:min-w-[45%]",
+  "inline-flex items-center justify-center no-underline text-center",
 );
 export const smallBtnLink = cn(smallBtn, "inline-flex items-center justify-center no-underline");
 export const pass = "p-[15px] bg-[#f7fbff] border border-[#e1e9f3] rounded-lg";

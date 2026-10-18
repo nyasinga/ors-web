@@ -14,7 +14,7 @@ export type EngagementType =
   | "other";
 
 /** API OpenAPI enum uses hyphenated `in-person`; older records may still store `in_person`. */
-export type EngagementMode = "in-person" | "in_person" | "virtual" | "hybrid";
+export type EngagementMode = "in-person" | "virtual" | "hybrid";
 
 /** Theme / objective items — API validates these as objects, not plain strings. */
 export type EngagementNamedItem = {
