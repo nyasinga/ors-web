@@ -552,6 +552,7 @@ export function CreateEventPage() {
         twitterUrl,
         linkedinUrl,
       });
+      console.log("[engagement submit] speakers.photo values", payload.speakers);
       if (isEdit && editId) {
         await updateEngagement(editId, payload);
         if (!asDraft) {
@@ -2164,27 +2165,32 @@ export function CreateEventPage() {
                 try {
                   const uploaded = await uploadResource(newSpeakerPhotoFile);
                   const photoId = uploaded.resourceID?.trim();
+                  console.log("[speaker photo upload]", {
+                    resourceID: uploaded.resourceID,
+                    resourcePath: uploaded.resourcePath,
+                    url: uploaded.url,
+                    photoId,
+                  });
                   if (!photoId) {
                     toast.error("Upload succeeded but no photo id was returned.");
                     return;
                   }
-                  setSpeakers((prev) => [
-                    ...prev,
-                    {
-                      id: `sp${Date.now()}`,
-                      name,
-                      role,
-                      org,
-                      roleLines: [role, org],
-                      topic: newSpeakerTopic.trim() || "To be announced",
-                      category,
-                      badge: badgeMap[category] || "Speaker",
-                      country: newSpeakerCountry.trim() || "",
-                      flag: "",
-                      photo: photoId,
-                      bio: "",
-                    },
-                  ]);
+                  const speakerRow = {
+                    id: `sp${Date.now()}`,
+                    name,
+                    role,
+                    org,
+                    roleLines: [role, org],
+                    topic: newSpeakerTopic.trim() || "To be announced",
+                    category,
+                    badge: badgeMap[category] || "Speaker",
+                    country: newSpeakerCountry.trim() || "",
+                    flag: "",
+                    photo: photoId,
+                    bio: "",
+                  };
+                  console.log("[speaker saved to array]", speakerRow);
+                  setSpeakers((prev) => [...prev, speakerRow]);
                   setNewSpeakerName("");
                   setNewSpeakerRole("");
                   setNewSpeakerOrg("");

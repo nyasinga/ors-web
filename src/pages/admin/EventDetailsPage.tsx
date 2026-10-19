@@ -3846,10 +3846,3 @@ function CommunicationsTab({
                 <Mail size={12} /> {email}
               </span>
             </div>
-          </section>
-        </aside>
-      </section>
-
-    </div>
-  );
-}
