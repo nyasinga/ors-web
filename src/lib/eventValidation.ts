@@ -27,6 +27,8 @@ export type EventWizardValues = {
   facebookUrl: string;
   twitterUrl: string;
   linkedinUrl: string;
+  contactEmail: string;
+  contactPhone: string;
 };
 
 export type EventFieldErrors = Partial<Record<keyof EventWizardValues | "form", string>>;
@@ -34,6 +36,7 @@ export type EventFieldErrors = Partial<Record<keyof EventWizardValues | "form", 
 export type ValidateMode = "step" | "draft" | "publish";
 
 const URL_RE = /^https?:\/\/.+\..+/i;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function isValidUrl(value: string) {
   const v = value.trim();
@@ -80,6 +83,10 @@ function validateStep2(values: EventWizardValues, errors: EventFieldErrors, stri
       "Use 2–48 characters: letters, numbers, dots, underscores or hyphens.";
   }
 
+  if (values.contactEmail.trim() && !EMAIL_RE.test(values.contactEmail.trim())) {
+    errors.contactEmail = "Enter a valid support email.";
+  }
+
   if (strict) {
     if (!values.description.trim()) {
       errors.description = "Short description is required.";
@@ -90,6 +97,12 @@ function validateStep2(values: EventWizardValues, errors: EventFieldErrors, stri
     if (!values.audience) errors.audience = "Select a target audience.";
     if (!values.tone) errors.tone = "Select a tone.";
     if (!values.language) errors.language = "Select a language.";
+    if (!values.contactEmail.trim()) {
+      errors.contactEmail = "Support email is required for registration help.";
+    }
+    if (!values.contactPhone.trim()) {
+      errors.contactPhone = "Support phone is required for registration help.";
+    }
   }
 }
 
@@ -211,6 +224,8 @@ export function stepForField(field: keyof EventFieldErrors): number {
     case "audience":
     case "tone":
     case "language":
+    case "contactEmail":
+    case "contactPhone":
       return 2;
     case "startDate":
     case "endDate":

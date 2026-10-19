@@ -65,6 +65,57 @@ export async function updateEngagement(id: string, body: Partial<Engagement>) {
   });
 }
 
+/**
+ * Push support contact details onto events so registration
+ * “Need Assistance?” and other public surfaces update.
+ * Updates every engagement the admin can list (this tenant typically has one live event).
+ */
+export async function syncSupportContactsToEvents(contacts: {
+  contactEmail: string;
+  contactPhone: string;
+  contactName?: string;
+}) {
+  const email = contacts.contactEmail.trim();
+  const phone = contacts.contactPhone.trim();
+  const name = contacts.contactName?.trim();
+  if (!email && !phone) return 0;
+
+  const rows = await listEngagements({
+    limit: 100,
+    order: "updatedAt DESC",
+  });
+  const list = Array.isArray(rows) ? rows : [];
+  const ids = list
+    .map((row) => row.engagementID)
+    .filter((id): id is string => Boolean(id));
+
+  const body: Partial<Engagement> = {
+    ...(email ? { contactEmail: email } : {}),
+    ...(phone ? { contactPhone: phone } : {}),
+    ...(name ? { contactName: name } : {}),
+  };
+
+  // Prefer published/featured first, but never skip the only event on the tenant.
+  const preferred = list.filter((row) => {
+    const status = String(row.status || "").toLowerCase();
+    return (
+      row.isFeatured === true ||
+      row.isPublished === true ||
+      status === "published" ||
+      status === "ongoing"
+    );
+  });
+  const targetIds = (
+    preferred.length
+      ? preferred.map((row) => row.engagementID)
+      : ids
+  ).filter((id): id is string => Boolean(id));
+
+  await Promise.all(targetIds.map((id) => updateEngagement(String(id), body)));
+
+  return targetIds.length;
+}
+
 export async function deleteEngagement(id: string) {
   return apiRequest<void>(`/engagements/${encodeURIComponent(id)}`, {
     method: "DELETE",
@@ -937,6 +988,9 @@ export type WizardEngagementInput = {
   facebookUrl?: string;
   twitterUrl?: string;
   linkedinUrl?: string;
+  /** Shown as “Need Assistance?” on registration and public surfaces. */
+  contactEmail?: string;
+  contactPhone?: string;
   /** Preserved on edit when the wizard does not manage objectives. */
   objectives?: Array<string | Record<string, unknown>>;
 };
@@ -1060,9 +1114,9 @@ export function buildEngagementPayload(input: WizardEngagementInput): NewEngagem
     facebookUrl: input.facebookUrl?.trim() || undefined,
     twitterUrl: input.twitterUrl?.trim() || undefined,
     linkedinUrl: input.linkedinUrl?.trim() || undefined,
-    contactEmail: user?.email,
+    contactEmail: input.contactEmail?.trim() || undefined,
     contactName: user?.fullName,
-    contactPhone: user?.phoneNo,
+    contactPhone: input.contactPhone?.trim() || undefined,
     createdBy: user?.id || user?.email,
     ownerID: user?.id,
   };
@@ -1232,6 +1286,8 @@ export function engagementToWizardState(engagement: Engagement) {
     facebookUrl: engagement.facebookUrl || "",
     twitterUrl: engagement.twitterUrl || "",
     linkedinUrl: engagement.linkedinUrl || "",
+    contactEmail: engagement.contactEmail || "",
+    contactPhone: engagement.contactPhone || "",
   };
 }
 

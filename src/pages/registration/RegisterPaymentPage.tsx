@@ -308,7 +308,7 @@ export function RegisterPaymentPage() {
             {SHOW_ECITIZEN_IFRAME ? (
               <div className={r.paymentMethod}>
                 <span className={r.radioBlue} aria-hidden />
-                <img className={r.ecitizen} src="/assets/aca-logo.png" alt="eCitizen" />
+                <img className={r.ecitizen} src="/assets/logo-aca.png" alt="eCitizen" />
                 <div>
                   <strong className={r.paymentMethodTitle}>Pay via eCitizen (Default)</strong>
                   <p className={r.paymentMethodText}>

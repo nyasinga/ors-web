@@ -90,13 +90,26 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   return parsed as T;
 }
 
-/** Multipart upload — do not set Content-Type; the browser adds the boundary. */
-export async function apiUpload<T>(path: string, options: UploadOptions): Promise<T> {
-  const { formData, token, headers, ...rest } = options;
+type FormRequestOptions = Omit<RequestInit, "body"> & {
+  formData: FormData;
+  token?: string | null;
+};
+
+type UrlEncodedOptions = Omit<RequestInit, "body"> & {
+  fields: Record<string, unknown>;
+  token?: string | null;
+};
+
+/**
+ * Multipart / form-data request — do not set Content-Type so the browser
+ * adds `multipart/form-data; boundary=…` (same pattern as signup-isippe).
+ */
+export async function apiForm<T>(path: string, options: FormRequestOptions): Promise<T> {
+  const { formData, token, headers, method = "POST", ...rest } = options;
   const url = `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 
   const res = await fetch(url, {
-    method: "POST",
+    method,
     ...rest,
     headers: {
       Accept: "application/json",
@@ -110,4 +123,37 @@ export async function apiUpload<T>(path: string, options: UploadOptions): Promis
   const parsed = await parseResponse(res);
   if (!res.ok) throwIfFailed(res.status, parsed);
   return parsed as T;
+}
+
+/** application/x-www-form-urlencoded (fallback when JSON/multipart are rejected). */
+export async function apiUrlEncoded<T>(path: string, options: UrlEncodedOptions): Promise<T> {
+  const { fields, token, headers, method = "POST", ...rest } = options;
+  const url = `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+  const body = new URLSearchParams();
+  for (const [key, value] of Object.entries(fields)) {
+    if (value === undefined || value === null) continue;
+    body.append(key, typeof value === "object" ? JSON.stringify(value) : String(value));
+  }
+
+  const res = await fetch(url, {
+    method,
+    ...rest,
+    headers: {
+      Accept: "application/json",
+      "x-tenant-id": TENANT_ID,
+      "Content-Type": "application/x-www-form-urlencoded",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...headers,
+    },
+    body,
+  });
+
+  const parsed = await parseResponse(res);
+  if (!res.ok) throwIfFailed(res.status, parsed);
+  return parsed as T;
+}
+
+/** Multipart upload — do not set Content-Type; the browser adds the boundary. */
+export async function apiUpload<T>(path: string, options: UploadOptions): Promise<T> {
+  return apiForm<T>(path, { method: "POST", ...options });
 }

@@ -30,6 +30,7 @@ export type AuthUser = {
   twoFactorAttempts?: number;
   country?: string;
   city?: string;
+  language?: string;
   /** Signup / registration payload (e.g. engagementID, organisation). */
   extraData?: Record<string, unknown> | null;
 };

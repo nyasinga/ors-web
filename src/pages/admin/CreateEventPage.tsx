@@ -48,6 +48,7 @@ import { Toggle } from "../../components/ui/Toggle";
 import { createWizardSteps, eventTypeOptions } from "../../data/adminEvents";
 import { COUNTRY_CODE_OPTIONS } from "../../data/countries";
 import { ApiError } from "../../lib/api";
+import { getAuthUser } from "../../lib/auth";
 import { resourcePublicUrl, uploadResource } from "../../lib/resources";
 import {
   activateEngagement,
@@ -137,6 +138,44 @@ function enumerateEventDays(start: string, end: string, extraDays = 0) {
   return days;
 }
 
+type WizardSession = {
+  id: string;
+  day: string;
+  time: string;
+  title: string;
+  description: string;
+  speakers: number;
+  place: string;
+  badge: string;
+  tone: "green" | "purple" | "orange" | "blue";
+};
+
+function toTimeInputValue(raw: string): string {
+  const m = raw.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return "09:00";
+  return `${m[1].padStart(2, "0")}:${m[2]}`;
+}
+
+function parseSessionTimeRange(time: string): { start: string; end: string } {
+  const m = time.match(/(\d{1,2}:\d{2})\s*[–\-—]\s*(\d{1,2}:\d{2})/);
+  if (m) return { start: toTimeInputValue(m[1]), end: toTimeInputValue(m[2]) };
+  const single = time.match(/(\d{1,2}:\d{2})/);
+  if (single) {
+    const start = toTimeInputValue(single[1]);
+    return { start, end: start };
+  }
+  return { start: "09:00", end: "10:00" };
+}
+
+function toneForSessionBadge(badge: string): WizardSession["tone"] {
+  const key = badge.toLowerCase();
+  if (/ceremony|opening|closing/.test(key)) return "purple";
+  if (/keynote/.test(key)) return "green";
+  if (/roundtable|workshop|panel/.test(key)) return "purple";
+  if (/break|lunch|registration|coffee|networking/.test(key)) return "blue";
+  return "orange";
+}
+
 /** Screen E Create / Edit Event 1–6 */
 export function CreateEventPage() {
   const navigate = useNavigate();
@@ -178,19 +217,7 @@ export function CreateEventPage() {
   const [programTab, setProgramTab] = useState("schedule");
   const [day, setDay] = useState("1");
   const [extraProgramDays, setExtraProgramDays] = useState(0);
-  const [sessions, setSessions] = useState<
-    Array<{
-      id: string;
-      day: string;
-      time: string;
-      title: string;
-      description: string;
-      speakers: number;
-      place: string;
-      badge: string;
-      tone: "green" | "purple" | "orange" | "blue";
-    }>
-  >([]);
+  const [sessions, setSessions] = useState<WizardSession[]>([]);
   const [speakers, setSpeakers] = useState<
     Array<{
       id: string;
@@ -245,16 +272,21 @@ export function CreateEventPage() {
   const [facebookUrl, setFacebookUrl] = useState("");
   const [twitterUrl, setTwitterUrl] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [contactEmail, setContactEmail] = useState(() => getAuthUser()?.email || "");
+  const [contactPhone, setContactPhone] = useState(() => getAuthUser()?.phoneNo || "");
   const [sessionModal, setSessionModal] = useState(false);
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [agendaPreviewOpen, setAgendaPreviewOpen] = useState(false);
   const [speakerModal, setSpeakerModal] = useState(false);
   const [packageModal, setPackageModal] = useState(false);
   const [newSessionTitle, setNewSessionTitle] = useState("");
   const [newSessionDesc, setNewSessionDesc] = useState("");
   const [newSessionType, setNewSessionType] = useState("Session");
+  const [newSessionDay, setNewSessionDay] = useState("1");
   const [newSessionStart, setNewSessionStart] = useState("14:00");
   const [newSessionEnd, setNewSessionEnd] = useState("15:00");
   const [newSessionVenue, setNewSessionVenue] = useState("");
+  const [newSessionSpeakers, setNewSessionSpeakers] = useState("0");
   const [newSessionCapacity, setNewSessionCapacity] = useState("");
   const [newSpeakerName, setNewSpeakerName] = useState("");
   const [newSpeakerRole, setNewSpeakerRole] = useState("");
@@ -311,6 +343,8 @@ export function CreateEventPage() {
     facebookUrl,
     twitterUrl,
     linkedinUrl,
+    contactEmail,
+    contactPhone,
   });
 
   const clearFieldError = (field: keyof EventFieldErrors) => {
@@ -401,6 +435,8 @@ export function CreateEventPage() {
         setFacebookUrl(state.facebookUrl);
         setTwitterUrl(state.twitterUrl);
         setLinkedinUrl(state.linkedinUrl);
+        setContactEmail(state.contactEmail);
+        setContactPhone(state.contactPhone);
       } catch (err) {
         if (cancelled) return;
         setLoadError(
@@ -462,6 +498,69 @@ export function CreateEventPage() {
     }));
   }, [programDays, sessions, previewDate]);
 
+  const resetSessionForm = (forDay = day) => {
+    setEditingSessionId(null);
+    setNewSessionTitle("");
+    setNewSessionDesc("");
+    setNewSessionType("Session");
+    setNewSessionDay(forDay);
+    setNewSessionStart("09:00");
+    setNewSessionEnd("10:00");
+    setNewSessionVenue(venueName || "");
+    setNewSessionSpeakers("0");
+    setNewSessionCapacity("");
+  };
+
+  const openAddSession = () => {
+    resetSessionForm(day);
+    setSessionModal(true);
+  };
+
+  const openEditSession = (session: WizardSession) => {
+    const range = parseSessionTimeRange(session.time);
+    setEditingSessionId(session.id);
+    setNewSessionTitle(session.title);
+    setNewSessionDesc(session.description === "New session added to the programme." ? "" : session.description);
+    setNewSessionType(session.badge || "Session");
+    setNewSessionDay(String(session.day || day));
+    setNewSessionStart(range.start);
+    setNewSessionEnd(range.end);
+    setNewSessionVenue(session.place || "");
+    setNewSessionSpeakers(String(session.speakers ?? 0));
+    setNewSessionCapacity("");
+    setSessionModal(true);
+  };
+
+  const saveSessionFromModal = () => {
+    if (!newSessionTitle.trim()) {
+      toast.error("Enter a session title.");
+      return;
+    }
+    const sessionDay = newSessionDay || day;
+    const wasEdit = Boolean(editingSessionId);
+    const entry: WizardSession = {
+      id: editingSessionId || `s${Date.now()}`,
+      day: sessionDay,
+      time: `${newSessionStart} – ${newSessionEnd}`,
+      title: newSessionTitle.trim(),
+      description: newSessionDesc.trim() || "New session added to the programme.",
+      speakers: Math.max(0, Number(newSessionSpeakers) || 0),
+      place: newSessionVenue.trim() || venueName || "Main hall",
+      badge: newSessionType,
+      tone: toneForSessionBadge(newSessionType),
+    };
+    setSessions((prev) => {
+      if (wasEdit) {
+        return prev.map((s) => (s.id === entry.id ? entry : s));
+      }
+      return [...prev, entry];
+    });
+    setSessionModal(false);
+    resetSessionForm(sessionDay);
+    setDay(sessionDay);
+    toast.success(wasEdit ? "Session updated." : `Session added to Day ${sessionDay}`);
+  };
+
   const tips = useMemo(() => {
     if (step === 1) {
       return [
@@ -476,6 +575,7 @@ export function CreateEventPage() {
       return [
         "Use a clear and descriptive title.",
         "Keep the description concise.",
+        "Set support email and phone for Need Assistance.",
         "Choose tags that improve discovery.",
         "Upload a high-resolution logo.",
       ];
@@ -551,6 +651,8 @@ export function CreateEventPage() {
         facebookUrl,
         twitterUrl,
         linkedinUrl,
+        contactEmail,
+        contactPhone,
       });
       console.log("[engagement submit] speakers.photo values", payload.speakers);
       if (isEdit && editId) {
@@ -891,6 +993,38 @@ export function CreateEventPage() {
                   />
                 </div>
                 <p className="mt-1 text-xs text-mute">Press Enter to add. Tags are saved with the event.</p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+                <p className="text-sm font-semibold text-ink">Event support contacts</p>
+                <p className="mt-0.5 text-xs text-mute">
+                  Shown as “Need Assistance?” on registration (email / phone).
+                </p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <Input
+                    label="Support email"
+                    type="email"
+                    required
+                    value={contactEmail}
+                    error={fieldErrors.contactEmail}
+                    placeholder="e.g. events@aca.go.ke"
+                    onChange={(e) => {
+                      setContactEmail(e.target.value);
+                      clearFieldError("contactEmail");
+                    }}
+                  />
+                  <Input
+                    label="Support phone"
+                    type="tel"
+                    required
+                    value={contactPhone}
+                    error={fieldErrors.contactPhone}
+                    placeholder="e.g. 254700000000"
+                    onChange={(e) => {
+                      setContactPhone(e.target.value);
+                      clearFieldError("contactPhone");
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </Card>
@@ -1271,6 +1405,14 @@ export function CreateEventPage() {
                         <div className="flex shrink-0 gap-1">
                           <button
                             type="button"
+                            className="grid h-8 w-8 place-items-center rounded-lg text-mute hover:bg-slate-100 hover:text-blue"
+                            aria-label={`Edit ${s.title}`}
+                            onClick={() => openEditSession(s)}
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            type="button"
                             className="grid h-8 w-8 place-items-center rounded-lg text-mute hover:bg-slate-100"
                             aria-label="Duplicate"
                             onClick={() =>
@@ -1294,9 +1436,6 @@ export function CreateEventPage() {
                           >
                             <Trash2 size={14} />
                           </button>
-                          <span className="grid h-8 w-8 place-items-center text-mute" aria-hidden>
-                            <GripVertical size={14} />
-                          </span>
                         </div>
                       </li>
                     ))}
@@ -1314,7 +1453,7 @@ export function CreateEventPage() {
                   variant="outline"
                   className="mt-4"
                   disabled={!startDate}
-                  onClick={() => setSessionModal(true)}
+                  onClick={openAddSession}
                 >
                   <Plus size={16} /> Add Session
                 </Button>
@@ -2015,48 +2154,37 @@ export function CreateEventPage() {
 
       <Modal
         open={sessionModal}
-        onClose={() => setSessionModal(false)}
-        title={`Add Session — Day ${day}${
-          programDays.find((d) => String(d.index) === day)
-            ? ` (${programDays.find((d) => String(d.index) === day)?.label})`
-            : ""
-        }`}
+        onClose={() => {
+          setSessionModal(false);
+          resetSessionForm();
+        }}
+        title={
+          editingSessionId
+            ? `Edit Session — Day ${newSessionDay}${
+                programDays.find((d) => String(d.index) === newSessionDay)
+                  ? ` (${programDays.find((d) => String(d.index) === newSessionDay)?.label})`
+                  : ""
+              }`
+            : `Add Session — Day ${newSessionDay || day}${
+                programDays.find((d) => String(d.index) === (newSessionDay || day))
+                  ? ` (${programDays.find((d) => String(d.index) === (newSessionDay || day))?.label})`
+                  : ""
+              }`
+        }
         className="md:max-w-lg"
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setSessionModal(false)}>
-              Cancel
-            </Button>
             <Button
+              variant="outline"
               onClick={() => {
-                if (!newSessionTitle.trim()) {
-                  toast.error("Enter a session title.");
-                  return;
-                }
-                setSessions((prev) => [
-                  ...prev,
-                  {
-                    id: `s${Date.now()}`,
-                    day,
-                    time: `${newSessionStart} – ${newSessionEnd}`,
-                    title: newSessionTitle.trim(),
-                    description: newSessionDesc.trim() || "New session added to the programme.",
-                    speakers: 1,
-                    place: newSessionVenue.trim() || venueName || "Main hall",
-                    badge: newSessionType,
-                    tone: "orange" as const,
-                  },
-                ]);
-                setNewSessionTitle("");
-                setNewSessionDesc("");
-                setNewSessionType("Session");
-                setNewSessionVenue("");
-                setNewSessionCapacity("");
                 setSessionModal(false);
-                toast.success(`Session added to Day ${day}`);
+                resetSessionForm();
               }}
             >
-              Save Session
+              Cancel
+            </Button>
+            <Button onClick={saveSessionFromModal}>
+              {editingSessionId ? "Save changes" : "Save Session"}
             </Button>
           </div>
         }
@@ -2070,16 +2198,37 @@ export function CreateEventPage() {
             placeholder="e.g. Closing Remarks"
           />
           <Select
+            label="Day"
+            value={newSessionDay}
+            onChange={(e) => setNewSessionDay(e.target.value)}
+            options={
+              programDays.length
+                ? programDays.map((d) => ({
+                    value: String(d.index),
+                    label: `Day ${d.index} (${d.label})`,
+                  }))
+                : [{ value: day || "1", label: `Day ${day || "1"}` }]
+            }
+          />
+          <Select
             label="Session type"
             value={newSessionType}
             onChange={(e) => setNewSessionType(e.target.value)}
-            options={[
-              { value: "Keynote", label: "Keynote" },
-              { value: "Panel Discussion", label: "Panel Discussion" },
-              { value: "Workshop", label: "Workshop" },
-              { value: "Session", label: "Session" },
-              { value: "Break", label: "Break" },
-            ]}
+            options={(() => {
+              const base = [
+                "Keynote",
+                "Panel Discussion",
+                "Panel",
+                "Workshop",
+                "Roundtable",
+                "Ceremony",
+                "Registration",
+                "Session",
+                "Break",
+              ];
+              const list = base.includes(newSessionType) ? base : [...base, newSessionType];
+              return list.map((value) => ({ value, label: value }));
+            })()}
           />
           <label className="grid gap-1.5 text-sm">
             <span className="font-medium text-ink">Description</span>
@@ -2110,12 +2259,21 @@ export function CreateEventPage() {
             value={newSessionVenue}
             onChange={(e) => setNewSessionVenue(e.target.value)}
           />
-          <Input
-            label="Capacity"
-            type="number"
-            value={newSessionCapacity}
-            onChange={(e) => setNewSessionCapacity(e.target.value)}
-          />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input
+              label="Speakers"
+              type="number"
+              min={0}
+              value={newSessionSpeakers}
+              onChange={(e) => setNewSessionSpeakers(e.target.value)}
+            />
+            <Input
+              label="Capacity"
+              type="number"
+              value={newSessionCapacity}
+              onChange={(e) => setNewSessionCapacity(e.target.value)}
+            />
+          </div>
         </div>
       </Modal>
 

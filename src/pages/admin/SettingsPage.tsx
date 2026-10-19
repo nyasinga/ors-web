@@ -50,25 +50,79 @@ import {
   sessionSummary,
   settingsTabs,
 } from "../../data/adminOps";
+import { useToast } from "../../components/ui/Toast";
+import { Modal } from "../../components/ui/Modal";
 import { useAuthUser } from "../../hooks/useAuthUser";
 import { ApiError } from "../../lib/api";
 import {
   displayName,
   formatAccountDate,
+  getAuthToken,
+  getAuthUser,
   initialsFrom,
   isAccountActive,
   roleLabel,
+  saveAuthSession,
   type AuthUser,
   userEmail,
   userPhone,
+  wasRemembered,
 } from "../../lib/auth";
 import { cn } from "../../lib/cn";
-import { changePassword, listUsers } from "../../lib/users";
+import { syncSupportContactsToEvents } from "../../lib/engagements";
+import { clearPublicEngagementCache } from "../../lib/publicEvent";
+import {
+  changePassword,
+  createUser,
+  listUsers,
+  updateMe,
+  type CreateUserInput,
+} from "../../lib/users";
 import {
   loadWorkspaceSettings,
   saveWorkspaceSettings,
   type WorkspaceSettings,
 } from "../../lib/workspaceSettings";
+
+async function saveProfileAndSyncEvents(input: {
+  fullName: string;
+  email: string;
+  phoneNo: string;
+  language?: string;
+}) {
+  const updated = await updateMe({
+    fullName: input.fullName,
+    email: input.email,
+    phoneNo: input.phoneNo,
+    ...(input.language ? { language: input.language } : {}),
+  });
+  syncSessionUser({
+    fullName: updated?.fullName || input.fullName,
+    email: updated?.email || input.email,
+    phoneNo: updated?.phoneNo || input.phoneNo,
+    ...(input.language
+      ? { language: updated?.language || input.language }
+      : {}),
+  });
+  let synced = 0;
+  try {
+    synced = await syncSupportContactsToEvents({
+      contactEmail: input.email,
+      contactPhone: input.phoneNo,
+      contactName: input.fullName,
+    });
+    clearPublicEngagementCache();
+  } catch {
+    synced = 0;
+  }
+  return { updated, synced };
+}
+
+const USER_TYPE_OPTIONS = [
+  { value: "admin", label: "Administrator" },
+  { value: "superadmin", label: "Super Administrator" },
+  { value: "staff", label: "Staff" },
+];
 
 const INTEGRATION_CATALOG = [
   { id: "mpesa", name: "M-Pesa", category: "Payments" },
@@ -234,27 +288,96 @@ function GeneralSection({
   workspace: WorkspaceSettings;
   onChange: (next: WorkspaceSettings) => void;
 }) {
+  const toast = useToast();
   const user = useAuthUser();
-  const fullName = displayName(user);
-  const email = userEmail(user);
-  const phone = userPhone(user);
+  const [name, setName] = useState(() => displayName(user, ""));
+  const [email, setEmail] = useState(() => userEmail(user, ""));
+  const [phone, setPhone] = useState(() => user?.phoneNo?.trim() || "");
+  const [saving, setSaving] = useState(false);
   const role = roleLabel(user);
   const created = formatAccountDate(user?.dateCreated);
   const statusBadge = user ? (isAccountActive(user) ? "Active" : "Inactive") : undefined;
+
+  useEffect(() => {
+    setName(displayName(user, ""));
+    setEmail(userEmail(user, ""));
+    setPhone(user?.phoneNo?.trim() || "");
+  }, [user]);
 
   const setField = <K extends keyof WorkspaceSettings>(key: K, value: WorkspaceSettings[K]) => {
     onChange({ ...workspace, [key]: value });
   };
 
+  const onSaveProfile = async () => {
+    const fullName = name.trim();
+    const nextEmail = email.trim();
+    const phoneNo = phone.trim();
+    if (!fullName) {
+      toast.error("Full name is required.");
+      return;
+    }
+    if (!nextEmail) {
+      toast.error("Email is required.");
+      return;
+    }
+    if (!phoneNo) {
+      toast.error("Phone number is required.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { synced } = await saveProfileAndSyncEvents({
+        fullName,
+        email: nextEmail,
+        phoneNo,
+      });
+      toast.success(
+        synced
+          ? "Account updated — registration support contacts refreshed."
+          : "Account updated. To refresh registration contacts, open the event → Edit support contacts.",
+      );
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to update account.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="grid gap-4">
       <Card>
-        <h2 className="font-bold text-navy">Account Information</h2>
-        <p className="text-sm text-mute">Live profile from your signed-in session.</p>
-        <div className="mt-2 grid gap-x-8 sm:grid-cols-2">
-          <InfoRow icon={User} label="Full Name" value={fullName} badge={statusBadge} />
-          <InfoRow icon={Mail} label="Email Address" value={email} />
-          <InfoRow icon={Phone} label="Phone Number" value={phone} />
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-bold text-navy">Account Information</h2>
+            <p className="text-sm text-mute">
+              Updates your profile and the support email/phone shown on registration.
+            </p>
+          </div>
+          <Button size="sm" disabled={saving} onClick={() => void onSaveProfile()}>
+            <Save size={16} /> {saving ? "Saving…" : "Save profile"}
+          </Button>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Input label="Full Name" value={name} onChange={(e) => setName(e.target.value)} />
+            {statusBadge ? (
+              <span className="mt-1.5 inline-flex">
+                <Pill tone={statusBadge === "Active" ? "green" : "red"}>{statusBadge}</Pill>
+              </span>
+            ) : null}
+          </div>
+          <Input
+            label="Email Address"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <Input
+            label="Phone Number"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+254…"
+          />
           <InfoRow icon={ShieldCheck} label="Role" value={role} />
           <InfoRow icon={CalendarDays} label="Account Created" value={created} />
           <InfoRow icon={Clock} label="Username" value={user?.username?.trim() || "—"} />
@@ -313,11 +436,22 @@ function GeneralSection({
   );
 }
 
+function syncSessionUser(next: Partial<AuthUser>) {
+  const token = getAuthToken();
+  const current = getAuthUser();
+  if (!token || !current) return;
+  saveAuthSession({ ...current, ...next }, token, wasRemembered());
+}
+
 function AccountSection() {
+  const toast = useToast();
   const user = useAuthUser();
   const [name, setName] = useState(() => displayName(user, ""));
   const [email, setEmail] = useState(() => userEmail(user, ""));
-  const [phone, setPhone] = useState(() => userPhone(user, ""));
+  const [phone, setPhone] = useState(() => user?.phoneNo?.trim() || "");
+  const [language, setLanguage] = useState(() => user?.language?.trim() || "en-ke");
+  const [saving, setSaving] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const initials = initialsFrom(user);
   const role = roleLabel(user);
   const roleValue = user?.userType?.trim().toLowerCase() || "admin";
@@ -325,52 +459,218 @@ function AccountSection() {
   useEffect(() => {
     setName(displayName(user, ""));
     setEmail(userEmail(user, ""));
-    setPhone(userPhone(user, ""));
+    setPhone(user?.phoneNo?.trim() || "");
+    setLanguage(user?.language?.trim() || "en-ke");
   }, [user]);
 
+  const onSave = async () => {
+    const fullName = name.trim();
+    const nextEmail = email.trim();
+    const phoneNo = phone.trim();
+    if (!fullName) {
+      toast.error("Full name is required.");
+      return;
+    }
+    if (!nextEmail) {
+      toast.error("Email is required.");
+      return;
+    }
+    if (!phoneNo) {
+      toast.error("Phone number is required.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { synced } = await saveProfileAndSyncEvents({
+        fullName,
+        email: nextEmail,
+        phoneNo,
+        language,
+      });
+      toast.success(
+        synced
+          ? "Profile updated — registration support contacts refreshed."
+          : "Profile updated. To refresh registration contacts, open the event → Edit support contacts.",
+      );
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to update profile.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <Card>
-      <SectionHead
-        icon={User}
-        title="Account & Profile"
-        description="Update your personal profile details."
-      />
-      <div className="mb-6 flex items-center gap-4">
-        <span className="grid h-16 w-16 place-items-center rounded-full bg-blue text-lg font-bold text-white">
-          {initials}
-        </span>
-        <div>
-          <Button variant="outline" size="sm">
-            Change photo
-          </Button>
-          <p className="mt-1 text-xs text-mute">JPG or PNG, max 2MB</p>
+    <>
+      <Card>
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <SectionHead
+            icon={User}
+            title="Account & Profile"
+            description="Update your personal profile details."
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => setAddOpen(true)}>
+              <UserPlus size={16} /> Add user
+            </Button>
+            <Button size="sm" disabled={saving} onClick={() => void onSave()}>
+              <Save size={16} /> {saving ? "Saving…" : "Save changes"}
+            </Button>
+          </div>
         </div>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input label="Full Name" value={name} onChange={(e) => setName(e.target.value)} />
-        <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <Input label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+        <div className="mb-6 flex items-center gap-4">
+          <span className="grid h-16 w-16 place-items-center rounded-full bg-blue text-lg font-bold text-white">
+            {initials}
+          </span>
+          <div>
+            <Button variant="outline" size="sm" disabled title="Photo upload is not available yet">
+              Change photo
+            </Button>
+            <p className="mt-1 text-xs text-mute">JPG or PNG, max 2MB</p>
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input label="Full Name" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input
+            label="Phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+254…"
+          />
+          <Select
+            label="Role"
+            value={roleValue}
+            disabled
+            options={[{ value: roleValue, label: role }]}
+          />
+          <Select
+            label="Language"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            options={[
+              { value: "en-ke", label: "English (Kenya)" },
+              { value: "en", label: "English" },
+              { value: "sw", label: "Kiswahili" },
+            ]}
+          />
+          <Select
+            label="Time Zone"
+            defaultValue="nairobi"
+            options={[{ value: "nairobi", label: "(GMT+03:00) Nairobi" }]}
+          />
+        </div>
+      </Card>
+      <AddUserModal open={addOpen} onClose={() => setAddOpen(false)} />
+    </>
+  );
+}
+
+function AddUserModal({
+  open,
+  onClose,
+  onCreated,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreated?: (user: AuthUser) => void;
+}) {
+  const toast = useToast();
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phoneNo, setPhoneNo] = useState("");
+  const [password, setPassword] = useState("");
+  const [userType, setUserType] = useState("admin");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setFullName("");
+    setEmail("");
+    setPhoneNo("");
+    setPassword("");
+    setUserType("admin");
+  }, [open]);
+
+  const onSubmit = async () => {
+    const payload: CreateUserInput = {
+      fullName: fullName.trim(),
+      email: email.trim(),
+      phoneNo: phoneNo.trim(),
+      userType,
+      ...(password.trim() ? { password: password.trim() } : {}),
+    };
+    if (!payload.fullName || !payload.email || !payload.phoneNo) {
+      toast.error("Full name, email and phone are required.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const created = await createUser(payload);
+      toast.success(`User ${created.fullName || payload.fullName} created.`);
+      onCreated?.(created);
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to create user.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Add user"
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button onClick={() => void onSubmit()} disabled={busy}>
+            <UserPlus size={16} /> {busy ? "Creating…" : "Create user"}
+          </Button>
+        </div>
+      }
+    >
+      <div className="grid gap-3">
+        <Input
+          label="Full Name *"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          autoComplete="name"
+        />
+        <Input
+          label="Email *"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+        />
+        <Input
+          label="Phone *"
+          value={phoneNo}
+          onChange={(e) => setPhoneNo(e.target.value)}
+          placeholder="+254…"
+          autoComplete="tel"
+        />
         <Select
           label="Role"
-          value={roleValue}
-          disabled
-          options={[{ value: roleValue, label: role }]}
+          value={userType}
+          onChange={(e) => setUserType(e.target.value)}
+          options={USER_TYPE_OPTIONS}
         />
-        <Select
-          label="Language"
-          defaultValue="en-ke"
-          options={[
-            { value: "en-ke", label: "English (Kenya)" },
-            { value: "sw", label: "Kiswahili" },
-          ]}
+        <Input
+          label="Temporary password (optional)"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
         />
-        <Select
-          label="Time Zone"
-          defaultValue="nairobi"
-          options={[{ value: "nairobi", label: "(GMT+03:00) Nairobi" }]}
-        />
+        <p className="text-xs text-mute">
+          If no password is set, the user can complete signup or reset via email later.
+        </p>
       </div>
-    </Card>
+    </Modal>
   );
 }
 
@@ -738,6 +1038,8 @@ function AccessControlPanel() {
   const [users, setUsers] = useState<AuthUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -763,7 +1065,7 @@ function AccessControlPanel() {
     return () => {
       cancelled = true;
     };
-  }, [sessionUser]);
+  }, [sessionUser, reloadKey]);
 
   const rows = (users.length ? users : sessionUser ? [sessionUser] : []).map((u) => ({
     id: u.id,
@@ -837,7 +1139,15 @@ function AccessControlPanel() {
               <p className="text-sm text-mute">Accounts returned by the API for this tenant.</p>
             </div>
           </div>
+          <Button size="sm" onClick={() => setAddOpen(true)}>
+            <UserPlus size={16} /> Add user
+          </Button>
         </div>
+        <AddUserModal
+          open={addOpen}
+          onClose={() => setAddOpen(false)}
+          onCreated={() => setReloadKey((k) => k + 1)}
+        />
         {error ? <p className="mb-3 text-sm font-semibold text-amber-700">{error}</p> : null}
         {loading ? (
           <p className="text-sm text-mute">Loading users…</p>
