@@ -7,7 +7,7 @@
   Cap-heights measured from the PNG; sizes chosen so rendered text matches.
 */
 @layer base {
-  :root {
+:root {
     /* Type scale locked to image-2 / Screen A pixels @ ~998px */
     --sa-h1: 3.5rem; /* 56px — ISIPPE-3 Inter Black */
     --sa-h1-lh: 0.92;

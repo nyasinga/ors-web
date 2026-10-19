@@ -4,6 +4,7 @@ import {
   type ECitizenCheckoutFields,
   type ECitizenCheckoutSession,
 } from "../types/registration";
+import { SHOW_ECITIZEN_IFRAME } from "./paymentMode";
 
 const TENANT_ID = (import.meta.env.VITE_API_TENANT_ID as string | undefined)?.trim() || "ACA";
 
@@ -84,6 +85,10 @@ export function submitCheckoutToFrame(
   fields: Record<string, unknown>,
   frameName = "paymentFrame",
 ) {
+  if (!SHOW_ECITIZEN_IFRAME) {
+    console.warn("[pesaflow] submitCheckoutToFrame skipped — eCitizen is disabled");
+    return;
+  }
   // Always re-sanitize at submit time so extras never reach Pesaflow.
   const safeFields = toPesaflowFormFields(fields);
 
@@ -149,6 +154,9 @@ type InitiateCheckoutResponse = ECitizenCheckoutSession & {
 
 /** Start eCitizen checkout — returns iframe POST url + fields. */
 export async function initiateEcitizenCheckout(input: InitiateCheckoutInput) {
+  if (!SHOW_ECITIZEN_IFRAME) {
+    throw new Error("eCitizen checkout is disabled. Use bank transfer instead.");
+  }
   const callbackURL = input.callbackURL || frontendCallbackUrl();
   const body = {
     amount: input.amount,
@@ -212,15 +220,18 @@ export type SignupIsippeInput = Record<string, unknown> & {
     ticket: {
       amount: number;
       currency: string;
-    }; 
+    };
 
-    eCitizen: {
+    /** Bank / M-Pesa transaction reference entered by the registrant. */
+    paymentReference?: string;
+
+    /** Present only when eCitizen checkout is enabled. */
+    eCitizen?: {
       reference: string;
       currency: string;
       invoiceRef: string;
     };
-  }
-
+  };
 };
 
 /** Finalize registration after the user completes payment in the iframe. */

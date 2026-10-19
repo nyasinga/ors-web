@@ -5,12 +5,7 @@ import {
   asTickets,
 } from "./engagements";
 import type { Engagement } from "../types/engagement";
-
-function parseKes(value?: string | number) {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (!value) return 0;
-  return Number(String(value).replace(/[^\d.]/g, "")) || 0;
-}
+import { parseKesPrice } from "./ticketAnalytics";
 
 function formatKes(n: number) {
   return `KES ${new Intl.NumberFormat("en-KE").format(n)}`;
@@ -57,7 +52,7 @@ export function buildLiveEventReport(engagement: Engagement): LiveEventReport {
   const registered = Number(engagement.registered ?? 0);
 
   const ticketBreakdown = tickets.map((t) => {
-    const price = parseKes(t.price);
+    const price = parseKesPrice(t.price);
     const capacity = t.capacity || 0;
     return {
       name: t.name,
@@ -72,7 +67,7 @@ export function buildLiveEventReport(engagement: Engagement): LiveEventReport {
   const sponsorBreakdown = sponsors.map((s) => ({
     name: s.name,
     tier: s.tier || s.name,
-    value: parseKes(s.price),
+    value: parseKesPrice(s.price),
   }));
   const sponsorshipValue = sponsorBreakdown.reduce((s, t) => s + t.value, 0);
 

@@ -76,6 +76,7 @@ import { cn } from "../../lib/cn";
 import { printParticipantTicket } from "../../lib/printParticipantTicket";
 import {
   fetchEventTransactions,
+  parseKesPrice,
   type PaymentTransaction,
 } from "../../lib/ticketAnalytics";
 import type {
@@ -1638,17 +1639,12 @@ type TicketRow = {
   status: string;
 };
 
-function parseKes(value?: string) {
-  if (!value) return 0;
-  return Number(String(value).replace(/[^\d.]/g, "")) || 0;
-}
-
 function toTicketRows(tickets: EngagementTicket[]): TicketRow[] {
   return tickets.map((t, i) => ({
     id: t.id || `tk-${i + 1}`,
     name: t.name,
     blurb: t.period || "Event ticket",
-    priceKes: parseKes(t.price),
+    priceKes: parseKesPrice(t.price),
     capacity: t.capacity || 0,
     sold: 0,
     status: "Active",
@@ -2235,8 +2231,8 @@ function TicketsTab({
                 const capacity = Number(data.get("capacity") || 0);
                 const period = String(data.get("period") || "").trim();
                 if (!name) return;
-                const priceKes = Number(priceRaw.replace(/[^\d.]/g, "")) || 0;
-                const price = priceRaw.toUpperCase().includes("KES")
+                const priceKes = parseKesPrice(priceRaw);
+                const price = /KES/i.test(priceRaw)
                   ? priceRaw
                   : `KES ${priceKes.toLocaleString("en-KE")}`;
                 const entry: EngagementTicket = {
@@ -2273,7 +2269,7 @@ function TicketsTab({
                 <input
                   name="price"
                   required
-                  defaultValue={editing ? String(parseKes(editing.price) || "") : ""}
+                  defaultValue={editing ? String(parseKesPrice(editing.price) || "") : ""}
                   className="mt-1 w-full rounded-lg border border-blue-200 px-3 py-2 font-normal outline-none focus:border-blue-500"
                   placeholder="60000"
                 />
@@ -3846,3 +3842,9 @@ function CommunicationsTab({
                 <Mail size={12} /> {email}
               </span>
             </div>
+          </section>
+        </aside>
+      </section>
+    </div>
+  );
+}

@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import PaymentModal from "../../components/registration/PaymentModal";
+import PaymentModal, {
+  SHOW_ECITIZEN_IFRAME,
+} from "../../components/registration/PaymentModal";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
 import { useToast } from "../../components/ui/Toast";
 import { useRegistration } from "../../hooks/useRegistration";
@@ -17,7 +19,7 @@ import * as r from "../../components/registration/registerStyles";
 
 const PAYMENT_CURRENCY = "KES";
 
-/** Registration step 3 — initiate-checkout → eCitizen iframe → signup-isippe. */
+/** Registration step 3 — bank transfer (eCitizen iframe hidden) → signup-isippe. */
 export function RegisterPaymentPage() {
   const navigate = useNavigate();
   const toast = useToast();
@@ -108,6 +110,14 @@ export function RegisterPaymentPage() {
       return;
     }
 
+    // Bank transfer mode — skip eCitizen initiate-checkout while iframe is hidden.
+    if (!SHOW_ECITIZEN_IFRAME) {
+      setInvoiceRef(reference);
+      setCheckout(null);
+      setIsModalOpen(true);
+      return;
+    }
+
     setLoading(true);
     toast.info("Starting eCitizen payment…");
     try {
@@ -121,7 +131,7 @@ export function RegisterPaymentPage() {
         currency: PAYMENT_CURRENCY,
         callbackURL: window.location.href,
       });
-      
+
       setInvoiceRef(String(session.fields.billRefNumber));
       setCheckout(session);
       setIsModalOpen(true);
@@ -133,8 +143,14 @@ export function RegisterPaymentPage() {
     }
   };
 
-  const finalizeAfterPayment = async () => {
-    if (!invoiceRef) {
+  const finalizeAfterPayment = async (paymentNote?: string) => {
+    const paymentReference = (paymentNote || "").trim();
+    const effectiveInvoiceRef = invoiceRef || reference;
+    if (!SHOW_ECITIZEN_IFRAME && !paymentReference) {
+      toast.error("Enter your bank / M-Pesa payment reference before continuing.");
+      return;
+    }
+    if (!effectiveInvoiceRef) {
       toast.error("Missing invoice reference. Please start payment again.");
       return;
     }
@@ -198,11 +214,16 @@ export function RegisterPaymentPage() {
               amount,
               currency: PAYMENT_CURRENCY,
             },
-            eCitizen: {
-              reference,
-              currency: PAYMENT_CURRENCY,
-              invoiceRef,
-            },
+            paymentReference: paymentReference || undefined,
+            ...(SHOW_ECITIZEN_IFRAME
+              ? {
+                  eCitizen: {
+                    reference,
+                    currency: PAYMENT_CURRENCY,
+                    invoiceRef: effectiveInvoiceRef,
+                  },
+                }
+              : {}),
           },
         },
         files,
@@ -238,7 +259,9 @@ export function RegisterPaymentPage() {
           <section className={cn(r.card, r.section)}>
             <h2 className={r.sectionTitle}>3. Payment</h2>
             <p className={r.subtitle}>
-              Complete your registration by making the payment using the eCitizen platform.
+              {SHOW_ECITIZEN_IFRAME
+                ? "Complete your registration by making the payment using the eCitizen platform."
+                : "Complete your registration by transferring the fee to the ACA bank account."}
             </p>
 
             <div className={r.payTop}>
@@ -282,26 +305,56 @@ export function RegisterPaymentPage() {
             </div>
 
             <h3 className={r.payHeading}>Payment Method</h3>
-            <div className={r.paymentMethod}>
-              <span className={r.radioBlue} aria-hidden />
-              <img className={r.ecitizen} src="/assets/ecitizen.svg" alt="eCitizen" />
-              <div>
-                <strong className={r.paymentMethodTitle}>Pay via eCitizen (Default)</strong>
-                <p className={r.paymentMethodText}>
-                  You will be redirected to the eCitizen payment platform to complete your payment
-                  securely.
-                </p>
+            {SHOW_ECITIZEN_IFRAME ? (
+              <div className={r.paymentMethod}>
+                <span className={r.radioBlue} aria-hidden />
+                <img className={r.ecitizen} src="/assets/aca-logo.png" alt="eCitizen" />
+                <div>
+                  <strong className={r.paymentMethodTitle}>Pay via eCitizen (Default)</strong>
+                  <p className={r.paymentMethodText}>
+                    You will be redirected to the eCitizen payment platform to complete your payment
+                    securely.
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className={r.paymentMethod}>
+                <span className={r.radioBlue} aria-hidden />
+                <img
+                  className="h-12 w-auto object-contain"
+                  src="/assets/aca-logo.png"
+                  alt="Anti Counterfeit Authority"
+                />
+                <div>
+                  <strong className={r.paymentMethodTitle}>Bank transfer (KCB)</strong>
+                  <p className={r.paymentMethodText}>
+                    Transfer the registration fee to the Anti Counterfeit Agency KCB account, then
+                    enter your payment reference to finish.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className={r.notice}>
               <strong className={r.noticeStrong}>ⓘ &nbsp; Important Information</strong>
               <br />
-              • You will open the official eCitizen payment platform in a secure window.
-              <br />
-              • Complete your payment, then confirm below to finish registration.
-              <br />• After successful payment, you will receive a confirmation and your electronic
-              ticket via email.
+              {SHOW_ECITIZEN_IFRAME ? (
+                <>
+                  • You will open the official eCitizen payment platform in a secure window.
+                  <br />
+                  • Complete your payment, then confirm below to finish registration.
+                  <br />• After successful payment, you will receive a confirmation and your
+                  electronic ticket via email.
+                </>
+              ) : (
+                <>
+                  • Transfer the exact amount to the ACA KCB account shown in the next step.
+                  <br />
+                  • Use your registration reference as the payment narration.
+                  <br />• After transferring, enter your bank / M-Pesa reference and confirm to
+                  finish registration.
+                </>
+              )}
             </div>
 
             <div className={r.actions}>
@@ -314,7 +367,11 @@ export function RegisterPaymentPage() {
                 disabled={loading}
                 onClick={() => void startPayment()}
               >
-                {loading ? "Starting eCitizen…" : "Proceed to eCitizen"}{" "}
+                {SHOW_ECITIZEN_IFRAME
+                  ? loading
+                    ? "Starting eCitizen…"
+                    : "Proceed to eCitizen"
+                  : "View bank details"}{" "}
                 <span className={r.arrow} aria-hidden>
                   →
                 </span>
@@ -375,6 +432,8 @@ export function RegisterPaymentPage() {
       <PaymentModal
         isOpen={isModalOpen}
         checkout={checkout}
+        amountKes={displayKes}
+        paymentReference={invoiceRef || reference}
         onClose={() => setIsModalOpen(false)}
         onPaymentComplete={finalizeAfterPayment}
         isVerifying={isFinalizing}
