@@ -25,12 +25,13 @@ const PESAFLOW_FORM_KEYS = [
   "clientName",
   "clientIDNumber",
   "clientEmail",
-  "callBackURLONSuccess",
+  "callBackURLOnSuccess",
   "amountExpected",
   "notificationURL",
   "secureHash",
   "format",
   "sendSTK",
+  "pictureURL"
 ] as const;
 
 /** Spec: clientMSISDN is BigInt e.g. 254722222222 */
@@ -66,7 +67,7 @@ export function toPesaflowFormFields(
       out[key] = toKenyaMsisdn(value as string | number);
       continue;
     }
-    if (key === "notificationURL") {
+    if (key === "notificationURL" || key==="callBackURLOnSuccess") {
       out[key] = ensureHttpsUrl(String(value));
       continue;
     }

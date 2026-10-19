@@ -121,7 +121,7 @@ export function RegisterPaymentPage() {
         currency: PAYMENT_CURRENCY,
         callbackURL: window.location.href,
       });
-
+      
       setInvoiceRef(String(session.fields.billRefNumber));
       setCheckout(session);
       setIsModalOpen(true);
