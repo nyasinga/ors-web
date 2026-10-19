@@ -2877,6 +2877,26 @@ function parseSponsorValue(price?: number | string): number {
   return 0;
 }
 
+const SPONSOR_TYPE_OPTIONS = [
+  "Platinum",
+  "Gold",
+  "Silver",
+  "Bronze",
+  "Supporting",
+  "Exhibitor Sponsor",
+] as const;
+
+function normalizeSponsorType(raw?: string): string {
+  const value = String(raw || "").trim();
+  if (!value) return SPONSOR_TYPE_OPTIONS[0];
+  if ((SPONSOR_TYPE_OPTIONS as readonly string[]).includes(value)) return value;
+  const stripped = value.replace(/\s+sponsor$/i, "").trim();
+  const match = SPONSOR_TYPE_OPTIONS.find(
+    (opt) => opt.toLowerCase() === stripped.toLowerCase() || value.toLowerCase().startsWith(opt.toLowerCase()),
+  );
+  return match || value || SPONSOR_TYPE_OPTIONS[0];
+}
+
 function mapApiSponsors(list: EngagementSponsor[]): SponsorRow[] {
   return list.map((s, i) => {
     const name = s.name || "Sponsor";
@@ -2894,13 +2914,18 @@ function mapApiSponsors(list: EngagementSponsor[]): SponsorRow[] {
         : s.active === false
           ? "Pending"
           : "Confirmed";
+    const rawPrice =
+      s.price ??
+      (typeof (s as { value?: number | string }).value !== "undefined"
+        ? (s as { value?: number | string }).value
+        : undefined);
     return {
       id: s.id || `api-spn-${i}`,
       name,
       category: s.category || s.subtitle || "—",
-      type: s.tier || "Package",
+      type: normalizeSponsorType(s.tier || name),
       status,
-      value: parseSponsorValue(s.price),
+      value: parseSponsorValue(rawPrice),
       contact: s.contact || "—",
       logo,
     };
@@ -3290,14 +3315,7 @@ function SponsorsTab({
     "Financial Services",
   ];
 
-  const typeOptions = [
-    "Platinum",
-    "Gold",
-    "Silver",
-    "Bronze",
-    "Supporting",
-    "Exhibitor Sponsor",
-  ];
+  const typeOptions = [...SPONSOR_TYPE_OPTIONS];
 
   const exportCsv = () => {
     const headers = [
@@ -3747,6 +3765,7 @@ function SponsorsTab({
               </button>
             </div>
             <form
+              key={editing?.id || "new-sponsor"}
               className="grid grid-cols-1 gap-3 sm:grid-cols-2"
               onSubmit={(e) => {
                 e.preventDefault();
@@ -3818,7 +3837,7 @@ function SponsorsTab({
                   name="type"
                   required
                   className="mt-1 w-full rounded-lg border border-blue-200 px-3 py-2 font-normal"
-                  defaultValue="Platinum"
+                  defaultValue={normalizeSponsorType(editing?.type)}
                 >
                   {typeOptions.map((t) => (
                     <option key={t} value={t}>
@@ -3834,8 +3853,11 @@ function SponsorsTab({
                   type="number"
                   min={0}
                   required
+                  defaultValue={
+                    editing && Number.isFinite(editing.value) ? String(editing.value) : ""
+                  }
                   className="mt-1 w-full rounded-lg border border-blue-200 px-3 py-2 font-normal"
-                  placeholder="500000"
+                  placeholder="e.g. 1000000"
                 />
               </label>
               <label className="text-sm font-semibold">
@@ -3843,6 +3865,9 @@ function SponsorsTab({
                 <input
                   name="contact"
                   required
+                  defaultValue={
+                    editing?.contact && editing.contact !== "—" ? editing.contact : ""
+                  }
                   className="mt-1 w-full rounded-lg border border-blue-200 px-3 py-2 font-normal outline-none focus:border-blue-500"
                   placeholder="Contact name"
                 />
@@ -3852,7 +3877,7 @@ function SponsorsTab({
                 <select
                   name="status"
                   className="mt-1 w-full rounded-lg border border-blue-200 px-3 py-2 font-normal"
-                  defaultValue="Confirmed"
+                  defaultValue={editing?.status || "Confirmed"}
                 >
                   <option>Confirmed</option>
                   <option>Pending</option>

@@ -422,7 +422,7 @@ export function engagementToHomeContent(engagement: Engagement | null): PublicHo
     cityLine,
     venueLine: about.venueTitle,
     intro: shortDesc || about.overviewParagraphs[0] || "",
-    tagline: shortDesc.length && shortDesc.length <= 120 ? shortDesc : shortDesc.slice(0, 120),
+    tagline: shortDesc,
     earlyBirdNote,
     aboutTitle: shortName ? `About ${shortName}` : "About",
     aboutBody:

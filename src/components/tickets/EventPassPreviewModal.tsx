@@ -1,12 +1,31 @@
 import { useEffect, useRef, useState } from "react";
 import { Download, ExternalLink, Printer } from "lucide-react";
 import { getDocument, GlobalWorkerOptions, type PDFDocumentProxy } from "pdfjs-dist";
-import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 import { cn } from "../../lib/cn";
 
-GlobalWorkerOptions.workerSrc = pdfWorker;
+/** Ensure worker loads even when the host serves `.mjs` as octet-stream. */
+let workerReady: Promise<void> | null = null;
+
+function ensurePdfWorker(): Promise<void> {
+  if (!workerReady) {
+    workerReady = (async () => {
+      try {
+        const res = await fetch(pdfWorkerUrl);
+        if (!res.ok) throw new Error(`Worker fetch failed (${res.status})`);
+        const buf = await res.arrayBuffer();
+        const blob = new Blob([buf], { type: "text/javascript" });
+        GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
+      } catch {
+        // Last resort: point at the bundled URL (works when MIME is correct).
+        GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+      }
+    })();
+  }
+  return workerReady;
+}
 
 type Props = {
   open: boolean;
@@ -49,7 +68,15 @@ export function EventPassPreviewModal({
         pdfRef.current?.destroy().catch(() => undefined);
         pdfRef.current = null;
 
-        const pdf = await getDocument({ url }).promise;
+        await ensurePdfWorker();
+
+        let pdf: PDFDocumentProxy;
+        try {
+          pdf = await getDocument({ url }).promise;
+        } catch {
+          // Worker still blocked — render on the main thread.
+          pdf = await getDocument({ url, useWorkerFetch: false, isEvalSupported: false }).promise;
+        }
         if (cancelled) {
           await pdf.destroy();
           return;

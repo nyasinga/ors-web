@@ -230,7 +230,7 @@ export function HomePage() {
           <aside
             className={cn(
               "z-[3] flex min-w-0 flex-col text-left",
-              "min-[961px]:absolute min-[961px]:bottom-8 min-[961px]:right-[clamp(28px,4vw,64px)] min-[961px]:top-[clamp(64px,12%,96px)] min-[961px]:w-[min(34%,360px)]",
+              "min-[961px]:absolute min-[961px]:bottom-8 min-[961px]:right-[clamp(28px,4vw,64px)] min-[961px]:top-[clamp(56px,10%,88px)] min-[961px]:w-[min(40%,420px)]",
               "max-[960px]:relative max-[960px]:order-3 max-[960px]:z-[2] max-[960px]:mt-0 max-[960px]:w-full max-[960px]:max-w-none max-[960px]:self-stretch",
               "max-[960px]:rounded-xl max-[960px]:border-[1px] max-[960px]:border-dotted max-[960px]:border-[#3F5BA9] max-[960px]:bg-white",
               "max-[960px]:px-4 max-[960px]:pb-4 max-[960px]:pt-5",
@@ -244,8 +244,8 @@ export function HomePage() {
 
               <h2
                 className={cn(
-                  "m-0 max-w-[340px] text-[clamp(1.05rem,1.3vw,1.25rem)] font-extrabold leading-[1.28] text-[#0b1016] [overflow-wrap:anywhere] [text-wrap:balance]",
-                  "max-[960px]:max-w-none max-[960px]:text-[clamp(1rem,4.2vw,1.2rem)]",
+                  "m-0 w-full text-[clamp(0.98rem,1.15vw,1.15rem)] font-extrabold leading-[1.3] text-[#0b1016] [overflow-wrap:anywhere] [text-wrap:pretty]",
+                  "max-[960px]:text-[clamp(1rem,4.2vw,1.2rem)]",
                   "max-[640px]:text-[clamp(1.05rem,4.5vw,1.2rem)]",
                 )}
               >
