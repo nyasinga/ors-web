@@ -59,7 +59,7 @@ export function HomePage() {
   const brandEndsWithE = home.showBrandLogo && /e$/i.test(home.brandMark);
 
   return (
-    <PublicEventGate>
+    <PublicEventGate variant="home">
     <div className="text-[#0b1016]">
       <section
         className={cn(

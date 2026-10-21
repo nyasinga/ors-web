@@ -44,13 +44,11 @@ import {
 import type { PaymentTxStatus } from "../../data/adminOps";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
-import ImagePicker from "../../components/ui/ImagePicker";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import { ScrollableNav } from "../../components/ui/ScrollableNav";
 import { Select } from "../../components/ui/Select";
 import { useToast } from "../../components/ui/Toast";
-import { resourcePublicUrl, uploadResource } from "../../lib/resources";
 import { eventDetailTabs } from "../../data/adminEvents";
 import { engagementSpeakerToCard } from "../../components/speakers/SpeakerCard";
 import { SpeakersDirectory } from "../../components/speakers/SpeakersDirectory";
@@ -809,17 +807,7 @@ export function EventDetailsPage() {
       ) : null}
       {validTab === "speakers" ? (
         <div className="mt-1">
-          <SpeakersTab
-            eventId={id}
-            speakers={speakers}
-            fromApi={fromApi}
-            loading={loading}
-            onChanged={async () => {
-              const row = await getEngagement(id);
-              setEngagement(row);
-              clearPublicEngagementCache(id);
-            }}
-          />
+          <SpeakersTab speakers={speakers} loading={loading} />
         </div>
       ) : null}
       {validTab === "sponsors" || validTab === "exhibitors" ? (
@@ -2486,371 +2474,34 @@ function ProgrammeTab({
   );
 }
 
-const SPEAKER_CATEGORY_OPTIONS = [
-  { value: "keynote", label: "Keynote Speaker" },
-  { value: "panelist", label: "Panelist" },
-  { value: "moderator", label: "Moderator" },
-  { value: "government", label: "Government Representative" },
-];
-
-const SPEAKER_BADGE: Record<string, string> = {
-  keynote: "Keynote Speaker",
-  panelist: "Panelist",
-  moderator: "Moderator",
-  government: "Government Representative",
-};
-
 function SpeakersTab({
-  eventId,
   speakers,
-  fromApi,
   loading,
-  onChanged,
 }: {
-  eventId: string;
   speakers: EngagementSpeaker[];
-  fromApi?: boolean;
   loading?: boolean;
-  onChanged: () => Promise<void>;
 }) {
-  const toast = useToast();
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<EngagementSpeaker | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [name, setName] = useState("");
-  const [role, setRole] = useState("");
-  const [org, setOrg] = useState("");
-  const [topic, setTopic] = useState("");
-  const [category, setCategory] = useState("panelist");
-  const [country, setCountry] = useState("");
-  const [bio, setBio] = useState("");
-  const [photoId, setPhotoId] = useState("");
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState("");
-
   const directoryRows = speakers.map(engagementSpeakerToCard);
-
-  const clearPhotoDraft = () => {
-    setPhotoPreview((prev) => {
-      if (prev.startsWith("blob:")) URL.revokeObjectURL(prev);
-      return "";
-    });
-    setPhotoFile(null);
-  };
-
-  const resetForm = () => {
-    setEditing(null);
-    setName("");
-    setRole("");
-    setOrg("");
-    setTopic("");
-    setCategory("panelist");
-    setCountry("");
-    setBio("");
-    setPhotoId("");
-    clearPhotoDraft();
-  };
-
-  const openCreate = () => {
-    resetForm();
-    setModalOpen(true);
-  };
-
-  const openEdit = (speaker: EngagementSpeaker) => {
-    clearPhotoDraft();
-    setEditing(speaker);
-    setName(speaker.name || "");
-    setRole(speaker.role || "");
-    setOrg(speaker.org || "");
-    setTopic(speaker.topic || "");
-    setCategory(speaker.category || "panelist");
-    setCountry(speaker.country || "");
-    setBio(speaker.bio || "");
-    setPhotoId(speaker.photo || "");
-    setPhotoPreview(speaker.photo ? resourcePublicUrl(speaker.photo) : "");
-    setModalOpen(true);
-  };
-
-  const persistSpeakers = async (next: EngagementSpeaker[], message: string) => {
-    if (!fromApi) {
-      toast.info("Sign in and open a live event to save speakers.");
-      return;
-    }
-    setSaving(true);
-    try {
-      await updateEngagement(eventId, { speakers: next });
-      clearPublicEngagementCache(eventId);
-      await onChanged();
-      setModalOpen(false);
-      resetForm();
-      toast.success(message);
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Failed to save speakers");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const removeSpeaker = async (speaker: EngagementSpeaker, index: number) => {
-    if (!fromApi) return;
-    if (!window.confirm(`Remove speaker “${speaker.name}”?`)) return;
-    const key = speaker.id || `sp-${index}`;
-    const next = speakers.filter((s, i) => (s.id || `sp-${i}`) !== key);
-    await persistSpeakers(next, "Speaker removed");
-  };
-
-  const saveSpeaker = async () => {
-    if (!name.trim()) {
-      toast.error("Enter the speaker’s name.");
-      return;
-    }
-    let nextPhoto = photoId;
-    if (photoFile) {
-      setUploading(true);
-      try {
-        const uploaded = await uploadResource(photoFile);
-        nextPhoto = uploaded.resourceID?.trim() || "";
-        if (!nextPhoto) {
-          toast.error("Upload succeeded but no photo id was returned.");
-          return;
-        }
-      } catch (err) {
-        toast.error(err instanceof ApiError ? err.message : "Could not upload the photo.");
-        return;
-      } finally {
-        setUploading(false);
-      }
-    }
-    if (!nextPhoto) {
-      toast.error("Upload a photo for the speaker.");
-      return;
-    }
-
-    const roleValue = role.trim() || "Speaker";
-    const orgValue = org.trim() || "TBD";
-    const entry: EngagementSpeaker = {
-      id: editing?.id || `sp-${Date.now()}`,
-      name: name.trim(),
-      role: roleValue,
-      org: orgValue,
-      roleLines: [roleValue, orgValue],
-      topic: topic.trim() || "To be announced",
-      category,
-      badge: SPEAKER_BADGE[category] || "Speaker",
-      country: country.trim(),
-      flag: editing?.flag || "",
-      photo: nextPhoto,
-      bio: bio.trim(),
-    };
-
-    const next = editing
-      ? speakers.map((s, i) => {
-          const key = s.id || `sp-${i}`;
-          if (editing.id && key === editing.id) return entry;
-          if (!editing.id && s.name === editing.name && s.org === editing.org) return entry;
-          return s;
-        })
-      : [...speakers, entry];
-
-    await persistSpeakers(next, editing ? "Speaker updated" : "Speaker added");
-  };
 
   return (
     <div className="grid gap-4">
       <Card>
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold text-ink">Speakers</h2>
-            <p className="text-sm text-mute">Add, edit or remove speakers for this event.</p>
-          </div>
-          <Button size="sm" onClick={openCreate} disabled={saving || !fromApi}>
-            <Plus size={14} /> Add Speaker
-          </Button>
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-ink">Speakers</h2>
+          <p className="text-sm text-mute">How speakers appear on the public Speakers page.</p>
         </div>
 
         {loading ? (
           <p className="text-sm text-mute">Loading speakers…</p>
-        ) : speakers.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-mute">
-            No speakers yet — add one to build the lineup.
-          </p>
         ) : (
-          <ul className="grid gap-3">
-            {speakers.map((sp, i) => {
-              const key = sp.id || `sp-${i}`;
-              return (
-                <li
-                  key={key}
-                  className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 p-3"
-                >
-                  {sp.photo ? (
-                    <img
-                      src={resourcePublicUrl(sp.photo)}
-                      alt=""
-                      className="h-14 w-11 shrink-0 rounded-md border border-slate-200 object-cover object-top"
-                    />
-                  ) : (
-                    <span className="grid h-14 w-11 shrink-0 place-items-center rounded-md bg-soft text-sm font-bold text-blue">
-                      {(sp.name || "?")
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .slice(0, 2)}
-                    </span>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-ink">{sp.name}</p>
-                    <p className="text-xs text-mute">
-                      {[sp.role, sp.org].filter(Boolean).join(" · ") || "—"}
-                    </p>
-                    <p className="text-xs text-blue">
-                      {sp.badge || SPEAKER_BADGE[sp.category || ""] || sp.category || "Speaker"}
-                      {sp.topic ? ` · ${sp.topic}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 gap-1">
-                    <button
-                      type="button"
-                      className="grid h-8 w-8 place-items-center rounded-lg text-mute hover:bg-slate-100 hover:text-blue"
-                      aria-label={`Edit ${sp.name}`}
-                      disabled={saving}
-                      onClick={() => openEdit(sp)}
-                    >
-                      <Pencil size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      className="grid h-8 w-8 place-items-center rounded-lg text-red hover:bg-red-50"
-                      aria-label={`Remove ${sp.name}`}
-                      disabled={saving}
-                      onClick={() => void removeSpeaker(sp, i)}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          <SpeakersDirectory
+            speakers={directoryRows}
+            columns={3}
+            containerClassName="w-full"
+            emptyMessage="No speakers added for this event yet."
+          />
         )}
       </Card>
-
-      <Card>
-        <h3 className="mb-1 font-bold text-ink">Public preview</h3>
-        <p className="mb-2 text-sm text-mute">How speakers appear on the public Speakers page.</p>
-        <SpeakersDirectory
-          speakers={directoryRows}
-          columns={3}
-          containerClassName="w-full"
-          emptyMessage="No speakers added for this event yet."
-        />
-      </Card>
-
-      <Modal
-        open={modalOpen}
-        onClose={() => {
-          if (uploading || saving) return;
-          setModalOpen(false);
-          resetForm();
-        }}
-        title={editing ? "Edit Speaker" : "Add Speaker"}
-        className="md:max-w-lg"
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              disabled={uploading || saving}
-              onClick={() => {
-                setModalOpen(false);
-                resetForm();
-              }}
-            >
-              Cancel
-            </Button>
-            <Button disabled={uploading || saving} onClick={() => void saveSpeaker()}>
-              {uploading ? "Uploading…" : saving ? "Saving…" : editing ? "Save changes" : "Save Speaker"}
-            </Button>
-          </div>
-        }
-      >
-        <div className="grid gap-3">
-          <div>
-            <p className="mb-1.5 text-sm font-medium text-ink">
-              Photo {editing ? "" : <span className="text-red">*</span>}
-            </p>
-            <ImagePicker
-              imageKey="speaker-passport.jpg"
-              value={photoPreview}
-              onChange={(file) => {
-                if (!file) {
-                  clearPhotoDraft();
-                  if (!editing?.photo) setPhotoId("");
-                  return;
-                }
-                const previewUrl = URL.createObjectURL(file);
-                setPhotoPreview((prev) => {
-                  if (prev.startsWith("blob:")) URL.revokeObjectURL(prev);
-                  return previewUrl;
-                });
-                setPhotoFile(file);
-              }}
-            />
-            <p className="mt-2 text-xs text-mute">
-              {editing
-                ? "Leave as-is to keep the current photo, or choose a new image."
-                : "Clear front-facing photo. Crop to frame the face before saving."}
-            </p>
-          </div>
-          <Input
-            label="Full name"
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Jane Doe"
-          />
-          <Input
-            label="Role / title"
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            placeholder="e.g. Director General"
-          />
-          <Input
-            label="Organisation"
-            value={org}
-            onChange={(e) => setOrg(e.target.value)}
-            placeholder="e.g. Intellectual Property Office"
-          />
-          <Select
-            label="Category"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            options={SPEAKER_CATEGORY_OPTIONS}
-          />
-          <Input
-            label="Topic"
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            placeholder="Session topic"
-          />
-          <Input
-            label="Country"
-            value={country}
-            onChange={(e) => setCountry(e.target.value)}
-            placeholder="e.g. Kenya"
-          />
-          <label className="grid gap-1.5 text-sm">
-            <span className="font-medium text-ink">Bio</span>
-            <textarea
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              rows={3}
-              placeholder="Short speaker bio…"
-              className="rounded-lg border border-slate-200 px-3 py-2.5 focus:border-blue focus:outline-none focus:ring-2 focus:ring-blue/20"
-            />
-          </label>
-        </div>
-      </Modal>
     </div>
   );
 }

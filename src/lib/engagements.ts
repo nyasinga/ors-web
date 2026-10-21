@@ -18,7 +18,8 @@ import type {
   LoopbackCount,
   NewEngagement,
 } from "../types/engagement";
-import { apiRequest } from "./api";
+import { FileUploadTypes } from "../types/registration";
+import { apiForm, apiRequest } from "./api";
 import { getAuthUser, getValidAuthToken } from "./auth";
 
 function authToken() {
@@ -57,11 +58,100 @@ export async function createEngagement(body: NewEngagement) {
   });
 }
 
+/** Build FormData the same way as registration `signupAfterPayment`. */
+function toEngagementFormData(
+  input: Record<string, unknown>,
+  speakerPhotos: Record<string, File> = {},
+): FormData {
+  const photoEntries = Object.entries(speakerPhotos).filter(([, file]) => Boolean(file));
+  const avatarFiles = photoEntries.map(([speakerId, file]) => {
+    const ext = file.name.includes(".") ? file.name.slice(file.name.lastIndexOf(".")) : ".jpg";
+    return new File([file], `${speakerId}${ext}`, {
+      type: file.type || "image/jpeg",
+      lastModified: file.lastModified,
+    });
+  });
+
+  // Clear photo on rows that include a new file (server should fill from `avatar`, like signup).
+  const speakersIn = Array.isArray(input.speakers) ? input.speakers : null;
+  const speakers = speakersIn
+    ? speakersIn.map((row) => {
+        const id = String((row as { id?: string })?.id || "");
+        if (id && speakerPhotos[id]) return { ...(row as object), photo: "" };
+        return row;
+      })
+    : input.speakers;
+  const body: Record<string, unknown> = { ...input, ...(speakersIn ? { speakers } : {}) };
+
+  const formData = new FormData();
+  const fields: [string, string | Blob][] = [];
+
+  for (const key of Object.keys(body)) {
+    const value = body[key];
+    if (value === undefined || value === null) continue;
+
+    if (value instanceof File || value instanceof Blob) {
+      fields.push([key, value]);
+    } else if (typeof value === "object") {
+      fields.push([key, JSON.stringify(value)]);
+    } else {
+      fields.push([key, String(value)]);
+    }
+  }
+
+  fields.forEach(([key, value]) => formData.append(key, value));
+  // Exact as registration: append each file under `avatar`.
+  avatarFiles.forEach((file) => {
+    formData.append(FileUploadTypes.Avatar, file, file.name);
+  });
+
+  return formData;
+}
+
+/** JSON PATCH — used by tabs that only touch scalar/array fields (tickets, FAQs, etc.). */
 export async function updateEngagement(id: string, body: Partial<Engagement>) {
   return apiRequest<void>(`/engagements/${encodeURIComponent(id)}`, {
     method: "PATCH",
     token: authToken(),
     body,
+  });
+}
+
+/** Multipart PATCH — same FormData shape as registration `signupAfterPayment`. */
+export async function updateEngagementMultipart(
+  id: string,
+  body: Partial<Engagement>,
+  speakerPhotos: Record<string, File> = {},
+) {
+  return apiForm<void>(`/engagements/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    token: authToken(),
+    formData: toEngagementFormData(body as Record<string, unknown>, speakerPhotos),
+  });
+}
+
+/**
+ * Save engagement exactly like registration `signupAfterPayment`:
+ * one multipart/form-data request with scalar/JSON fields + `avatar` file(s).
+ * POST for create, multipart PATCH for update — never JSON, never `/resources/upload`.
+ *
+ * @param speakerPhotos map of speakerId → File (filename becomes `{speakerId}.jpg`)
+ */
+export async function saveEngagementLikeRegistration(
+  input: NewEngagement | Partial<Engagement>,
+  speakerPhotos: Record<string, File> = {},
+  options?: { engagementId?: string | null },
+): Promise<Engagement | void> {
+  const engagementId = options?.engagementId?.trim();
+
+  if (engagementId) {
+    return updateEngagementMultipart(engagementId, input, speakerPhotos);
+  }
+
+  return apiForm<Engagement>("/engagements", {
+    method: "POST",
+    token: authToken(),
+    formData: toEngagementFormData(input as Record<string, unknown>, speakerPhotos),
   });
 }
 

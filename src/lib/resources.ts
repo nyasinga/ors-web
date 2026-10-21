@@ -75,10 +75,51 @@ export function resourcePublicUrl(resource: UploadedResource | string | null | u
   return "";
 }
 
-/** POST multipart to /resources/upload with field name `file`. */
-export async function uploadResource(file: File): Promise<UploadedResource> {
+export type UploadResourceOptions = {
+  /** Defaults to a client-generated UUID (matches existing API resources). */
+  resourceName?: string;
+  /** Defaults to `rsc` (same as live resources). */
+  moduleCode?: string;
+  /** Defaults to the file mime type, or `image/jpeg`. */
+  mimeType?: string;
+  /** Defaults to the same value as mimeType. */
+  resourceType?: string;
+};
+
+function extensionOf(fileName: string, mimeType: string): string {
+  const fromName = fileName.includes(".") ? fileName.slice(fileName.lastIndexOf(".")) : "";
+  if (fromName && fromName.length <= 8) return fromName;
+  if (mimeType === "image/png") return ".png";
+  if (mimeType === "image/webp") return ".webp";
+  if (mimeType === "image/gif") return ".gif";
+  return ".jpg";
+}
+
+/**
+ * POST multipart to /resources/upload.
+ * The API requires resourceName, mimeType, resourceType, and moduleCode as form fields
+ * in addition to `file` — file-only uploads return 422.
+ */
+export async function uploadResource(
+  file: File,
+  options: UploadResourceOptions = {},
+): Promise<UploadedResource> {
+  const mimeType = (options.mimeType || file.type || "image/jpeg").trim() || "image/jpeg";
+  const resourceType = (options.resourceType || mimeType).trim() || mimeType;
+  const moduleCode = (options.moduleCode || "rsc").trim() || "rsc";
+  const resourceName = (options.resourceName || crypto.randomUUID()).trim();
+  const filename = `${resourceName}${extensionOf(file.name || "", mimeType)}`;
+  const uploadFile =
+    file.name === filename && file.type === mimeType
+      ? file
+      : new File([file], filename, { type: mimeType });
+
   const formData = new FormData();
-  formData.append("file", file, file.name);
+  formData.append("file", uploadFile, filename);
+  formData.append("resourceName", resourceName);
+  formData.append("mimeType", mimeType);
+  formData.append("resourceType", resourceType);
+  formData.append("moduleCode", moduleCode);
 
   const payload = await apiUpload<unknown>("/resources/upload", {
     formData,

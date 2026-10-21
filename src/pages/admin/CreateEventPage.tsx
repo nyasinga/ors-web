@@ -49,18 +49,23 @@ import { createWizardSteps, eventTypeOptions } from "../../data/adminEvents";
 import { COUNTRY_CODE_OPTIONS } from "../../data/countries";
 import { ApiError } from "../../lib/api";
 import { getAuthUser } from "../../lib/auth";
-import { resourcePublicUrl, uploadResource } from "../../lib/resources";
+import { resourcePublicUrl } from "../../lib/resources";
+import {
+  SPEAKER_PHOTO_KEY,
+  clearSpeakerPhotoDrafts,
+  persistSpeakerPhotoDrafts,
+  restoreSpeakerPhotoDrafts,
+} from "../../lib/speakerPhotoDraft";
 import {
   activateEngagement,
   buildEngagementPayload,
-  createEngagement,
   engagementToWizardState,
   EVENT_AUDIENCE_OPTIONS,
   EVENT_CATEGORY_OPTIONS,
   EVENT_LANGUAGE_OPTIONS,
   EVENT_TONE_OPTIONS,
   getEngagement,
-  updateEngagement,
+  saveEngagementLikeRegistration,
 } from "../../lib/engagements";
 import {
   firstErrorMessage,
@@ -288,15 +293,23 @@ export function CreateEventPage() {
   const [newSessionVenue, setNewSessionVenue] = useState("");
   const [newSessionSpeakers, setNewSessionSpeakers] = useState("0");
   const [newSessionCapacity, setNewSessionCapacity] = useState("");
+  const [editingSpeakerId, setEditingSpeakerId] = useState<string | null>(null);
   const [newSpeakerName, setNewSpeakerName] = useState("");
   const [newSpeakerRole, setNewSpeakerRole] = useState("");
   const [newSpeakerOrg, setNewSpeakerOrg] = useState("");
   const [newSpeakerTopic, setNewSpeakerTopic] = useState("");
   const [newSpeakerCategory, setNewSpeakerCategory] = useState("keynote");
   const [newSpeakerCountry, setNewSpeakerCountry] = useState("");
+  const [newSpeakerPhotoId, setNewSpeakerPhotoId] = useState("");
   const [newSpeakerPhotoFile, setNewSpeakerPhotoFile] = useState<File | null>(null);
   const [newSpeakerPhotoPreview, setNewSpeakerPhotoPreview] = useState("");
-  const [uploadingSpeakerPhoto, setUploadingSpeakerPhoto] = useState(false);
+  /** Photos chosen in the modal — uploaded only when the event is saved/published. */
+  const [pendingSpeakerPhotos, setPendingSpeakerPhotos] = useState<Record<string, File>>({});
+  const [pendingSpeakerPhotoPreviews, setPendingSpeakerPhotoPreviews] = useState<Record<string, string>>(
+    {},
+  );
+  const [speakerPhotosHydrated, setSpeakerPhotosHydrated] = useState(false);
+  const speakerDraftKey = editId || "new";
   const [pkgName, setPkgName] = useState("");
   const [pkgPrice, setPkgPrice] = useState("");
   const [pkgDesc, setPkgDesc] = useState("");
@@ -312,6 +325,154 @@ export function CreateEventPage() {
       return "";
     });
     setNewSpeakerPhotoFile(null);
+  };
+
+  const clearPendingSpeakerPhoto = (speakerId: string) => {
+    setPendingSpeakerPhotoPreviews((prev) => {
+      const url = prev[speakerId];
+      if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+      const next = { ...prev };
+      delete next[speakerId];
+      return next;
+    });
+    setPendingSpeakerPhotos((prev) => {
+      const next = { ...prev };
+      delete next[speakerId];
+      return next;
+    });
+  };
+
+  const clearAllPendingSpeakerPhotos = () => {
+    setPendingSpeakerPhotoPreviews((prev) => {
+      Object.values(prev).forEach((url) => {
+        if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+      });
+      return {};
+    });
+    setPendingSpeakerPhotos({});
+    clearSpeakerPhotoDrafts(speakerDraftKey);
+  };
+
+  // Restore staged speaker photos (registration-style local draft).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const restored = await restoreSpeakerPhotoDrafts(speakerDraftKey);
+      if (cancelled) return;
+      setPendingSpeakerPhotos(restored.files);
+      setPendingSpeakerPhotoPreviews(restored.previews);
+      setSpeakerPhotosHydrated(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [speakerDraftKey]);
+
+  // Persist staged speaker photos so refresh keeps them until event save.
+  useEffect(() => {
+    if (!speakerPhotosHydrated) return;
+    void persistSpeakerPhotoDrafts(speakerDraftKey, pendingSpeakerPhotos);
+  }, [pendingSpeakerPhotos, speakerDraftKey, speakerPhotosHydrated]);
+
+  const speakerPhotoSrc = (sp: { id: string; photo: string }) =>
+    pendingSpeakerPhotoPreviews[sp.id] || (sp.photo ? resourcePublicUrl(sp.photo) : "");
+
+  const resetSpeakerForm = () => {
+    setEditingSpeakerId(null);
+    setNewSpeakerName("");
+    setNewSpeakerRole("");
+    setNewSpeakerOrg("");
+    setNewSpeakerTopic("");
+    setNewSpeakerCategory("keynote");
+    setNewSpeakerCountry("");
+    setNewSpeakerPhotoId("");
+    clearSpeakerPhoto();
+  };
+
+  const openAddSpeaker = () => {
+    resetSpeakerForm();
+    setSpeakerModal(true);
+  };
+
+  const openEditSpeaker = (sp: (typeof speakers)[number]) => {
+    clearSpeakerPhoto();
+    setEditingSpeakerId(sp.id);
+    setNewSpeakerName(sp.name || "");
+    setNewSpeakerRole(sp.role || "");
+    setNewSpeakerOrg(sp.org || "");
+    setNewSpeakerTopic(sp.topic || "");
+    setNewSpeakerCategory(sp.category || "panelist");
+    setNewSpeakerCountry(sp.country || "");
+    setNewSpeakerPhotoId(sp.photo || "");
+    setNewSpeakerPhotoPreview(
+      pendingSpeakerPhotoPreviews[sp.id] || (sp.photo ? resourcePublicUrl(sp.photo) : ""),
+    );
+    setSpeakerModal(true);
+  };
+
+  /** Writes into local speakers[] only — no API call until Save as Draft / Publish. */
+  const applySpeakerToList = () => {
+    if (!newSpeakerName.trim()) {
+      toast.error("Enter the speaker’s name.");
+      return;
+    }
+    const speakerId = editingSpeakerId || `sp${Date.now()}`;
+    const existingPhotoId = newSpeakerPhotoId.trim();
+    const hasPendingPhoto = Boolean(newSpeakerPhotoFile) || Boolean(pendingSpeakerPhotos[speakerId]);
+    if (!editingSpeakerId && !hasPendingPhoto && !existingPhotoId) {
+      toast.error("Choose a passport photo for the speaker.");
+      return;
+    }
+
+    const role = newSpeakerRole.trim() || "Speaker";
+    const org = newSpeakerOrg.trim() || "TBD";
+    const category = newSpeakerCategory || "panelist";
+    const badgeMap: Record<string, string> = {
+      keynote: "Keynote Speaker",
+      panelist: "Panelist",
+      moderator: "Moderator",
+      government: "Government Representative",
+    };
+    const name = newSpeakerName.trim();
+    const existing = editingSpeakerId ? speakers.find((s) => s.id === editingSpeakerId) : null;
+
+    // Stage photo locally — upload only when the event is saved/published.
+    if (newSpeakerPhotoFile) {
+      const previewUrl = URL.createObjectURL(newSpeakerPhotoFile);
+      setPendingSpeakerPhotoPreviews((prev) => {
+        const old = prev[speakerId];
+        if (old?.startsWith("blob:")) URL.revokeObjectURL(old);
+        return { ...prev, [speakerId]: previewUrl };
+      });
+      setPendingSpeakerPhotos((prev) => ({ ...prev, [speakerId]: newSpeakerPhotoFile }));
+    }
+
+    const speakerRow = {
+      id: speakerId,
+      name,
+      role,
+      org,
+      roleLines: [role, org],
+      topic: newSpeakerTopic.trim() || "To be announced",
+      category,
+      badge: badgeMap[category] || "Speaker",
+      country: newSpeakerCountry.trim() || "",
+      flag: existing?.flag || "",
+      photo: existingPhotoId,
+      bio: existing?.bio || "",
+    };
+    setSpeakers((prev) =>
+      editingSpeakerId
+        ? prev.map((s) => (s.id === editingSpeakerId ? speakerRow : s))
+        : [...prev, speakerRow],
+    );
+    setSpeakerModal(false);
+    resetSpeakerForm();
+    toast.success(
+      editingSpeakerId
+        ? `${name} updated in the list — save the event to publish.`
+        : `${name} added to the list — save the event to publish.`,
+    );
   };
 
   const wizardValues = (): EventWizardValues => ({
@@ -654,28 +815,32 @@ export function CreateEventPage() {
         contactEmail,
         contactPhone,
       });
-      console.log("[engagement submit] speakers.photo values", payload.speakers);
-      if (isEdit && editId) {
-        await updateEngagement(editId, payload);
-        if (!asDraft) {
-          await activateEngagement(editId);
-          toast.success("Event published — it is now the only active event.");
-        } else {
-          toast.success("Draft saved");
-        }
-        navigate(`/admin/events/${editId}/overview`);
+      console.log("[engagement submit] speakers + pending photos", {
+        speakers: payload.speakers,
+        pendingPhotoSpeakerIds: Object.keys(pendingSpeakerPhotos),
+      });
+
+      // Exact registration pattern: one multipart FormData (fields + avatar files).
+      // No separate POST /resources/upload.
+      const saved = await saveEngagementLikeRegistration(payload, pendingSpeakerPhotos, {
+        engagementId: isEdit ? editId : null,
+      });
+
+      const id =
+        (isEdit && editId) ||
+        (saved && typeof saved === "object" && "engagementID" in saved
+          ? String(saved.engagementID || "")
+          : "");
+      if (!id) throw new Error("Event saved but no engagementID was returned.");
+
+      if (!asDraft) {
+        await activateEngagement(id);
+        toast.success("Event published — it is now the only active event.");
       } else {
-        const created = await createEngagement(payload);
-        const id = created.engagementID;
-        if (!id) throw new Error("Event created but no engagementID was returned.");
-        if (!asDraft) {
-          await activateEngagement(id);
-          toast.success("Event published — it is now the only active event.");
-        } else {
-          toast.success("Draft saved");
-        }
-        navigate(`/admin/events/${id}/overview`);
+        toast.success("Draft saved");
       }
+      clearAllPendingSpeakerPhotos();
+      navigate(`/admin/events/${id}/overview`);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         toast.error("Your session has expired. Please sign in again.");
@@ -1461,11 +1626,13 @@ export function CreateEventPage() {
             ) : programTab === "speakers" ? (
               <div className="mt-4">
                 <ul className="grid gap-3">
-                  {speakers.map((sp) => (
+                  {speakers.map((sp) => {
+                    const photoSrc = speakerPhotoSrc(sp);
+                    return (
                     <li key={sp.id} className="flex items-center gap-3 rounded-lg border border-slate-200 p-3">
-                      {sp.photo ? (
+                      {photoSrc ? (
                         <img
-                          src={resourcePublicUrl(sp.photo)}
+                          src={photoSrc}
                           alt=""
                           className="h-12 w-10 shrink-0 rounded-md border border-slate-200 object-cover object-top"
                         />
@@ -1484,26 +1651,38 @@ export function CreateEventPage() {
                           {sp.role} · {sp.org}
                         </p>
                         <p className="text-xs text-blue">{sp.topic}</p>
+                        {!photoSrc ? (
+                          <p className="mt-0.5 text-[11px] font-medium text-amber-700">No photo yet</p>
+                        ) : pendingSpeakerPhotos[sp.id] ? (
+                          <p className="mt-0.5 text-[11px] font-medium text-blue">Photo ready — saves with event</p>
+                        ) : null}
                       </div>
-                      <button
-                        type="button"
-                        className="grid h-8 w-8 place-items-center rounded-lg text-red hover:bg-red-50"
-                        aria-label={`Remove ${sp.name}`}
-                        onClick={() => setSpeakers((prev) => prev.filter((x) => x.id !== sp.id))}
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <button
+                          type="button"
+                          className="inline-flex h-8 items-center gap-1 rounded-lg border border-blue-200 bg-white px-2.5 text-xs font-semibold text-blue hover:bg-blue-50"
+                          aria-label={`Edit ${sp.name}`}
+                          onClick={() => openEditSpeaker(sp)}
+                        >
+                          <Pencil size={13} /> Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 text-red hover:bg-red-50"
+                          aria-label={`Remove ${sp.name}`}
+                          onClick={() => {
+                            clearPendingSpeakerPhoto(sp.id);
+                            setSpeakers((prev) => prev.filter((x) => x.id !== sp.id));
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => {
-                    clearSpeakerPhoto();
-                    setSpeakerModal(true);
-                  }}
-                >
+                <Button variant="outline" className="mt-4" onClick={openAddSpeaker}>
                   <Plus size={16} /> Add Speaker
                 </Button>
               </div>
@@ -2280,98 +2459,25 @@ export function CreateEventPage() {
       <Modal
         open={speakerModal}
         onClose={() => {
-          if (uploadingSpeakerPhoto) return;
           setSpeakerModal(false);
-          clearSpeakerPhoto();
+          resetSpeakerForm();
         }}
-        title="Add Speaker"
+        title={editingSpeakerId ? "Edit Speaker" : "Add Speaker"}
         className="md:max-w-lg"
         footer={
           <div className="flex justify-end gap-2">
             <Button
+              type="button"
               variant="outline"
-              disabled={uploadingSpeakerPhoto}
               onClick={() => {
                 setSpeakerModal(false);
-                clearSpeakerPhoto();
+                resetSpeakerForm();
               }}
             >
               Cancel
             </Button>
-            <Button
-              disabled={uploadingSpeakerPhoto}
-              onClick={async () => {
-                if (!newSpeakerName.trim()) {
-                  toast.error("Enter the speaker’s name.");
-                  return;
-                }
-                if (!newSpeakerPhotoFile) {
-                  toast.error("Upload a passport photo for the speaker.");
-                  return;
-                }
-                const role = newSpeakerRole.trim() || "Speaker";
-                const org = newSpeakerOrg.trim() || "TBD";
-                const category = newSpeakerCategory || "panelist";
-                const badgeMap: Record<string, string> = {
-                  keynote: "Keynote Speaker",
-                  panelist: "Panelist",
-                  moderator: "Moderator",
-                  government: "Government Representative",
-                };
-                const name = newSpeakerName.trim();
-                setUploadingSpeakerPhoto(true);
-                try {
-                  const uploaded = await uploadResource(newSpeakerPhotoFile);
-                  const photoId = uploaded.resourceID?.trim();
-                  console.log("[speaker photo upload]", {
-                    resourceID: uploaded.resourceID,
-                    resourcePath: uploaded.resourcePath,
-                    url: uploaded.url,
-                    photoId,
-                  });
-                  if (!photoId) {
-                    toast.error("Upload succeeded but no photo id was returned.");
-                    return;
-                  }
-                  const speakerRow = {
-                    id: `sp${Date.now()}`,
-                    name,
-                    role,
-                    org,
-                    roleLines: [role, org],
-                    topic: newSpeakerTopic.trim() || "To be announced",
-                    category,
-                    badge: badgeMap[category] || "Speaker",
-                    country: newSpeakerCountry.trim() || "",
-                    flag: "",
-                    photo: photoId,
-                    bio: "",
-                  };
-                  console.log("[speaker saved to array]", speakerRow);
-                  setSpeakers((prev) => [...prev, speakerRow]);
-                  setNewSpeakerName("");
-                  setNewSpeakerRole("");
-                  setNewSpeakerOrg("");
-                  setNewSpeakerTopic("");
-                  setNewSpeakerCategory("keynote");
-                  setNewSpeakerCountry("");
-                  clearSpeakerPhoto();
-                  setSpeakerModal(false);
-                  toast.success(`${name} added as speaker`);
-                } catch (err) {
-                  const message =
-                    err instanceof ApiError
-                      ? err.message
-                      : err instanceof Error
-                        ? err.message
-                        : "Could not upload the passport photo.";
-                  toast.error(message);
-                } finally {
-                  setUploadingSpeakerPhoto(false);
-                }
-              }}
-            >
-              {uploadingSpeakerPhoto ? "Uploading…" : "Save Speaker"}
+            <Button type="button" onClick={applySpeakerToList}>
+              {editingSpeakerId ? "Save changes" : "Add to list"}
             </Button>
           </div>
         }
@@ -2379,26 +2485,34 @@ export function CreateEventPage() {
         <div className="grid gap-3">
           <div>
             <p className="mb-1.5 text-sm font-medium text-ink">
-              Passport photo <span className="text-red">*</span>
+              Passport photo {editingSpeakerId ? null : <span className="text-red">*</span>}
             </p>
             <ImagePicker
-              imageKey="speaker-passport.jpg"
+              imageKey={SPEAKER_PHOTO_KEY}
               value={newSpeakerPhotoPreview}
               onChange={(file) => {
                 if (!file) {
                   clearSpeakerPhoto();
+                  if (editingSpeakerId) clearPendingSpeakerPhoto(editingSpeakerId);
+                  else setNewSpeakerPhotoId("");
                   return;
                 }
-                const previewUrl = URL.createObjectURL(file);
+                // Match registration: rename cropped file, preview immediately, stage File in memory.
+                const renamedFile = new File([file], SPEAKER_PHOTO_KEY, {
+                  type: file.type || "image/jpeg",
+                  lastModified: file.lastModified,
+                });
+                const previewUrl = URL.createObjectURL(renamedFile);
                 setNewSpeakerPhotoPreview((prev) => {
                   if (prev.startsWith("blob:")) URL.revokeObjectURL(prev);
                   return previewUrl;
                 });
-                setNewSpeakerPhotoFile(file);
+                setNewSpeakerPhotoFile(renamedFile);
               }}
             />
             <p className="mt-2 text-xs text-mute">
-              Clear front-facing passport-style photo. Crop to frame the face before saving.
+              Choose a picture and crop it before saving. The file will be uploaded later with your
+              event save (multipart), same as registration.
             </p>
           </div>
           <Input
