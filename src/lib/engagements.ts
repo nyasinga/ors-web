@@ -108,6 +108,47 @@ function toEngagementFormData(
   return formData;
 }
 
+/** Readable snapshot of multipart parts for console debugging. */
+function describeEngagementFormData(formData: FormData): {
+  fields: Record<string, string>;
+  files: Array<{ field: string; name: string; type: string; size: number }>;
+} {
+  const fields: Record<string, string> = {};
+  const files: Array<{ field: string; name: string; type: string; size: number }> = [];
+
+  formData.forEach((value, key) => {
+    if (value instanceof File) {
+      files.push({
+        field: key,
+        name: value.name,
+        type: value.type,
+        size: value.size,
+      });
+      return;
+    }
+    const text = String(value);
+    // Keep console usable — trim huge JSON blobs.
+    fields[key] = text.length > 500 ? `${text.slice(0, 500)}… (${text.length} chars)` : text;
+  });
+
+  return { fields, files };
+}
+
+function logEngagementMultipartRequest(
+  method: "POST" | "PATCH",
+  path: string,
+  formData: FormData,
+) {
+  const snapshot = describeEngagementFormData(formData);
+  console.log(`[engagement ${method}] ${path}`, {
+    contentType: "multipart/form-data",
+    fieldCount: Object.keys(snapshot.fields).length,
+    fileCount: snapshot.files.length,
+    fields: snapshot.fields,
+    files: snapshot.files,
+  });
+}
+
 /** JSON PATCH — used by tabs that only touch scalar/array fields (tickets, FAQs, etc.). */
 export async function updateEngagement(id: string, body: Partial<Engagement>) {
   return apiRequest<void>(`/engagements/${encodeURIComponent(id)}`, {
@@ -123,10 +164,13 @@ export async function updateEngagementMultipart(
   body: Partial<Engagement>,
   speakerPhotos: Record<string, File> = {},
 ) {
-  return apiForm<void>(`/engagements/${encodeURIComponent(id)}`, {
+  const path = `/engagements/${encodeURIComponent(id)}`;
+  const formData = toEngagementFormData(body as Record<string, unknown>, speakerPhotos);
+  logEngagementMultipartRequest("PATCH", path, formData);
+  return apiForm<void>(path, {
     method: "PATCH",
     token: authToken(),
-    formData: toEngagementFormData(body as Record<string, unknown>, speakerPhotos),
+    formData,
   });
 }
 
@@ -148,10 +192,12 @@ export async function saveEngagementLikeRegistration(
     return updateEngagementMultipart(engagementId, input, speakerPhotos);
   }
 
+  const formData = toEngagementFormData(input as Record<string, unknown>, speakerPhotos);
+  logEngagementMultipartRequest("POST", "/engagements", formData);
   return apiForm<Engagement>("/engagements", {
     method: "POST",
     token: authToken(),
-    formData: toEngagementFormData(input as Record<string, unknown>, speakerPhotos),
+    formData,
   });
 }
 
