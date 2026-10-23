@@ -24,9 +24,9 @@ import { scanQRCode } from "../../lib/scanQRCode";
 /** Hero background: navy fade over the participant photo; flat navy overlay on tablet / phone. */
 const heroBg = cn(
   "absolute inset-0",
-  "[background:linear-gradient(90deg,rgba(2,31,105,0.99)_0%,rgba(3,40,115,0.95)_33%,rgba(3,42,118,0.48)_53%,rgba(3,42,118,0.12)_73%),url('/assets/participant-hero.jpg')_center/cover_no-repeat]",
+  "[background:linear-gradient(90deg,rgba(2,31,105,0.99)_0%,rgba(3,40,115,0.95)_33%,rgba(3,42,118,0.48)_53%,rgba(3,42,118,0.12)_73%),url('/assets/about-hero.png')_center/cover_no-repeat]",
   "min-[1600px]:left-[max(0px,calc(50%_-_720px))] min-[1600px]:right-[max(0px,calc(50%_-_720px))]",
-  "max-[850px]:[background:linear-gradient(180deg,rgba(2,31,105,0.98),rgba(3,42,118,0.78)),url('/assets/participant-hero.jpg')_center/cover_no-repeat]",
+  "max-[850px]:[background:linear-gradient(180deg,rgba(2,31,105,0.98),rgba(3,42,118,0.78)),url('/assets/about-hero.png')_center/cover_no-repeat]",
 );
 
 const methodCard = cn(

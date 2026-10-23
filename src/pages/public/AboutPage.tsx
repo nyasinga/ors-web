@@ -117,7 +117,7 @@ export function AboutPage() {
         breadcrumb="About"
         title={`About ${about.name?.split(' ')?.[0]}`}
         description={about.shortDescription}
-        image="/assets/about-hero.jpg"
+        image="/assets/about-hero.png"
         imageAlt={`About ${about.name?.split(' ')?.[0]}`}
         combinedLocation
       />
@@ -327,7 +327,7 @@ export function AboutPage() {
                   src={
                     engagement?.bannerImage?.trim() ||
                     engagement?.logo?.trim() ||
-                    "/assets/dashboard-venue.jpg"
+                    "/assets/about-hero.png"
                   }
                   alt={about.venueTitle || about.name || "Event venue"}
                 />

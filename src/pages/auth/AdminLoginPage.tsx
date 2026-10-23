@@ -116,7 +116,7 @@ export function AdminLoginPage() {
         <div
           className={cn(
             "pointer-events-none absolute inset-y-0 right-0 z-0 hidden w-[min(52%,640px)]",
-            "bg-[url('/assets/login-hero-skyline.jpg')] bg-cover bg-[center_30%] bg-no-repeat",
+            "bg-[url('/assets/about-hero.png')] bg-cover bg-[center_30%] bg-no-repeat",
             "min-[901px]:block",
           )}
           aria-hidden

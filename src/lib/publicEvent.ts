@@ -411,8 +411,8 @@ export function engagementToHomeContent(engagement: Engagement | null): PublicHo
 
   const cityLine = [about.venueCity, about.venueCountry].filter(Boolean).join(", ");
   const shortName = about.name.split(/[—–-]/)[0]?.trim() || about.name;
-  const shortDesc = engagement.shortDescription?.trim() || "";
-
+  const shortDesc = engagement.description?.trim() || "";
+console.log(engagement);
   return {
     brandMark: brand.mark,
     brandYear: brand.year,

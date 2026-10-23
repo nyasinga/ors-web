@@ -182,17 +182,15 @@ export function HomePage() {
                 </div>
               </div>
             </div>
-
             <p
               className={cn(
-                "mb-[13px] mt-5 max-w-[500px] text-[13.5px] leading-[1.38] text-[#676b71]",
+                "mb-[13px] mt-5 w-full min-w-0 max-w-[500px] line-clamp-3 overflow-hidden text-[13.5px] leading-[1.38] text-[#676b71]",
                 "max-[960px]:max-w-none",
-                "max-[640px]:mb-4 max-[640px]:mt-3.5 max-[640px]:text-[12px] max-[640px]:leading-[1.45]",
+                "max-[640px]:mb-4 max-[640px]:mt-3.5 max-[640px]:line-clamp-5 max-[640px]:text-[12px] max-[640px]:leading-[1.45]",
               )}
             >
-              {home.intro}
+                          {home.intro}
             </p>
-
             <div
               className={cn(
                 "flex flex-wrap gap-3",
@@ -239,17 +237,17 @@ export function HomePage() {
               "max-[380px]:text-[#3F5BA9]",
             )}
           >
-            <div className="min-w-0 shrink-0">
+            <div className="min-w-0 shrink-0 min-[960px]:mt-[-40px] min-[960px]:ml-[20px]">
               <div className="mb-2.5 h-1 w-10 bg-[#ed1c24] max-[960px]:mb-2" aria-hidden />
 
               <h2
                 className={cn(
-                  "m-0 w-full text-[clamp(0.98rem,1.15vw,1.15rem)] font-extrabold leading-[1.3] text-[#0b1016] [overflow-wrap:anywhere] [text-wrap:pretty]",
+                  "m-0 w-full text-[clamp(0.90rem,1.10vw,1.10rem)] font-normal leading-[1.3] text-[#0b1016] [overflow-wrap:anywhere] [text-wrap:pretty]",
                   "max-[960px]:text-[clamp(1rem,4.2vw,1.2rem)]",
                   "max-[640px]:text-[clamp(1.05rem,4.5vw,1.2rem)]",
                 )}
               >
-                {home.tagline}
+                <span>{home.themes?.map((t:any) => t).join('.') || 'No themes'}</span>
               </h2>
             </div>
 
@@ -257,7 +255,7 @@ export function HomePage() {
               className={cn(
                 "mt-auto flex min-w-0 flex-col",
                 "min-[961px]:pt-5",
-                "max-[960px]:mt-4 max-[960px]:pt-0",
+                "max-[960px]:mt-4 max-[960px]:pt-0 min-[960px]:ml-[-200px]",
               )}
             >
               <div
@@ -301,7 +299,7 @@ export function HomePage() {
                 className={cn(
                   "mt-10 w-full max-w-[390px] text-[13px] leading-[1.4] [overflow-wrap:anywhere]",
                   "max-[960px]:mt-2.5 max-[960px]:max-w-none max-[960px]:text-[12px]",
-                  "max-[640px]:mt-6",
+                  "max-[640px]:mt-6 min-[960px]:ml-[150px]",
                 )}
               >
                 {home.earlyBirdNote}
@@ -446,7 +444,7 @@ export function HomePage() {
             id="venue"
           >
             <img
-              src="/assets/home-about-venue.jpg"
+              src="/assets/about-hero.png"
               alt={home.venueImageAlt}
               className="absolute inset-0 block h-full w-full object-cover"
             />

@@ -63,7 +63,7 @@ export function FaqPage() {
       <PageHero
         title="Frequently Asked Questions"
         description={`Find answers to common questions about ${event.name || "this event"} registration, payments, participation and more.`}
-        image="/assets/faq-hero.jpg"
+        image="/assets/about-hero.png"
         imageAlt={`${event.name || "Event"} frequently asked questions`}
       />
 

@@ -1435,7 +1435,7 @@ export function CreateEventPage() {
                 </button>
               </div>
               <img
-                src="/assets/dashboard-venue.jpg"
+                src="/assets/about-hero.png"
                 alt={venueName || "Venue preview"}
                 className="h-28 w-full object-cover"
               />
@@ -2010,7 +2010,7 @@ export function CreateEventPage() {
             <section>
               <h3 className="mb-2 font-semibold text-ink">Gallery Images (Optional)</h3>
               <div className="flex flex-wrap gap-3">
-                {["/placeholders/venue.jpg", "/assets/dashboard-venue.jpg", "/assets/hero-nairobi.jpg"].map((src) => (
+                {["/placeholders/venue.jpg", "/assets/about-hero.png", "/assets/hero-nairobi.jpg"].map((src) => (
                   <div key={src} className="relative h-20 w-28 overflow-hidden rounded-lg">
                     <img src={src} alt="" className="h-full w-full object-cover" />
                     <button

@@ -139,9 +139,9 @@ export function RegisterHero({
           className={cn(
             pageContainer,
             "min-h-[276px] pt-[23px]",
-            "[background:linear-gradient(90deg,rgba(3,30,98,0.99)_0%,rgba(3,32,103,0.96)_35%,rgba(3,32,103,0.45)_55%,rgba(3,32,103,0)_78%),url('/assets/registration-hero.jpg')_96%_center/auto_108%_no-repeat]",
+            "[background:linear-gradient(90deg,rgba(3,30,98,0.99)_0%,rgba(3,32,103,0.96)_35%,rgba(3,32,103,0.45)_55%,rgba(3,32,103,0)_78%),url('/assets/about-hero.png')_96%_center/auto_108%_no-repeat]",
             "max-[1100px]:min-h-[390px]",
-            "max-[1100px]:[background:linear-gradient(180deg,rgba(3,30,98,0.99)_0%,rgba(3,32,103,0.88)_48%,rgba(3,32,103,0.1)_100%),url('/assets/registration-hero.jpg')_center_bottom/auto_65%_no-repeat]",
+            "max-[1100px]:[background:linear-gradient(180deg,rgba(3,30,98,0.99)_0%,rgba(3,32,103,0.88)_48%,rgba(3,32,103,0.1)_100%),url('/assets/about-hero.png')_center_bottom/auto_65%_no-repeat]",
             "max-[760px]:min-h-0 max-[760px]:pt-[18px]",
             "max-[760px]:[background:linear-gradient(180deg,rgba(3,30,98,0.99)_0%,rgba(3,32,103,0.99)_100%)]",
             "min-[1600px]:[background-size:auto,auto_110%]",

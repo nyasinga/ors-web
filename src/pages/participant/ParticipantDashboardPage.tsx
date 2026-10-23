@@ -497,7 +497,7 @@ export function ParticipantDashboardPage() {
         {activeTab === "venue" ? (
           <section className={cn(card, "mt-[13px] overflow-hidden")}>
             <div
-              className="h-[140px] [background:url('/assets/dashboard-venue.jpg')_center/cover] max-[600px]:h-[120px]"
+              className="h-[140px] [background:url('/assets/about-hero.png')_center/cover] max-[600px]:h-[120px]"
               role="img"
               aria-label={engagement?.venue || event.venue || "Event venue"}
             />

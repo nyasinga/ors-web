@@ -33,7 +33,7 @@ const typeToneClass: Record<SessionTypeTone, string> = {
   orange: "bg-[#fff0d7] text-[#c96a00]",
 };
 
-const DEFAULT_THUMB = "/assets/dashboard-venue.jpg";
+const DEFAULT_THUMB = "/assets/about-hero.png";
 
 function toneForBadge(badge?: string): SessionTypeTone {
   const key = (badge || "").toLowerCase();

@@ -49,7 +49,7 @@ export function VenuePage() {
           </>
         }
         description={venue.description}
-        image="/assets/venue-hero.jpg"
+        image="/assets/about-hero.png"
         imageAlt={`${venue.name}, ${venue.city}`}
         combinedLocation
       />

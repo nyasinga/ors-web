@@ -20,7 +20,7 @@ export function SpeakersPage() {
         <PageHero
           title="Speakers"
           subtitle={eventName}
-          image="/assets/speakers-hero.jpg"
+          image="/assets/about-hero.png"
           imageAlt={`${eventName} speakers`}
         />
         <div id="speakers">

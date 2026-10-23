@@ -17,7 +17,7 @@ export function ProgrammePage() {
         <PageHero
           title="Programme"
           subtitle={eventName}
-          image="/assets/programme-hero.jpg"
+          image="/assets/about-hero.png"
           imageAlt={`${eventName} programme`}
         />
         <ProgrammeSchedule programme={programme} />
