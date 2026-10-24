@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Download, ExternalLink, FileText } from "lucide-react";
 import { SHOW_ECITIZEN_IFRAME } from "../../components/registration/PaymentModal";
-import { ProofOfPaymentModal } from "../../components/registration/ProofOfPaymentModal";
+import {
+  ProofOfPaymentModal,
+  type ProofOfPaymentSubmit,
+} from "../../components/registration/ProofOfPaymentModal";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
 import { useToast } from "../../components/ui/Toast";
 import { useRegistration } from "../../hooks/useRegistration";
@@ -11,6 +14,7 @@ import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { formatMoney } from "../../i18n/format";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
+import { submitTicketPaymentReference } from "../../lib/pesaflow";
 import { engagementToPublicSponsors } from "../../lib/publicEvent";
 import { parseKesPrice } from "../../lib/ticketAnalytics";
 import * as r from "../../components/registration/registerStyles";
@@ -29,7 +33,7 @@ const BANK_DETAILS = [
  * Registration step 3:
  * 1) Invoice preview + download (from Details → create-invoice)
  * 2) Next → bank transfer instructions + “I have completed payment”
- * 3) Proof-of-payment modal (submit endpoint TBD)
+ * 3) Proof-of-payment modal → PATCH /ticketing/{ticketID}/reference
  */
 export function RegisterPaymentPage() {
   const navigate = useNavigate();
@@ -39,6 +43,7 @@ export function RegisterPaymentPage() {
   const {
     participationType,
     details,
+    setDetails,
     reference,
     feeKes,
     feeUsd,
@@ -114,16 +119,41 @@ export function RegisterPaymentPage() {
     a.remove();
   };
 
-  const handleProofSubmit = async (files: File[]) => {
+  const handleProofSubmit = async ({ transactionReference, files }: ProofOfPaymentSubmit) => {
+    const ticketID = invoice?.ticketID?.trim();
+    if (!ticketID) {
+      toast.error("Missing ticket ID — go back to Details and create the invoice again.");
+      return;
+    }
+
     setProofSubmitting(true);
     try {
       setPaymentProofFiles(files);
-      // Endpoint for proof upload will be wired when provided.
-      toast.info(
-        "Proof attached. Upload endpoint will be connected next — your files are ready locally.",
-        5000,
-      );
+      const result = await submitTicketPaymentReference({
+        ticketID,
+        transactionReference,
+        files,
+        token: invoice?.token,
+      });
+
+      const ticket = (result.ticket || result) as Record<string, unknown>;
+      setDetails({
+        status: ticket.status ? String(ticket.status) : details.status || "issued",
+        reference: ticket.reference ? String(ticket.reference) : invoiceRef,
+        passCode: ticket.passCode ? String(ticket.passCode) : details.passCode,
+        engagementID: ticket.engagementID
+          ? String(ticket.engagementID)
+          : details.engagementID,
+      });
+
       setProofOpen(false);
+      toast.success("Payment proof submitted — registration is pending verification.");
+      navigate("/register/confirmation");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Could not submit payment proof.",
+        6000,
+      );
     } finally {
       setProofSubmitting(false);
     }

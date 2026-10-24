@@ -3,11 +3,15 @@ import { FileUp, Loader2, X } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { Button } from "../ui/Button";
 
+export type ProofOfPaymentSubmit = {
+  transactionReference: string;
+  files: File[];
+};
+
 type Props = {
   open: boolean;
   onClose: () => void;
-  /** Called with selected proof file(s). Endpoint wiring comes later. */
-  onSubmit: (files: File[]) => Promise<void> | void;
+  onSubmit: (payload: ProofOfPaymentSubmit) => Promise<void> | void;
   submitting?: boolean;
   invoiceReference?: string;
 };
@@ -16,7 +20,7 @@ const ACCEPT = "image/*,.pdf,application/pdf";
 
 /**
  * Attach proof of payment after bank transfer.
- * Submit endpoint will be wired when provided.
+ * Submits transactionReference + files via PATCH /ticketing/{ticketID}/reference.
  */
 export function ProofOfPaymentModal({
   open,
@@ -27,11 +31,13 @@ export function ProofOfPaymentModal({
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
+  const [transactionReference, setTransactionReference] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!open) {
       setFiles([]);
+      setTransactionReference("");
       setError("");
       return;
     }
@@ -83,7 +89,7 @@ export function ProofOfPaymentModal({
 
         <div className="space-y-4 px-4 py-4">
           <p className="m-0 text-sm text-[#52627d]">
-            Upload a bank slip, M-Pesa confirmation, or PDF showing your transfer
+            Enter your bank / M-Pesa transaction reference and upload a slip or confirmation
             {invoiceReference ? (
               <>
                 {" "}
@@ -94,6 +100,24 @@ export function ProofOfPaymentModal({
             .
           </p>
 
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-semibold text-[#10216d]">
+              Transaction reference <span className="text-red-500">*</span>
+            </span>
+            <input
+              type="text"
+              value={transactionReference}
+              onChange={(e) => {
+                setTransactionReference(e.target.value);
+                if (error) setError("");
+              }}
+              placeholder="e.g. bank / M-Pesa receipt number"
+              disabled={submitting}
+              className="box-border w-full rounded-lg border border-[#c9d6ea] bg-white px-3 py-2.5 text-sm text-[#0f172a] outline-none ring-[#0755d2] placeholder:text-[#94a3b8] focus:border-[#0755d2] focus:ring-2 disabled:opacity-60"
+              autoComplete="off"
+            />
+          </label>
+
           <input
             ref={inputRef}
             type="file"
@@ -103,7 +127,7 @@ export function ProofOfPaymentModal({
             onChange={(e) => {
               const next = Array.from(e.target.files || []);
               setFiles(next);
-              setError(next.length ? "" : "Select at least one file.");
+              if (error) setError("");
             }}
           />
 
@@ -150,11 +174,16 @@ export function ProofOfPaymentModal({
             type="button"
             disabled={submitting}
             onClick={() => {
-              if (!files.length) {
-                setError("Select at least one file.");
+              const ref = transactionReference.trim();
+              if (!ref) {
+                setError("Enter your transaction reference.");
                 return;
               }
-              void onSubmit(files);
+              if (!files.length) {
+                setError("Select at least one proof file.");
+                return;
+              }
+              void onSubmit({ transactionReference: ref, files });
             }}
           >
             {submitting ? (

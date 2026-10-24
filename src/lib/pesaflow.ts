@@ -478,3 +478,67 @@ export async function signupAfterPayment(
 
   return data;
 }
+
+export type SubmitTicketPaymentReferenceInput = {
+  ticketID: string;
+  /** Bank / M-Pesa transaction reference. */
+  transactionReference: string;
+  /** Proof of payment files (PDF / images). */
+  files?: File[];
+  token?: string | null;
+};
+
+/**
+ * Submit payment reference + proof after bank transfer.
+ * PATCH /ticketing/{ticketID}/reference (multipart supported).
+ */
+export async function submitTicketPaymentReference(
+  input: SubmitTicketPaymentReferenceInput,
+): Promise<Record<string, unknown>> {
+  const ticketID = input.ticketID.trim();
+  const transactionReference = input.transactionReference.trim();
+  if (!ticketID) throw new Error("Ticket ID is required to submit payment proof.");
+  if (!transactionReference) {
+    throw new Error("Enter your bank / M-Pesa transaction reference.");
+  }
+
+  const formData = new FormData();
+  formData.append("transactionReference", transactionReference);
+  for (const file of input.files || []) {
+    formData.append("proof", file, file.name);
+  }
+
+  const endpoint = `${PAYMENT_API_BASE}/ticketing/${encodeURIComponent(ticketID)}/reference`;
+  console.log("[pesaflow] ticket reference request", {
+    url: endpoint,
+    transactionReference,
+    files: (input.files || []).map((f) => f.name),
+  });
+
+  const headers = paymentHeaders();
+  delete (headers as Record<string, string>)["Content-Type"];
+  delete (headers as Record<string, string>)["content-type"];
+  if (input.token?.trim()) {
+    (headers as Record<string, string>)["Authorization"] = `Bearer ${input.token.trim()}`;
+  }
+
+  const res = await fetch(endpoint, {
+    method: "PATCH",
+    headers,
+    body: formData,
+  });
+
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown> & {
+    error?: { message?: string };
+    message?: string;
+  };
+  console.log("[pesaflow] ticket reference response", { status: res.status, data });
+
+  if (!res.ok) {
+    throw new Error(
+      data?.error?.message || data?.message || `Could not submit payment proof (${res.status}).`,
+    );
+  }
+
+  return data;
+}
