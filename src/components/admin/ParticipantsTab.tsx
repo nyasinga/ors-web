@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
-import { Check, Download, Plus, Printer, Search, Timer, Users, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { BadgeCheck, Check, Download, Plus, Printer, Search, Timer, Users, X } from "lucide-react";
 import { AddParticipantModal, type AddedParticipant } from "./AddParticipantModal";
 import { EventPassPreviewModal } from "../tickets/EventPassPreviewModal";
 import { useToast } from "../ui/Toast";
 import { ApiError } from "../../lib/api";
 import { cn } from "../../lib/cn";
-import { listEventParticipants } from "../../lib/eventParticipants";
+import {
+  confirmParticipantPayment,
+  listEventParticipants,
+} from "../../lib/eventParticipants";
 import { fetchEventPassPdfUrl } from "../../lib/printParticipantTicket";
 
 const avatarToneClass: Record<string, string> = {
@@ -52,6 +55,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [printingId, setPrintingId] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [passPreview, setPassPreview] = useState<{
     url: string;
     passCode: string;
@@ -73,15 +77,41 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
+  const reloadParticipants = useCallback(async () => {
     if (!eventId || !fromApi) {
       setApiRows([]);
       setListError(null);
       setListLoading(false);
       return;
     }
+    setListLoading(true);
+    setListError(null);
+    try {
+      const rows = await listEventParticipants(eventId);
+      setApiRows(rows);
+    } catch (err) {
+      setApiRows([]);
+      setListError(
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Could not load participants.",
+      );
+    } finally {
+      setListLoading(false);
+    }
+  }, [eventId, fromApi]);
+
+  useEffect(() => {
     let cancelled = false;
     (async () => {
+      if (!eventId || !fromApi) {
+        setApiRows([]);
+        setListError(null);
+        setListLoading(false);
+        return;
+      }
       setListLoading(true);
       setListError(null);
       try {
@@ -106,6 +136,54 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
       cancelled = true;
     };
   }, [eventId, fromApi]);
+
+  const needsPaymentConfirm = (p: AddedParticipant) => {
+    const raw = (p.rawStatus || "").toLowerCase();
+    if (raw === "issued") return true;
+    if (p.status === "Pending") return true;
+    return false;
+  };
+
+  const handleConfirmPayment = async (p: AddedParticipant) => {
+    if (!p.passCode) {
+      toast.error("No pass code on this registration — cannot confirm payment.");
+      return;
+    }
+    setConfirmingId(p.id);
+    try {
+      const ticket = await confirmParticipantPayment(p.passCode);
+      const nextStatus = String(ticket.status || "registered").toLowerCase();
+      const ui =
+        nextStatus === "registered" || nextStatus === "checked-in" || nextStatus === "checked_in"
+          ? "Confirmed"
+          : nextStatus === "issued"
+            ? "Pending"
+            : p.status;
+      const patch = {
+        status: ui,
+        rawStatus: nextStatus,
+        checkIn: nextStatus.includes("checked") ? "Checked In" : p.checkIn,
+      };
+      setApiRows((prev) => prev.map((row) => (row.id === p.id ? { ...row, ...patch } : row)));
+      setLocalRows((prev) => prev.map((row) => (row.id === p.id ? { ...row, ...patch } : row)));
+      toast.success(
+        nextStatus === "registered" || nextStatus.includes("checked")
+          ? `Payment confirmed for ${p.name}.`
+          : `Payment status updated for ${p.name}.`,
+      );
+      void reloadParticipants();
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Unable to confirm payment.",
+      );
+    } finally {
+      setConfirmingId(null);
+    }
+  };
 
   const source = useMemo(() => {
     const byId = new Map<string, AddedParticipant>();
@@ -365,32 +443,53 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                       {p.checkIn === "—" ? "–" : <span className={checkInPillClass(p.checkIn)}>{p.checkIn}</span>}
                     </td>
                     <td className="border-b border-blue-50 px-2 py-1.5 text-center">
-                      <button
-                        type="button"
-                        disabled={printingId === p.id || !p.passCode}
-                        className="inline-flex items-center gap-1 rounded-md border border-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        aria-label={`Print ticket for ${p.name}`}
-                        title={p.passCode ? "Open event pass PDF" : "No pass code on this registration"}
-                        onClick={() => {
-                          void (async () => {
-                            setPrintingId(p.id);
-                            try {
-                              closePassPreview();
-                              const { url, passCode } = await fetchEventPassPdfUrl(p.passCode || "");
-                              setPassPreview({ url, passCode, name: p.name });
-                            } catch (err) {
-                              toast.error(
-                                err instanceof Error ? err.message : "Unable to load event pass.",
-                              );
-                            } finally {
-                              setPrintingId(null);
+                      <div className="inline-flex flex-wrap items-center justify-center gap-1">
+                        {needsPaymentConfirm(p) ? (
+                          <button
+                            type="button"
+                            disabled={confirmingId === p.id || !p.passCode}
+                            className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            aria-label={`Confirm payment for ${p.name}`}
+                            title={
+                              p.passCode
+                                ? "Confirm payment (toggle payment status)"
+                                : "No pass code on this registration"
                             }
-                          })();
-                        }}
-                      >
-                        <Printer size={12} />
-                        {printingId === p.id ? "…" : "Print"}
-                      </button>
+                            onClick={() => {
+                              void handleConfirmPayment(p);
+                            }}
+                          >
+                            <BadgeCheck size={12} />
+                            {confirmingId === p.id ? "…" : "Confirm Payment"}
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          disabled={printingId === p.id || !p.passCode}
+                          className="inline-flex items-center gap-1 rounded-md border border-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          aria-label={`Print ticket for ${p.name}`}
+                          title={p.passCode ? "Open event pass PDF" : "No pass code on this registration"}
+                          onClick={() => {
+                            void (async () => {
+                              setPrintingId(p.id);
+                              try {
+                                closePassPreview();
+                                const { url, passCode } = await fetchEventPassPdfUrl(p.passCode || "");
+                                setPassPreview({ url, passCode, name: p.name });
+                              } catch (err) {
+                                toast.error(
+                                  err instanceof Error ? err.message : "Unable to load event pass.",
+                                );
+                              } finally {
+                                setPrintingId(null);
+                              }
+                            })();
+                          }}
+                        >
+                          <Printer size={12} />
+                          {printingId === p.id ? "…" : "Print"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

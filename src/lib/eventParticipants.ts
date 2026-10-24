@@ -176,6 +176,7 @@ function toAddedParticipant(ticket: EngagementParticipantTicket): AddedParticipa
     participationType: participationTypeOf(ticket),
     passCode: passCode.length >= 6 ? passCode : undefined,
     reference: pickString(ticket.reference),
+    rawStatus: pickString(ticket.status).toLowerCase() || undefined,
   };
 }
 
@@ -196,4 +197,25 @@ export async function listEventParticipants(
   const token = getValidAuthToken();
   const payload = await apiRequest<unknown>(path, token ? { token } : {});
   return normalizeTickets(payload).map(toAddedParticipant);
+}
+
+/**
+ * Confirm / toggle payment for a pending engagement ticket.
+ * POST /ticketing/register — moves status issued → registered (EngagementTicketController.registerTicket).
+ */
+export async function confirmParticipantPayment(passCode: string): Promise<EngagementParticipantTicket> {
+  const code = passCode.replace(/\D/g, "").slice(0, 6);
+  if (code.length < 6) {
+    throw new Error("A valid 6-digit pass code is required to confirm payment.");
+  }
+
+  const token = getValidAuthToken();
+  const result = await apiRequest<Record<string, unknown>>("/ticketing/register", {
+    method: "POST",
+    body: { passCode: code },
+    token: token || undefined,
+  });
+
+  const ticket = (result.ticket || result) as EngagementParticipantTicket;
+  return ticket;
 }
