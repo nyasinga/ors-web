@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BadgeCheck, Check, Download, Plus, Printer, Search, Timer, Users, X } from "lucide-react";
+import { Check, Download, Plus, Printer, Search, Timer, Users, X } from "lucide-react";
 import { AddParticipantModal, type AddedParticipant } from "./AddParticipantModal";
 import { EventPassPreviewModal } from "../tickets/EventPassPreviewModal";
 import { useToast } from "../ui/Toast";
 import { ApiError } from "../../lib/api";
 import { cn } from "../../lib/cn";
 import {
-  confirmParticipantPayment,
   listEventParticipants,
+  toggleParticipantPayment,
 } from "../../lib/eventParticipants";
 import { fetchEventPassPdfUrl } from "../../lib/printParticipantTicket";
 
@@ -56,6 +56,8 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
   const [pageSize, setPageSize] = useState(10);
   const [printingId, setPrintingId] = useState<string | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  /** Brief flash when toggle-on fails so the switch snaps back visibly. */
+  const [toggleFailedId, setToggleFailedId] = useState<string | null>(null);
   const [passPreview, setPassPreview] = useState<{
     url: string;
     passCode: string;
@@ -137,21 +139,35 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     };
   }, [eventId, fromApi]);
 
-  const needsPaymentConfirm = (p: AddedParticipant) => {
+  const isPaymentPaid = (p: AddedParticipant) => {
     const raw = (p.rawStatus || "").toLowerCase();
-    if (raw === "issued") return true;
-    if (p.status === "Pending") return true;
-    return false;
+    if (raw === "registered" || raw === "checked-in" || raw === "checked_in") return true;
+    return p.status === "Confirmed";
   };
 
-  const handleConfirmPayment = async (p: AddedParticipant) => {
-    if (!p.passCode) {
-      toast.error("No pass code on this registration — cannot confirm payment.");
+  /** Keep Paid toggle visible for all non-cancelled participants. */
+  const showPaymentToggle = (p: AddedParticipant) => {
+    if (p.status === "Cancelled") return false;
+    const raw = (p.rawStatus || "").toLowerCase();
+    if (raw === "cancelled" || raw === "canceled") return false;
+    return true;
+  };
+
+  const handleTogglePayment = async (p: AddedParticipant) => {
+    const ticketID = p.ticketID || (p.id && !p.id.startsWith("p-") ? p.id : "");
+    if (!ticketID) {
+      toast.error("No ticket ID on this registration — cannot toggle payment.");
       return;
     }
+    // Already paid — API cannot unconfirm; keep switch on.
+    if (isPaymentPaid(p)) {
+      toast.info("Payment is already confirmed. Unconfirm is not supported yet.");
+      return;
+    }
+    setToggleFailedId(null);
     setConfirmingId(p.id);
     try {
-      const ticket = await confirmParticipantPayment(p.passCode);
+      const { ticket, message } = await toggleParticipantPayment(ticketID);
       const nextStatus = String(ticket.status || "registered").toLowerCase();
       const ui =
         nextStatus === "registered" || nextStatus === "checked-in" || nextStatus === "checked_in"
@@ -166,20 +182,22 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
       };
       setApiRows((prev) => prev.map((row) => (row.id === p.id ? { ...row, ...patch } : row)));
       setLocalRows((prev) => prev.map((row) => (row.id === p.id ? { ...row, ...patch } : row)));
-      toast.success(
-        nextStatus === "registered" || nextStatus.includes("checked")
-          ? `Payment confirmed for ${p.name}.`
-          : `Payment status updated for ${p.name}.`,
-      );
+      toast.success(message || `Payment confirmed for ${p.name}.`);
       void reloadParticipants();
     } catch (err) {
+      // Leave row Pending — switch snaps back off; flash red briefly.
+      setToggleFailedId(p.id);
+      window.setTimeout(() => {
+        setToggleFailedId((id) => (id === p.id ? null : id));
+      }, 1200);
       toast.error(
         err instanceof ApiError
           ? err.message
           : err instanceof Error
             ? err.message
-            : "Unable to confirm payment.",
+            : "Payment toggle failed — still pending. Try again.",
       );
+      void reloadParticipants();
     } finally {
       setConfirmingId(null);
     }
@@ -443,25 +461,61 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                       {p.checkIn === "—" ? "–" : <span className={checkInPillClass(p.checkIn)}>{p.checkIn}</span>}
                     </td>
                     <td className="border-b border-blue-50 px-2 py-1.5 text-center">
-                      <div className="inline-flex flex-wrap items-center justify-center gap-1">
-                        {needsPaymentConfirm(p) ? (
-                          <button
-                            type="button"
-                            disabled={confirmingId === p.id || !p.passCode}
-                            className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
-                            aria-label={`Confirm payment for ${p.name}`}
+                      <div className="inline-flex flex-wrap items-center justify-center gap-1.5">
+                        {showPaymentToggle(p) ? (
+                          <label
+                            className="inline-flex items-center gap-1.5"
                             title={
-                              p.passCode
-                                ? "Confirm payment (toggle payment status)"
-                                : "No pass code on this registration"
+                              !(p.ticketID || p.id)
+                                ? "No ticket ID on this registration"
+                                : toggleFailedId === p.id
+                                  ? "Confirm failed — still pending"
+                                  : isPaymentPaid(p)
+                                    ? "Payment confirmed"
+                                    : "Toggle on to confirm payment"
                             }
-                            onClick={() => {
-                              void handleConfirmPayment(p);
-                            }}
                           >
-                            <BadgeCheck size={12} />
-                            {confirmingId === p.id ? "…" : "Confirm Payment"}
-                          </button>
+                            <span
+                              className={cn(
+                                "text-[9px] font-semibold",
+                                toggleFailedId === p.id
+                                  ? "text-red-600"
+                                  : isPaymentPaid(p)
+                                    ? "text-emerald-700"
+                                    : "text-amber-700",
+                              )}
+                            >
+                              Paid
+                            </span>
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={isPaymentPaid(p) || confirmingId === p.id}
+                              aria-label={`Toggle payment for ${p.name}`}
+                              disabled={
+                                confirmingId === p.id || !(p.ticketID || (p.id && !p.id.startsWith("p-")))
+                              }
+                              onClick={() => {
+                                void handleTogglePayment(p);
+                              }}
+                              className={cn(
+                                "relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                                toggleFailedId === p.id
+                                  ? "bg-red-300"
+                                  : isPaymentPaid(p) || confirmingId === p.id
+                                    ? "bg-emerald-500"
+                                    : "bg-slate-300",
+                                confirmingId === p.id && "opacity-70",
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  "absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform",
+                                  (isPaymentPaid(p) || confirmingId === p.id) && "translate-x-4",
+                                )}
+                              />
+                            </button>
+                          </label>
                         ) : null}
                         <button
                           type="button"

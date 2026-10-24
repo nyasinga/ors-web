@@ -33,6 +33,22 @@ export type RegistrationDetails = {
   engagementID?: string;
 };
 
+/** Invoice created after Details submit — shown before bank payment. */
+export type RegistrationInvoice = {
+  /** URL to view / download the invoice (PDF or HTML). */
+  url: string;
+  /** Bill / invoice reference for bank narration. */
+  reference: string;
+  amount?: number;
+  currency?: string;
+  /** From signup-isippe — used to re-fetch GET /ticketing/{ticketID}/invoice */
+  ticketID?: string;
+  /** JWT from signup — required for invoice endpoint */
+  token?: string;
+  /** True when `url` is a blob: object URL (do not persist across reloads). */
+  isBlobUrl?: boolean;
+};
+
 export type SelectedSponsorPackage = {
   id: string;
   name: string;
@@ -81,6 +97,17 @@ export type RegistrationContextValue = {
   ) => void;
   clearSponsorPackage: () => void;
   fromSponsorship: boolean;
+  /** Invoice from Details → API; required before bank payment. */
+  invoice: RegistrationInvoice | null;
+  setInvoice: (invoice: RegistrationInvoice | null) => void;
+  /** Payment sub-step: invoice preview, then bank instructions. */
+  paymentPhase: "invoice" | "bank";
+  setPaymentPhase: (phase: "invoice" | "bank") => void;
+  /** Proof-of-payment files (endpoint wired later). */
+  paymentProofFiles: File[];
+  setPaymentProofFiles: (files: File[] | ((prev: File[]) => File[])) => void;
+  /** True once details / invoice have been restored from storage. */
+  registrationHydrated: boolean;
 };
 
 export const RegistrationContext = createContext<RegistrationContextValue | null>(null);

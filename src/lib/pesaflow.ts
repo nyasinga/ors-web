@@ -195,6 +195,205 @@ export async function initiateEcitizenCheckout(input: InitiateCheckoutInput) {
 /** @deprecated Use initiateEcitizenCheckout */
 export const createEcitizenInvoice = initiateEcitizenCheckout;
 
+export type CreateRegistrationInvoiceResult = {
+  url: string;
+  reference: string;
+  amount?: number;
+  currency?: string;
+  raw: Record<string, unknown>;
+  ticket?: Record<string, unknown>;
+  ticketID?: string;
+  token?: string;
+  isBlobUrl?: boolean;
+};
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function pickString(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  }
+  return "";
+}
+
+function pickInvoiceUrl(data: Record<string, unknown>): string {
+  const ticket = asRecord(data.ticket);
+  const nested = asRecord(data.invoice) || asRecord(data.data) || asRecord(data.result);
+  const candidates = [
+    data.invoiceUrl,
+    data.invoice_url,
+    data.pdfUrl,
+    data.pdf_url,
+    data.downloadUrl,
+    data.download_url,
+    data.url,
+    ticket?.invoiceUrl,
+    ticket?.invoice_url,
+    ticket?.pdfUrl,
+    nested?.invoiceUrl,
+    nested?.invoice_url,
+    nested?.pdfUrl,
+    nested?.url,
+  ];
+  for (const value of candidates) {
+    if (typeof value === "string" && value.trim()) {
+      const s = value.trim();
+      if (/^https?:\/\//i.test(s) || s.startsWith("blob:")) return s;
+    }
+  }
+  return "";
+}
+
+function pickInvoiceReference(
+  data: Record<string, unknown>,
+  fallback: string,
+): string {
+  const ticket = asRecord(data.ticket);
+  const nested = asRecord(data.invoice) || asRecord(data.data) || asRecord(data.result);
+  const candidates = [
+    data.billRefNumber,
+    data.invoiceRef,
+    data.invoice_ref,
+    data.reference,
+    data.receiptNo,
+    ticket?.reference,
+    ticket?.invoiceRef,
+    nested?.billRefNumber,
+    nested?.reference,
+    nested?.invoiceRef,
+  ];
+  for (const value of candidates) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  }
+  return fallback;
+}
+
+function pickTicketId(signup: Record<string, unknown>): string {
+  const ticket = asRecord(signup.ticket);
+  return pickString(
+    ticket?.ticketID,
+    ticket?.id,
+    signup.ticketID,
+    signup.ticketId,
+  );
+}
+
+function pickSignupToken(signup: Record<string, unknown>): string {
+  const user = asRecord(signup.user);
+  const ticket = asRecord(signup.ticket);
+  return pickString(
+    signup.token,
+    signup.accessToken,
+    signup.access_token,
+    signup.jwt,
+    user?.token,
+    ticket?.token,
+  );
+}
+
+/**
+ * GET /ticketing/{ticketID}/invoice
+ * JWT is optional — signup-isippe often returns no token; public fetch still works.
+ * Returns a view/download URL (remote HTTPS or local blob: for PDF bytes).
+ */
+export async function fetchTicketInvoice(
+  ticketID: string,
+  token?: string | null,
+): Promise<{ url: string; isBlobUrl: boolean; raw?: Record<string, unknown> }> {
+  const id = ticketID.trim();
+  if (!id) throw new Error("Ticket ID is required to load the invoice.");
+
+  const endpoint = `${PAYMENT_API_BASE}/ticketing/${encodeURIComponent(id)}/invoice`;
+  console.log("[pesaflow] ticket invoice request", { url: endpoint, hasToken: Boolean(token?.trim()) });
+
+  const res = await fetch(endpoint, {
+    method: "GET",
+    headers: {
+      Accept: "application/pdf, application/json",
+      "x-tenant-id": TENANT_ID,
+      ...(token?.trim() ? { Authorization: `Bearer ${token.trim()}` } : {}),
+    },
+  });
+
+  const contentType = (res.headers.get("content-type") || "").toLowerCase();
+
+  if (!res.ok) {
+    let message = `Could not load invoice (${res.status}).`;
+    try {
+      const errBody = (await res.json()) as { error?: { message?: string }; message?: string };
+      message = errBody?.error?.message || errBody?.message || message;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(message);
+  }
+
+  if (contentType.includes("application/pdf") || contentType.includes("octet-stream")) {
+    const blob = await res.blob();
+    return { url: URL.createObjectURL(blob), isBlobUrl: true };
+  }
+
+  const data = (await res.json()) as Record<string, unknown>;
+  console.log("[pesaflow] ticket invoice response", data);
+  const url = pickInvoiceUrl(data);
+  if (!url) {
+    throw new Error("Invoice endpoint returned no download URL.");
+  }
+  return { url, isBlobUrl: url.startsWith("blob:"), raw: data };
+}
+
+/**
+ * Create registration after Details, then load invoice.
+ * 1) POST /signup-isippe (returns flat ticket — often no JWT)
+ * 2) GET /ticketing/{ticketID}/invoice
+ */
+export async function createRegistrationInvoice(
+  input: SignupIsippeInput,
+  files: File[] = [],
+  fallbackReference = "",
+): Promise<CreateRegistrationInvoiceResult> {
+  const data = (await signupAfterPayment(input, files)) as Record<string, unknown>;
+  // signup-isippe may return `{ ticket }` or the ticket fields at the root.
+  const ticket = asRecord(data.ticket) || (data.ticketID ? data : undefined);
+  const ticketID = pickTicketId(data);
+  const token = pickSignupToken(data) || undefined;
+
+  if (!ticketID) {
+    throw new Error("Registration succeeded but no ticket ID was returned.");
+  }
+
+  const invoice = await fetchTicketInvoice(ticketID, token);
+  const reference = pickInvoiceReference(
+    { ...data, ...(ticket || {}), ...(invoice.raw || {}) },
+    fallbackReference,
+  );
+  if (!reference) {
+    throw new Error("Invoice reference missing from server response.");
+  }
+
+  const amount =
+    Number(ticket?.ticketPrice) ||
+    Number(input.extraData?.ticket?.amount);
+  return {
+    url: invoice.url,
+    reference,
+    amount: Number.isFinite(amount) && amount > 0 ? amount : undefined,
+    currency:
+      pickString(ticket?.currency, input.extraData?.ticket?.currency) || "KES",
+    raw: data,
+    ticket,
+    ticketID,
+    token,
+    isBlobUrl: invoice.isBlobUrl,
+  };
+}
+
 export type SignupIsippeInput = Record<string, unknown> & {
   title: string;
   email: string;
@@ -274,7 +473,7 @@ export async function signupAfterPayment(
   const data = await res.json();
 
   if (!res.ok) {
-    throw new Error(data?.error?.message || "Registration failed after payment.");
+    throw new Error(data?.error?.message || "Registration request failed.");
   }
 
   return data;

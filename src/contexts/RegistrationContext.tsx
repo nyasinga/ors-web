@@ -16,8 +16,11 @@ import {
   type PersistedImage,
   type RegistrationContextValue,
   type RegistrationDetails,
+  type RegistrationInvoice,
   type SelectedSponsorPackage,
 } from "./registrationShared";
+
+const INVOICE_PERSIST_KEY = `${PERSIST_KEY}-invoice`;
 
 const defaultDetails: RegistrationDetails = {
   title: "",
@@ -64,8 +67,53 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
   const [details, setDetailsState] = useState<RegistrationDetails>(defaultDetails);
   const [selectedSponsorPackage, setSelectedSponsorPackage] = useState<SelectedSponsorPackage | null>(null);
   const [sponsorEntrySource, setSponsorEntrySource] = useState<"sponsorship" | "register" | null>(null);
+  const [invoice, setInvoiceState] = useState<RegistrationInvoice | null>(() => {
+    try {
+      const raw = sessionStorage.getItem(INVOICE_PERSIST_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as RegistrationInvoice;
+      return parsed?.reference ? parsed : null;
+    } catch {
+      return null;
+    }
+  });
+  const [paymentPhase, setPaymentPhase] = useState<"invoice" | "bank">("invoice");
+  const [paymentProofFiles, setPaymentProofFiles] = useState<File[]>([]);
   const [referenceSuffix] = useState(() => Math.floor(100000 + Math.random() * 900000));
   const reference = `${event.referencePrefix}-${referenceSuffix}`;
+
+  const setInvoice = useCallback((next: RegistrationInvoice | null) => {
+    setInvoiceState((prev) => {
+      if (prev?.isBlobUrl && prev.url) {
+        try {
+          URL.revokeObjectURL(prev.url);
+        } catch {
+          /* ignore */
+        }
+      }
+      return next;
+    });
+    if (next) {
+      // Persist metadata only — blob: URLs are not durable across reloads.
+      try {
+        const { url, isBlobUrl, ...meta } = next;
+        sessionStorage.setItem(
+          INVOICE_PERSIST_KEY,
+          JSON.stringify({
+            ...meta,
+            url: isBlobUrl ? "" : url,
+            isBlobUrl: false,
+          }),
+        );
+      } catch {
+        /* ignore quota */
+      }
+      setPaymentPhase("invoice");
+    } else {
+      sessionStorage.removeItem(INVOICE_PERSIST_KEY);
+      setPaymentPhase("invoice");
+    }
+  }, []);
 
   const clearSponsorPackage = useCallback(() => {
     setSelectedSponsorPackage(null);
@@ -104,11 +152,50 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
     setParticipationTypeState("delegate");
     setFiles([]);
     setProfilePicturePreview("");
+    setPaymentProofFiles([]);
+    setInvoice(null);
     clearSponsorPackage();
 
     localStorage.removeItem(PERSIST_KEY);
     localStorage.removeItem(IMAGE_PERSIST_KEY);
-  }, [clearSponsorPackage]);
+  }, [clearSponsorPackage, setInvoice]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const raw = sessionStorage.getItem(INVOICE_PERSIST_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw) as RegistrationInvoice;
+        if (!parsed?.reference) return;
+
+        if (parsed.url) {
+          if (!cancelled) setInvoiceState(parsed);
+          return;
+        }
+
+        // Re-fetch PDF invoice after reload when we only persisted ticketID.
+        if (parsed.ticketID) {
+          const { fetchTicketInvoice } = await import("../lib/pesaflow");
+          const invoice = await fetchTicketInvoice(parsed.ticketID, parsed.token);
+          if (cancelled) {
+            if (invoice.isBlobUrl) URL.revokeObjectURL(invoice.url);
+            return;
+          }
+          setInvoiceState({
+            ...parsed,
+            url: invoice.url,
+            isBlobUrl: invoice.isBlobUrl,
+          });
+        }
+      } catch {
+        /* ignore restore failures */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const restoreImage = async () => {
@@ -246,6 +333,13 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
       profilePicturePreview,
       setProfilePicturePreview,
       clearDetails,
+      invoice,
+      setInvoice,
+      paymentPhase,
+      setPaymentPhase,
+      paymentProofFiles,
+      setPaymentProofFiles,
+      registrationHydrated: detailsLoaded && pictureLoaded,
     }),
     [
       participationType,
@@ -265,6 +359,12 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
       files,
       clearDetails,
       profilePicturePreview,
+      invoice,
+      setInvoice,
+      paymentPhase,
+      paymentProofFiles,
+      detailsLoaded,
+      pictureLoaded,
     ],
   );
 

@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import PaymentModal, {
-  SHOW_ECITIZEN_IFRAME,
-} from "../../components/registration/PaymentModal";
+import { Download, ExternalLink, FileText } from "lucide-react";
+import { SHOW_ECITIZEN_IFRAME } from "../../components/registration/PaymentModal";
+import { ProofOfPaymentModal } from "../../components/registration/ProofOfPaymentModal";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
 import { useToast } from "../../components/ui/Toast";
 import { useRegistration } from "../../hooks/useRegistration";
@@ -11,25 +11,34 @@ import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { formatMoney } from "../../i18n/format";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
-import { initiateEcitizenCheckout, signupAfterPayment } from "../../lib/pesaflow";
 import { engagementToPublicSponsors } from "../../lib/publicEvent";
 import { parseKesPrice } from "../../lib/ticketAnalytics";
-import type { ECitizenCheckoutSession } from "../../types/registration";
 import * as r from "../../components/registration/registerStyles";
 
-const PAYMENT_CURRENCY = "KES";
+const BANK_DETAILS = [
+  { label: "Account Name:", value: "ANTI COUNTERFEIT AGENCY" },
+  { label: "Bank:", value: "KENYA COMMERCIAL BANK" },
+  { label: "Branch:", value: "Kipande House" },
+  { label: "Account No.:", value: "1119056322" },
+  { label: "Bank code:", value: "01" },
+  { label: "Branch code:", value: "101" },
+  { label: "Swift code:", value: "KCBLKENX005" },
+] as const;
 
-/** Registration step 3 — bank transfer (eCitizen iframe hidden) → signup-isippe. */
+/**
+ * Registration step 3:
+ * 1) Invoice preview + download (from Details → create-invoice)
+ * 2) Next → bank transfer instructions + “I have completed payment”
+ * 3) Proof-of-payment modal (submit endpoint TBD)
+ */
 export function RegisterPaymentPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const event = useEventCopy();
   const { engagement } = usePublicEngagement();
   const {
-    files,
     participationType,
     details,
-    setDetails,
     reference,
     feeKes,
     feeUsd,
@@ -38,26 +47,26 @@ export function RegisterPaymentPage() {
     earlyBird,
     late,
     selectedSponsorPackage,
+    invoice,
+    paymentPhase,
+    setPaymentPhase,
+    setPaymentProofFiles,
+    registrationHydrated,
   } = useRegistration();
 
+  const [proofOpen, setProofOpen] = useState(false);
+  const [proofSubmitting, setProofSubmitting] = useState(false);
+
   const typeLabel = participationTypes.find((item) => item.id === participationType)?.title ?? "Delegate";
-  const engagementID = engagement?.engagementID ? String(engagement.engagementID) : null;
   const isSponsor = participationType === "sponsor" || Boolean(selectedSponsorPackage);
   const liveSponsorPackages = useMemo(
     () => engagementToPublicSponsors(engagement),
     [engagement],
   );
 
-  /**
-   * Sponsors: live package price from engagement (refreshed before checkout/signup).
-   * Others: registration ticket fee from context.
-   */
   const resolvedTicket = useMemo(() => {
     if (!isSponsor) {
-      return {
-        amount: feeKes,
-        sponsor: null as null | { id: string; name: string; kes: number },
-      };
+      return { amount: feeKes };
     }
     const live =
       liveSponsorPackages.find(
@@ -67,189 +76,71 @@ export function RegisterPaymentPage() {
       ) || null;
     if (live) {
       const amount = parseKesPrice(live.price);
-      if (amount > 0) {
-        return { amount, sponsor: { id: live.id, name: live.name, kes: amount } };
-      }
+      if (amount > 0) return { amount };
     }
-    const kes = selectedSponsorPackage?.kes ?? 0;
-    return {
-      amount: kes,
-      sponsor: selectedSponsorPackage
-        ? { id: selectedSponsorPackage.id, name: selectedSponsorPackage.name, kes }
-        : null,
-    };
+    return { amount: selectedSponsorPackage?.kes ?? 0 };
   }, [isSponsor, feeKes, liveSponsorPackages, selectedSponsorPackage]);
 
-  const displayKes = resolvedTicket.amount > 0 ? resolvedTicket.amount : feeKes;
-  const invoiceDescription = selectedSponsorPackage
-    ? `${event.name || "Event"} — ${selectedSponsorPackage.name}`
-    : `${event.name || "Event"} registration fee`;
-
-  const [loading, setLoading] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [checkout, setCheckout] = useState<ECitizenCheckoutSession | null>(null);
-  const [invoiceRef, setInvoiceRef] = useState("");
-  const [isFinalizing, setIsFinalizing] = useState(false);
-
-  const startPayment = async () => {
-    const amount = resolvedTicket.amount;
-    if (!amount || amount <= 0) {
-      toast.error(
-        isSponsor
-          ? "Sponsorship package price is not available yet. Select a package with a published price."
-          : "Registration fee is not available yet. Please try again once ticket prices are published.",
-      );
-      return;
-    }
-    if (isSponsor && !resolvedTicket.sponsor) {
-      toast.error("Select a sponsorship package before paying.");
-      return;
-    }
-    if (!details.email || !details.fullName || !details.phone) {
-      toast.error("Complete your registration details before paying.");
-      return;
-    }
-
-    // Bank transfer mode — skip eCitizen initiate-checkout while iframe is hidden.
-    if (!SHOW_ECITIZEN_IFRAME) {
-      setInvoiceRef(reference);
-      setCheckout(null);
-      setIsModalOpen(true);
-      return;
-    }
-
-    setLoading(true);
-    toast.info("Starting eCitizen payment…");
-    try {
-      const session = await initiateEcitizenCheckout({
-        amount: String(amount),
-        email: details.email,
-        idNumber: details.phone.replace(/\D/g, "") || reference,
-        phone: details.phone,
-        name: details.fullName,
-        itemDescription: invoiceDescription,
-        currency: PAYMENT_CURRENCY,
-        callbackURL: window.location.href,
-      });
-
-      setInvoiceRef(String(session.fields.billRefNumber));
-      setCheckout(session);
-      setIsModalOpen(true);
-      toast.success("Invoice ready — complete payment in the eCitizen window.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to start eCitizen payment.", 6000);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const finalizeAfterPayment = async (paymentNote?: string) => {
-    const paymentReference = (paymentNote || "").trim();
-    const effectiveInvoiceRef = invoiceRef || reference;
-    if (!SHOW_ECITIZEN_IFRAME && !paymentReference) {
-      toast.error("Enter your bank / M-Pesa payment reference before continuing.");
-      return;
-    }
-    if (!effectiveInvoiceRef) {
-      toast.error("Missing invoice reference. Please start payment again.");
-      return;
-    }
-    setIsFinalizing(true);
-    toast.info("Completing registration…");
-    try {
-      // Re-read live sponsor price immediately before signup-isippe.
-      const livePackages = engagementToPublicSponsors(engagement);
-      const live =
-        livePackages.find(
-          (pkg) =>
-            pkg.id === selectedSponsorPackage?.id ||
-            pkg.name === selectedSponsorPackage?.name,
-        ) || null;
-      const amount = isSponsor
-        ? parseKesPrice(live?.price) || selectedSponsorPackage?.kes || 0
+  const displayKes =
+    invoice?.amount && invoice.amount > 0
+      ? invoice.amount
+      : resolvedTicket.amount > 0
+        ? resolvedTicket.amount
         : feeKes;
-      const sponsor = isSponsor
-        ? {
-            id: live?.id || selectedSponsorPackage?.id || "",
-            name: live?.name || selectedSponsorPackage?.name || "",
-            kes: amount,
-          }
-        : null;
 
-      if (!amount || amount <= 0) {
-        throw new Error(
-          isSponsor
-            ? "Sponsorship package price is missing. Cannot complete registration."
-            : "Registration fee is missing. Cannot complete registration.",
-        );
-      }
-      if (isSponsor && !sponsor?.id) {
-        throw new Error("Sponsorship package is missing. Cannot complete registration.");
-      }
+  const invoiceRef = invoice?.reference || details.reference || reference;
 
-      const { ticket, googleCalendarURL, passCodeQR }: any = await signupAfterPayment(
-        {
-          title: details.title,
-          fullName: details.fullName,
-          email: details.email,
-          phoneNo: details.phone,
-          country: details.country,
-          city: details.city,
-          userType: isSponsor ? "sponsor" : participationType,
-          extraData: {
-            dietary: details.dietary,
-            accessibility: details.accessibility,
-            jobTitle: details.jobTitle,
-            organisation: details.organisation,
-            engagementID,
-            sponsorPackage: sponsor
-              ? {
-                  id: sponsor.id,
-                  name: sponsor.name,
-                  amount,
-                  price: amount,
-                }
-              : {},
-            ticket: {
-              amount,
-              currency: PAYMENT_CURRENCY,
-            },
-            paymentReference: paymentReference || undefined,
-            ...(SHOW_ECITIZEN_IFRAME
-              ? {
-                  eCitizen: {
-                    reference,
-                    currency: PAYMENT_CURRENCY,
-                    invoiceRef: effectiveInvoiceRef,
-                  },
-                }
-              : {}),
-          },
-        },
-        files,
+  useEffect(() => {
+    if (!registrationHydrated) return;
+    if (!details.fullName || !details.email) {
+      navigate("/register/details", { replace: true });
+      return;
+    }
+    // Allow restore/re-fetch when we have ticketID but url not hydrated yet.
+    if (!invoice?.url && !invoice?.ticketID) {
+      navigate("/register/details", { replace: true });
+    }
+  }, [details.email, details.fullName, invoice, navigate, registrationHydrated]);
+
+  const downloadInvoice = () => {
+    if (!invoice?.url) return;
+    const a = document.createElement("a");
+    a.href = invoice.url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.download = `invoice-${invoiceRef || "registration"}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  const handleProofSubmit = async (files: File[]) => {
+    setProofSubmitting(true);
+    try {
+      setPaymentProofFiles(files);
+      // Endpoint for proof upload will be wired when provided.
+      toast.info(
+        "Proof attached. Upload endpoint will be connected next — your files are ready locally.",
+        5000,
       );
-
-      setDetails({
-        googleCalendarURL, 
-        passCodeQR,
-        passCode: ticket.passCode, 
-        status: ticket.status,
-        reference: ticket.reference,
-        engagementID: ticket.engagementID
-      })
-
-      setIsModalOpen(false);
-      toast.success("Payment confirmed — registration complete.");
-      navigate("/register/confirmation");
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Could not complete registration after payment.",
-        6000,
-      );
+      setProofOpen(false);
     } finally {
-      setIsFinalizing(false);
+      setProofSubmitting(false);
     }
   };
+
+  if (!invoice?.url) {
+    return (
+      <div className={r.registerPage}>
+        <RegisterHero current={3} />
+        <main className={r.main}>
+          <div className={cn(r.container, "py-10 text-center text-sm text-[#52627d]")}>
+            {invoice?.ticketID ? "Loading invoice PDF…" : "Preparing invoice…"}
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className={r.registerPage}>
@@ -257,126 +148,201 @@ export function RegisterPaymentPage() {
       <main className={r.main}>
         <div className={cn(r.container, r.payLayout)}>
           <section className={cn(r.card, r.section)}>
-            <h2 className={r.sectionTitle}>3. Payment</h2>
-            <p className={r.subtitle}>
-              {SHOW_ECITIZEN_IFRAME
-                ? "Complete your registration by making the payment using the eCitizen platform."
-                : "Complete your registration by transferring the fee to the ACA bank account."}
-            </p>
-
-            <div className={r.payTop}>
-              <div className={r.sidePrice}>
-                <div className={r.priceLabel}>
-                  {selectedSponsorPackage ? "🏷 Selected Package" : "🏷 Registration Fee"}
-                </div>
-                <b>{feeLabel}</b>
-                <div className={r.period}>{feeUntil}</div>
-                <div className={r.price}>{formatMoney(displayKes, "KES")}</div>
-                {!isSponsor && feeUsd > 0 ? (
-                  <div className={r.priceSub}>{formatMoney(feeUsd, "USD")} (Approx.)</div>
-                ) : null}
-              </div>
-              <div className={r.infoBox}>
-                <div className={r.infoTitle}>
-                  {selectedSponsorPackage ? "▣ Package Benefits" : "▣ Registration Periods"}
-                </div>
-                <p className={r.infoText}>
-                  {selectedSponsorPackage ? (
-                    selectedSponsorPackage.benefits.map((benefit) => (
-                      <span key={benefit}>
-                        ✓ {benefit}
-                        <br />
-                      </span>
-                    ))
-                  ) : (
-                    <>
-                      <b>{earlyBird.label}</b>
-                      <br />
-                      {earlyBird.until} &nbsp; <b>{formatMoney(earlyBird.kes, "KES")}</b>
-                      <br />
-                      <br />
-                      <b>{late.label}</b>
-                      <br />
-                      {late.until} &nbsp; <b>{formatMoney(late.kes, "KES")}</b>
-                    </>
-                  )}
+            {paymentPhase === "invoice" ? (
+              <>
+                <h2 className={r.sectionTitle}>3. Invoice</h2>
+                <p className={r.subtitle}>
+                  Review and download your invoice, then continue to bank payment instructions.
                 </p>
-              </div>
-            </div>
 
-            <h3 className={r.payHeading}>Payment Method</h3>
-            {SHOW_ECITIZEN_IFRAME ? (
-              <div className={r.paymentMethod}>
-                <span className={r.radioBlue} aria-hidden />
-                <img className={r.ecitizen} src="/assets/logo-aca.png" alt="eCitizen" />
-                <div>
-                  <strong className={r.paymentMethodTitle}>Pay via eCitizen (Default)</strong>
-                  <p className={r.paymentMethodText}>
-                    You will be redirected to the eCitizen payment platform to complete your payment
-                    securely.
-                  </p>
+                <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-[#d7e5f5] bg-[#f0f6ff] px-3 py-2.5 text-sm text-[#1e3a8a]">
+                  <FileText size={16} className="shrink-0" />
+                  <span>
+                    Invoice ref: <strong>{invoiceRef}</strong>
+                  </span>
+                  <span className="text-[#64748b]">·</span>
+                  <span>
+                    Amount: <strong>{formatMoney(displayKes, "KES")}</strong>
+                  </span>
                 </div>
-              </div>
+
+                <div className="overflow-hidden rounded-xl border border-[#e5ebf3] bg-[#f8fafc]">
+                  <iframe
+                    title="Registration invoice"
+                    src={invoice.url}
+                    className="block h-[min(70vh,560px)] w-full border-0 bg-white"
+                  />
+                </div>
+
+                <div className={r.actions}>
+                  <Link className={r.btn} to="/register/details">
+                    ← Back to Details
+                  </Link>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" className={r.btn} onClick={downloadInvoice}>
+                      <Download size={14} className="mr-1 inline" />
+                      Download invoice
+                    </button>
+                    <a
+                      className={r.btn}
+                      href={invoice.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink size={14} className="mr-1 inline" />
+                      Open
+                    </a>
+                    <button
+                      type="button"
+                      className={r.btnPrimary}
+                      onClick={() => setPaymentPhase("bank")}
+                    >
+                      Next: Bank payment{" "}
+                      <span className={r.arrow} aria-hidden>
+                        →
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              </>
             ) : (
-              <div className={r.paymentMethod}>
-                <span className={r.radioBlue} aria-hidden />
-                <img
-                  className="h-12 w-auto object-contain"
-                  src="/assets/aca-logo.png"
-                  alt="Anti Counterfeit Authority"
-                />
-                <div>
-                  <strong className={r.paymentMethodTitle}>Bank transfer (KCB)</strong>
-                  <p className={r.paymentMethodText}>
-                    Transfer the registration fee to the Anti Counterfeit Agency KCB account, then
-                    enter your payment reference to finish.
-                  </p>
+              <>
+                <h2 className={r.sectionTitle}>3. Payment</h2>
+                <p className={r.subtitle}>
+                  {SHOW_ECITIZEN_IFRAME
+                    ? "Complete your registration by making the payment using the eCitizen platform."
+                    : "Complete your registration by transferring the fee to the ACA bank account."}
+                </p>
+
+                <div className={r.payTop}>
+                  <div className={r.sidePrice}>
+                    <div className={r.priceLabel}>
+                      {selectedSponsorPackage ? "🏷 Selected Package" : "🏷 Registration Fee"}
+                    </div>
+                    <b>{feeLabel}</b>
+                    <div className={r.period}>{feeUntil}</div>
+                    <div className={r.price}>{formatMoney(displayKes, "KES")}</div>
+                    {!isSponsor && feeUsd > 0 ? (
+                      <div className={r.priceSub}>{formatMoney(feeUsd, "USD")} (Approx.)</div>
+                    ) : null}
+                  </div>
+                  <div className={r.infoBox}>
+                    <div className={r.infoTitle}>
+                      {selectedSponsorPackage ? "▣ Package Benefits" : "▣ Registration Periods"}
+                    </div>
+                    <p className={r.infoText}>
+                      {selectedSponsorPackage ? (
+                        selectedSponsorPackage.benefits.map((benefit) => (
+                          <span key={benefit}>
+                            ✓ {benefit}
+                            <br />
+                          </span>
+                        ))
+                      ) : (
+                        <>
+                          <b>{earlyBird.label}</b>
+                          <br />
+                          {earlyBird.until} &nbsp; <b>{formatMoney(earlyBird.kes, "KES")}</b>
+                          <br />
+                          <br />
+                          <b>{late.label}</b>
+                          <br />
+                          {late.until} &nbsp; <b>{formatMoney(late.kes, "KES")}</b>
+                        </>
+                      )}
+                    </p>
+                  </div>
                 </div>
-              </div>
+
+                <h3 className={r.payHeading}>Payment Method</h3>
+                <div className={r.paymentMethod}>
+                  <span className={r.radioBlue} aria-hidden />
+                  <img
+                    className="h-12 w-auto object-contain"
+                    src="/assets/aca-logo.png"
+                    alt="Anti Counterfeit Authority"
+                  />
+                  <div>
+                    <strong className={r.paymentMethodTitle}>Bank transfer (KCB)</strong>
+                    <p className={r.paymentMethodText}>
+                      Transfer the registration fee to the Anti Counterfeit Agency KCB account using
+                      your invoice reference as the narration.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Existing bank details block (same content as previous payment modal) */}
+                <div className="relative mt-4 overflow-hidden rounded-lg border border-[#e8eef5] bg-white">
+                  <div
+                    className="pointer-events-none absolute -right-6 -top-10 h-28 w-40 rotate-[28deg]"
+                    aria-hidden
+                  >
+                    <div className="absolute inset-x-0 top-0 h-[10px] bg-[#1a9b4a]" />
+                    <div className="absolute inset-x-0 top-[12px] h-[10px] bg-[#c8102e]" />
+                    <div className="absolute inset-x-0 top-[24px] h-[10px] bg-[#0056a4]" />
+                  </div>
+                  <div className="relative px-5 pb-6 pt-5 sm:px-7 sm:pt-6">
+                    <div className="mb-6 flex items-center gap-3">
+                      <img
+                        src="/assets/aca-logo.png"
+                        alt="Anti Counterfeit Authority"
+                        className="h-14 w-auto object-contain sm:h-16"
+                      />
+                    </div>
+                    <h5 className="m-0 mb-4 text-sm font-extrabold uppercase tracking-wide text-[#111827] sm:text-[15px]">
+                      Make all payments to:
+                    </h5>
+                    <dl className="m-0 grid gap-2.5 text-[13px] leading-snug text-[#111827] sm:text-sm">
+                      {BANK_DETAILS.map((row) => (
+                        <div
+                          key={row.label}
+                          className="grid grid-cols-[7.5rem_1fr] gap-x-2 sm:grid-cols-[9rem_1fr]"
+                        >
+                          <dt className="text-[#374151]">{row.label}</dt>
+                          <dd className="m-0 font-bold tracking-wide text-[#0f172a]">{row.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                    {displayKes > 0 ? (
+                      <p className="mt-5 mb-0 rounded-md bg-[#f0f6ff] px-3 py-2.5 text-sm text-[#1e3a8a]">
+                        Amount due:{" "}
+                        <strong className="tabular-nums">{formatMoney(displayKes, "KES")}</strong>
+                      </p>
+                    ) : null}
+                    <p className="mt-3 mb-0 text-xs text-[#64748b]">
+                      Use invoice ref <strong className="text-[#334155]">{invoiceRef}</strong> as the
+                      payment narration.
+                    </p>
+                  </div>
+                </div>
+
+                <div className={r.notice}>
+                  <strong className={r.noticeStrong}>ⓘ &nbsp; Important Information</strong>
+                  <br />
+                  • Transfer the exact amount to the ACA KCB account above.
+                  <br />
+                  • Use your invoice reference as the payment narration.
+                  <br />• After transferring, click below and attach your proof of payment.
+                </div>
+
+                <div className={r.actions}>
+                  <button
+                    type="button"
+                    className={r.btn}
+                    onClick={() => setPaymentPhase("invoice")}
+                  >
+                    ← Back to Invoice
+                  </button>
+                  <button
+                    type="button"
+                    className={r.btnPrimary}
+                    onClick={() => setProofOpen(true)}
+                  >
+                    I have completed payment ✓
+                  </button>
+                </div>
+              </>
             )}
-
-            <div className={r.notice}>
-              <strong className={r.noticeStrong}>ⓘ &nbsp; Important Information</strong>
-              <br />
-              {SHOW_ECITIZEN_IFRAME ? (
-                <>
-                  • You will open the official eCitizen payment platform in a secure window.
-                  <br />
-                  • Complete your payment, then confirm below to finish registration.
-                  <br />• After successful payment, you will receive a confirmation and your
-                  electronic ticket via email.
-                </>
-              ) : (
-                <>
-                  • Transfer the exact amount to the ACA KCB account shown in the next step.
-                  <br />
-                  • Use your registration reference as the payment narration.
-                  <br />• After transferring, enter your bank / M-Pesa reference and confirm to
-                  finish registration.
-                </>
-              )}
-            </div>
-
-            <div className={r.actions}>
-              <Link className={r.btn} to="/register/details">
-                ← Back to Details
-              </Link>
-              <button
-                type="button"
-                className={r.btnPrimary}
-                disabled={loading}
-                onClick={() => void startPayment()}
-              >
-                {SHOW_ECITIZEN_IFRAME
-                  ? loading
-                    ? "Starting eCitizen…"
-                    : "Proceed to eCitizen"
-                  : "View bank details"}{" "}
-                <span className={r.arrow} aria-hidden>
-                  →
-                </span>
-              </button>
-            </div>
           </section>
 
           <aside className={r.sidebar}>
@@ -405,6 +371,10 @@ export function RegisterPaymentPage() {
                 </div>
               ) : null}
               <div className={r.summaryRow()}>
+                <span>Invoice ref</span>
+                <b className="break-all">{invoiceRef}</b>
+              </div>
+              <div className={r.summaryRow()}>
                 <span>{selectedSponsorPackage ? "Package Fee" : "Registration Fee"}</span>
                 <span>{formatMoney(displayKes, "KES")}</span>
               </div>
@@ -429,14 +399,12 @@ export function RegisterPaymentPage() {
 
       <PrivacyBar />
 
-      <PaymentModal
-        isOpen={isModalOpen}
-        checkout={checkout}
-        amountKes={displayKes}
-        paymentReference={invoiceRef || reference}
-        onClose={() => setIsModalOpen(false)}
-        onPaymentComplete={finalizeAfterPayment}
-        isVerifying={isFinalizing}
+      <ProofOfPaymentModal
+        open={proofOpen}
+        onClose={() => setProofOpen(false)}
+        onSubmit={handleProofSubmit}
+        submitting={proofSubmitting}
+        invoiceReference={invoiceRef}
       />
     </div>
   );

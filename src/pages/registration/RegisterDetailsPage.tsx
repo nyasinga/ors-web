@@ -4,11 +4,13 @@ import { PrivacyBar, RegisterHero } from "../../components/registration/Register
 import { IMAGE_KEY, IMAGE_PERSIST_KEY } from "../../contexts/registrationShared";
 import { useRegistration } from "../../hooks/useRegistration";
 import { SearchableSelect } from "../../components/ui/SearchableSelect";
+import { useToast } from "../../components/ui/Toast";
 import { COUNTRY_NAME_OPTIONS } from "../../data/countries";
 import { participationTypes } from "../../data/registration";
 import { formatMoney } from "../../i18n/format";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
+import { createRegistrationInvoice } from "../../lib/pesaflow";
 import { engagementToPublicSponsors } from "../../lib/publicEvent";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import * as r from "../../components/registration/registerStyles";
@@ -25,11 +27,14 @@ const defaultInclusions = [
 /** Registration step 2 — structure & CSS from HTML package */
 export function RegisterDetailsPage() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const event = useEventCopy();
   const { engagement } = usePublicEngagement();
-  
+  const [submitting, setSubmitting] = useState(false);
+
   const {
+    files,
     setFiles,
     profilePicturePreview,
     setProfilePicturePreview,
@@ -41,7 +46,14 @@ export function RegisterDetailsPage() {
     selectSponsorPackage,
     sponsorEntrySource,
     participationType,
+    feeKes,
+    reference,
+    setInvoice,
+    setPaymentPhase,
   } = useRegistration();
+
+  const engagementID = engagement?.engagementID ? String(engagement.engagementID) : null;
+  const isSponsor = participationType === "sponsor" || Boolean(selectedSponsorPackage);
 
   const backTo =
     sponsorEntrySource === "sponsorship"
@@ -83,6 +95,89 @@ export function RegisterDetailsPage() {
     if (!details.city.trim()) next.city = "City is required";
     setErrors(next);
     return Object.keys(next).length === 0;
+  };
+
+  const amountKes =
+    selectedSponsorPackage && selectedSponsorPackage.kes > 0
+      ? selectedSponsorPackage.kes
+      : feeKes;
+
+  const submitDetailsAndCreateInvoice = async () => {
+    if (!validate()) return;
+    if (!amountKes || amountKes <= 0) {
+      toast.error("Registration fee is not available yet. Please try again later.");
+      return;
+    }
+    if (isSponsor && !selectedSponsorPackage?.id) {
+      toast.error("Select a sponsorship package before continuing.");
+      return;
+    }
+
+    setSubmitting(true);
+    toast.info("Creating your invoice…");
+    try {
+      const invoice = await createRegistrationInvoice(
+        {
+          title: details.title,
+          fullName: details.fullName.trim(),
+          email: details.email.trim(),
+          phoneNo: details.phone.trim(),
+          country: details.country,
+          city: details.city.trim(),
+          userType: isSponsor ? "sponsor" : participationType,
+          extraData: {
+            dietary: details.dietary,
+            accessibility: details.accessibility,
+            jobTitle: details.jobTitle.trim(),
+            organisation: details.organisation.trim(),
+            engagementID,
+            sponsorPackage: isSponsor && selectedSponsorPackage
+              ? {
+                  id: selectedSponsorPackage.id,
+                  name: selectedSponsorPackage.name,
+                  amount: amountKes,
+                  price: amountKes,
+                }
+              : {},
+            ticket: {
+              amount: amountKes,
+              currency: "KES",
+            },
+          },
+        },
+        files,
+        reference,
+      );
+
+      const ticket = invoice.ticket || {};
+      setInvoice({
+        url: invoice.url,
+        reference: invoice.reference,
+        amount: invoice.amount ?? amountKes,
+        currency: invoice.currency || "KES",
+        ticketID: invoice.ticketID,
+        token: invoice.token,
+        isBlobUrl: invoice.isBlobUrl,
+      });
+      setDetails({
+        reference: invoice.reference,
+        passCode: ticket.passCode ? String(ticket.passCode) : details.passCode,
+        status: ticket.status ? String(ticket.status) : details.status,
+        engagementID: ticket.engagementID
+          ? String(ticket.engagementID)
+          : engagementID || details.engagementID,
+      });
+      setPaymentPhase("invoice");
+      toast.success("Invoice ready — you can download it on the next step.");
+      navigate("/register/payment");
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Could not create invoice. Please try again.",
+        6000,
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -304,14 +399,17 @@ export function RegisterDetailsPage() {
               <button
                 type="button"
                 className={r.btnPrimary}
+                disabled={submitting}
                 onClick={() => {
-                  if (validate()) navigate("/register/payment");
+                  void submitDetailsAndCreateInvoice();
                 }}
               >
-                Next: Payment{" "}
-                <span className={r.arrow} aria-hidden>
-                  →
-                </span>
+                {submitting ? "Creating invoice…" : "Next: Payment"}{" "}
+                {!submitting ? (
+                  <span className={r.arrow} aria-hidden>
+                    →
+                  </span>
+                ) : null}
               </button>
             </div>
           </section>

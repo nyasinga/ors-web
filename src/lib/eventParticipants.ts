@@ -175,6 +175,7 @@ function toAddedParticipant(ticket: EngagementParticipantTicket): AddedParticipa
     accessibility: pickString(ticket.accessibility, extra?.accessibility),
     participationType: participationTypeOf(ticket),
     passCode: passCode.length >= 6 ? passCode : undefined,
+    ticketID: pickString(ticket.ticketID) || undefined,
     reference: pickString(ticket.reference),
     rawStatus: pickString(ticket.status).toLowerCase() || undefined,
   };
@@ -199,23 +200,55 @@ export async function listEventParticipants(
   return normalizeTickets(payload).map(toAddedParticipant);
 }
 
+export type TogglePaymentResult = {
+  ticket: EngagementParticipantTicket;
+  /** True when status is registered / checked-in after the call. */
+  paid: boolean;
+  message?: string;
+};
+
 /**
- * Confirm / toggle payment for a pending engagement ticket.
- * POST /ticketing/register — moves status issued → registered (EngagementTicketController.registerTicket).
+ * Confirm / toggle payment for an engagement ticket.
+ * GET /ticketing/confirm/{ticketID} (@authenticate('jwt')).
  */
-export async function confirmParticipantPayment(passCode: string): Promise<EngagementParticipantTicket> {
-  const code = passCode.replace(/\D/g, "").slice(0, 6);
-  if (code.length < 6) {
-    throw new Error("A valid 6-digit pass code is required to confirm payment.");
+export async function toggleParticipantPayment(ticketID: string): Promise<TogglePaymentResult> {
+  const id = ticketID.trim();
+  if (!id) {
+    throw new Error("A ticket ID is required to confirm payment.");
   }
 
   const token = getValidAuthToken();
-  const result = await apiRequest<Record<string, unknown>>("/ticketing/register", {
-    method: "POST",
-    body: { passCode: code },
-    token: token || undefined,
-  });
+  if (!token) {
+    throw new Error("Sign in as admin to confirm payment.");
+  }
+
+  const result = await apiRequest<Record<string, unknown>>(
+    `/ticketing/confirm/${encodeURIComponent(id)}`,
+    { method: "GET", token },
+  );
 
   const ticket = (result.ticket || result) as EngagementParticipantTicket;
-  return ticket;
+  const status = pickString(ticket.status).toLowerCase();
+  const message =
+    typeof result.message === "string" && result.message.trim()
+      ? result.message.trim()
+      : undefined;
+
+  // Still pending after a successful HTTP response → treat as failed confirm.
+  if (status === "issued") {
+    throw new Error(
+      message || "Payment was not confirmed — ticket is still pending. Try again.",
+    );
+  }
+
+  const next: EngagementParticipantTicket = {
+    ...ticket,
+    ticketID: pickString(ticket.ticketID) || id,
+    status: status || "registered",
+  };
+
+  return { ticket: next, paid: true, message };
 }
+
+/** @deprecated Prefer toggleParticipantPayment */
+export const confirmParticipantPayment = toggleParticipantPayment;
