@@ -675,9 +675,7 @@ export function toManagedEvent(engagement: Engagement): ManagedEvent {
   const type = toUiEventType(engagement.engagementType);
   const capacity = pickCapacity(engagement);
   const registered = pickRegistered(engagement);
-  const subtitle = truncateText(
-    engagement.shortDescription || engagement.description || "",
-  );
+  const subtitle = truncateText(engagement.shortDescription || engagement.description || "");
   return {
     id: String(engagement.engagementID ?? "").trim(),
     name: String(engagement.engagementName ?? "").trim() || "Untitled event",
@@ -1051,6 +1049,7 @@ export type WizardEngagementInput = {
   /** Short public/API code for the engagement (e.g. ISIPPE-2026). */
   engagementCode: string;
   description: string;
+  shortDescription?: string;
   category: string;
   audience: string;
   tone: string;
@@ -1209,7 +1208,7 @@ export function buildEngagementPayload(input: WizardEngagementInput): NewEngagem
     engagementName: input.title.trim(),
     engagementCode: input.engagementCode.trim(),
     category: input.category || undefined,
-    shortDescription: input.description.trim().slice(0, 180) || undefined,
+    shortDescription: (input.shortDescription || input.description).trim() || undefined,
     description: input.description.trim() || undefined,
     audience,
     tone,
