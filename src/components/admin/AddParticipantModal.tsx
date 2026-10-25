@@ -30,7 +30,7 @@ export type AddedParticipant = {
   participationType: ParticipationType;
   /** Ticket pass code — used for GET /ticketing/{passCode}/event-pass */
   passCode?: string;
-  /** Engagement ticket id — used for GET /ticketing/confirm/{ticketID} */
+  /** Engagement ticket id — used for GET /ticketing/{ticketID}/confirm */
   ticketID?: string;
   reference?: string;
   /** Raw API ticket status (issued | registered | checked-in | cancelled). */

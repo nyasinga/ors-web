@@ -180,7 +180,7 @@ export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<G
   });
 
   const confirmResult = await apiRequest<Record<string, unknown>>(
-    `/ticketing/confirm/${encodeURIComponent(ticketID)}`,
+    `/ticketing/${encodeURIComponent(ticketID)}/confirm`,
     { method: "GET", token },
   );
 

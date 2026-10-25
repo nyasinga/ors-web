@@ -225,7 +225,7 @@ export type TogglePaymentResult = {
 
 /**
  * Confirm / toggle payment for an engagement ticket.
- * GET /ticketing/confirm/{ticketID} (@authenticate('jwt')).
+ * GET /ticketing/{ticketID}/confirm (@authenticate('jwt')).
  */
 export async function toggleParticipantPayment(ticketID: string): Promise<TogglePaymentResult> {
   const id = ticketID.trim();
@@ -239,7 +239,7 @@ export async function toggleParticipantPayment(ticketID: string): Promise<Toggle
   }
 
   const result = await apiRequest<Record<string, unknown>>(
-    `/ticketing/confirm/${encodeURIComponent(id)}`,
+    `/ticketing/${encodeURIComponent(id)}/confirm`,
     { method: "GET", token },
   );
 
