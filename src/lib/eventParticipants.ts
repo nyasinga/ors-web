@@ -109,8 +109,9 @@ function uiTypeLabel(ticket: EngagementParticipantTicket) {
 function uiStatus(ticket: EngagementParticipantTicket): string {
   const status = pickString(ticket.status).toLowerCase();
   if (status === "cancelled" || status === "canceled") return "Cancelled";
-  if (status === "issued") return "Pending";
-  if (status === "registered" || status === "checked-in" || status === "checked_in") return "Confirmed";
+  // draft / issued / registered = awaiting payment verification → Pending
+  if (status === "draft" || status === "issued" || status === "registered") return "Pending";
+  if (status === "checked-in" || status === "checked_in") return "Confirmed";
   return status ? status.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "Pending";
 }
 

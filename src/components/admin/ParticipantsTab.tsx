@@ -141,7 +141,8 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
 
   const isPaymentPaid = (p: AddedParticipant) => {
     const raw = (p.rawStatus || "").toLowerCase();
-    if (raw === "registered" || raw === "checked-in" || raw === "checked_in") return true;
+    // registered = pending verification; only checked-in (or UI Confirmed) counts as paid
+    if (raw === "checked-in" || raw === "checked_in") return true;
     return p.status === "Confirmed";
   };
 
@@ -170,9 +171,9 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
       const { ticket, message } = await toggleParticipantPayment(ticketID);
       const nextStatus = String(ticket.status || "registered").toLowerCase();
       const ui =
-        nextStatus === "registered" || nextStatus === "checked-in" || nextStatus === "checked_in"
+        nextStatus === "checked-in" || nextStatus === "checked_in"
           ? "Confirmed"
-          : nextStatus === "issued"
+          : nextStatus === "draft" || nextStatus === "issued" || nextStatus === "registered"
             ? "Pending"
             : p.status;
       const patch = {

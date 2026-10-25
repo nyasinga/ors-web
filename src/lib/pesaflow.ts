@@ -505,7 +505,8 @@ export async function submitTicketPaymentReference(
   const formData = new FormData();
   formData.append("transactionReference", transactionReference);
   for (const file of input.files || []) {
-    formData.append("proof", file, file.name);
+    // Backend FileUploadTypes.PaymentProof = 'payment-proof'
+    formData.append("payment-proof", file, file.name);
   }
 
   const endpoint = `${PAYMENT_API_BASE}/ticketing/${encodeURIComponent(ticketID)}/reference`;
