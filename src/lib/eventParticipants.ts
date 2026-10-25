@@ -5,7 +5,7 @@
  * @see https://ciprop.mustsacco.co.ke/explorer/#/EngagementTicketController
  */
 
-import { API_BASE_URL, apiForm, apiRequest, toFormData } from "./api";
+import { API_BASE_URL, TENANT_ID, apiForm, apiRequest, toFormData } from "./api";
 import { getValidAuthToken } from "./auth";
 import type { AddedParticipant } from "../components/admin/AddParticipantModal";
 import { toTicketingUserType, type ParticipationType } from "../data/registration";
@@ -103,20 +103,49 @@ function pickString(...values: unknown[]): string {
   return "";
 }
 
-/** Resolve relative media paths against the API host (or Vite `/api` proxy). */
-export function resolveTicketMediaUrl(url: string): string {
-  const raw = url.trim();
+/**
+ * Bank payment proof files are stored as resource IDs on `paymentReceiptURL`.
+ * Download via GET /resources/download/{id}?tenant-id=ACA
+ */
+export function resolvePaymentProofUrl(paymentReceiptURL: string): string {
+  const raw = paymentReceiptURL.trim();
   if (!raw) return "";
-  if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
+  if (/^(data:|blob:)/i.test(raw)) return raw;
+
+  // Already a download URL (absolute or relative).
+  if (/\/resources\/download\//i.test(raw)) {
+    if (/^(https?:)/i.test(raw)) {
+      return raw.includes("tenant-id=")
+        ? raw
+        : `${raw}${raw.includes("?") ? "&" : "?"}tenant-id=${encodeURIComponent(TENANT_ID)}`;
+    }
+    const base = API_BASE_URL.replace(/\/$/, "");
+    const path = raw.startsWith("/") ? raw : `/${raw}`;
+    const withTenant = path.includes("tenant-id=")
+      ? path
+      : `${path}${path.includes("?") ? "&" : "?"}tenant-id=${encodeURIComponent(TENANT_ID)}`;
+    return `${base}${withTenant}`;
+  }
+
+  // Full absolute URL to some other host — use as-is.
+  if (/^(https?:)/i.test(raw)) return raw;
+
+  // Resource id → /resources/download/{paymentReceiptURL}?tenant-id=ACA
+  const id = raw.replace(/^\/+/, "").replace(/^resources\/download\//i, "");
   const base = API_BASE_URL.replace(/\/$/, "");
-  return `${base}${raw.startsWith("/") ? raw : `/${raw}`}`;
+  return `${base}/resources/download/${id}?tenant-id=${encodeURIComponent(TENANT_ID)}`;
+}
+
+/** @deprecated Prefer resolvePaymentProofUrl for receipts. */
+export function resolveTicketMediaUrl(url: string): string {
+  return resolvePaymentProofUrl(url);
 }
 
 function collectProofUrls(ticket: EngagementParticipantTicket): string[] {
   const found = new Set<string>();
   const add = (value: unknown) => {
     if (typeof value === "string" && value.trim()) {
-      const resolved = resolveTicketMediaUrl(value.trim());
+      const resolved = resolvePaymentProofUrl(value.trim());
       if (resolved) found.add(resolved);
       return;
     }
@@ -128,10 +157,14 @@ function collectProofUrls(ticket: EngagementParticipantTicket): string[] {
     if (!row) return;
     add(row.url);
     add(row.path);
+    add(row.id);
+    add(row.resourceID);
+    add(row.resourceId);
     add(row.fileURL);
     add(row.fileUrl);
     add(row.location);
     add(row.href);
+    add(row.paymentReceiptURL);
   };
 
   add(ticket.paymentReceiptURL);
