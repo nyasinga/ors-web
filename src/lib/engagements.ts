@@ -59,6 +59,19 @@ export async function createEngagement(body: NewEngagement) {
   });
 }
 
+/** Get the active published engagement. */
+export async function getActiveEngagement(): Promise<Engagement | null> {
+  const rows = await listEngagements({
+    where: {
+      isPublished: true,
+      status: "published",
+    },
+    limit: 1,
+    order: "publishedAt DESC",
+  });
+  return rows[0] ?? null;
+}
+
 /** Build FormData the same way as registration `signupAfterPayment`. */
 function toEngagementFormData(
   input: Record<string, unknown>,

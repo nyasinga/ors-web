@@ -27,6 +27,7 @@ import {
 } from "../../lib/engagements";
 import { sumEngagementParticipantCounts } from "../../lib/eventParticipants";
 import type { Engagement } from "../../types/engagement";
+import { ParticipantsTab } from "../../components/admin/ParticipantsTab";
 
 const glass =
   "rounded-xl border border-[rgba(215,231,248,.95)] bg-[rgba(255,255,255,.86)] shadow-[0_5px_22px_rgba(56,126,190,.09)]";
@@ -582,6 +583,16 @@ export function AdminDashboardPage() {
           </div>
         </article>
       </section>
+
+      <section className={cn(glass, "min-w-0 p-3 shadow-card")}>
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-[13px] font-extrabold">
+          <Users size={14} strokeWidth={2} className="text-blue-600" aria-hidden />
+          Pending Approvals
+        </h2>
+      </div>
+      <ParticipantsTab eventId={featured?.engagementID!} fromApi={true} loading={eventsLoading} />
+    </section>
 
       {/* Bottom panels */}
       <section className="grid grid-cols-1 gap-2.5 lg:grid-cols-[1.2fr_1.2fr_.8fr]">
