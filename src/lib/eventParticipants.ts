@@ -552,13 +552,10 @@ export async function toggleParticipantPayment(ticketID: string): Promise<Toggle
 
   const ticket = (result.ticket || result) as EngagementParticipantTicket;
   const status = pickString(ticket.status).toLowerCase();
-  const message =
-    typeof result.message === "string" && result.message.trim()
-      ? result.message.trim()
-      : undefined;
+  const message = (typeof result.message === "string" && result.message.trim())? result.message.trim() : undefined;
 
   // Still pending after a successful HTTP response → treat as failed confirm.
-  if (status === "issued") {
+  if (status === "registered") {
     throw new Error(
       message || "Payment was not confirmed — ticket is still pending. Try again.",
     );
