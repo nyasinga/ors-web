@@ -404,18 +404,14 @@ export async function createAdminParticipant(
   const transactionReference =
     waiverRef || encodeVerifiedReference("ADMIN-ADD");
 
+  // EngagementTicket model rejects unknown top-level props (userType, title,
+  // organisation, jobTitle, country, city, paymentMode, …). Keep those in extraData.
   const body: Record<string, unknown> = {
     engagementID,
     fullName: input.fullName.trim(),
     email: input.email.trim(),
     phoneNo: input.phone.trim(),
-    userType,
     participationType: userType,
-    title: input.title.trim(),
-    organisation: input.organisation.trim(),
-    jobTitle: input.jobTitle.trim(),
-    country: input.country.trim(),
-    city: input.city.trim(),
     currency: "KES",
     ticketPrice: waiver
       ? 0
@@ -446,15 +442,6 @@ export async function createAdminParticipant(
         : {}),
     },
   };
-
-  if (paymentMode) {
-    body.paymentMode = paymentMode;
-    body.waiverReason = waiver!.reason;
-  }
-  if (waiver?.agencyName?.trim()) body.agencyName = waiver.agencyName.trim();
-  if (waiver?.sponsorTicketID?.trim()) {
-    body.sponsorTicketID = waiver.sponsorTicketID.trim();
-  }
 
   const result = await apiForm<Record<string, unknown>>("/ticketing", {
     method: "POST",

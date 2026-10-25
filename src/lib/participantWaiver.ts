@@ -189,7 +189,7 @@ export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<G
     }),
   };
 
-  // Backend validates `userType` against a fixed allow-list (not participationType).
+  // EngagementTicket rejects unknown top-level props — put profile/waiver meta in extraData.
   const userType =
     input.reason === "gov_speaker"
       ? "speaker"
@@ -199,16 +199,18 @@ export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<G
     engagementID,
     ticketPrice: 0,
     currency: "KES",
-    userType,
     participationType: userType,
-    paymentMode: waiver.paymentMode,
-    waiverReason: waiver.waiverReason,
     transactionReference: waiver.transactionReference,
     status: "registered",
     extraData: {
       paymentMode: waiver.paymentMode,
       waiverReason: waiver.waiverReason,
       userType,
+      ...(input.title?.trim() ? { title: input.title.trim() } : {}),
+      ...(input.organisation?.trim() ? { organisation: input.organisation.trim() } : {}),
+      ...(input.jobTitle?.trim() ? { jobTitle: input.jobTitle.trim() } : {}),
+      ...(input.country?.trim() ? { country: input.country.trim() } : {}),
+      ...(input.city?.trim() ? { city: input.city.trim() } : {}),
       ...(waiver.agencyName ? { agencyName: waiver.agencyName } : {}),
       ...(waiver.sponsorTicketID ? { sponsorTicketID: waiver.sponsorTicketID } : {}),
     },
@@ -218,13 +220,6 @@ export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<G
   if (input.fullName?.trim()) body.fullName = input.fullName.trim();
   if (input.email?.trim()) body.email = input.email.trim();
   if (input.phoneNo?.trim()) body.phoneNo = input.phoneNo.trim();
-  if (input.organisation?.trim()) body.organisation = input.organisation.trim();
-  if (input.jobTitle?.trim()) body.jobTitle = input.jobTitle.trim();
-  if (input.country?.trim()) body.country = input.country.trim();
-  if (input.city?.trim()) body.city = input.city.trim();
-  if (input.title?.trim()) body.title = input.title.trim();
-  if (waiver.agencyName) body.agencyName = waiver.agencyName;
-  if (waiver.sponsorTicketID) body.sponsorTicketID = waiver.sponsorTicketID;
 
   const result = await apiForm<Record<string, unknown>>("/ticketing", {
     method: "POST",
