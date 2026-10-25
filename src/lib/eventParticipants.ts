@@ -5,7 +5,7 @@
  * @see https://ciprop.mustsacco.co.ke/explorer/#/EngagementTicketController
  */
 
-import { apiForm, apiRequest, toFormData } from "./api";
+import { API_BASE_URL, apiForm, apiRequest, toFormData } from "./api";
 import { getValidAuthToken } from "./auth";
 import type { AddedParticipant } from "../components/admin/AddParticipantModal";
 import { toTicketingUserType, type ParticipationType } from "../data/registration";
@@ -18,7 +18,11 @@ import {
   verificationBucketLabel,
   type VerificationBucket,
 } from "./paymentVerification";
-import { parseWaiverFromTicket } from "./participantWaiver";
+import {
+  encodeWaiverReference,
+  parseWaiverFromTicket,
+  type WaiverReason,
+} from "./participantWaiver";
 
 export type { VerificationBucket };
 export { canIssueEventPass, verificationBucketLabel };
@@ -99,6 +103,55 @@ function pickString(...values: unknown[]): string {
   return "";
 }
 
+/** Resolve relative media paths against the API host (or Vite `/api` proxy). */
+export function resolveTicketMediaUrl(url: string): string {
+  const raw = url.trim();
+  if (!raw) return "";
+  if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
+  const base = API_BASE_URL.replace(/\/$/, "");
+  return `${base}${raw.startsWith("/") ? raw : `/${raw}`}`;
+}
+
+function collectProofUrls(ticket: EngagementParticipantTicket): string[] {
+  const found = new Set<string>();
+  const add = (value: unknown) => {
+    if (typeof value === "string" && value.trim()) {
+      const resolved = resolveTicketMediaUrl(value.trim());
+      if (resolved) found.add(resolved);
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach(add);
+      return;
+    }
+    const row = asRecord(value);
+    if (!row) return;
+    add(row.url);
+    add(row.path);
+    add(row.fileURL);
+    add(row.fileUrl);
+    add(row.location);
+    add(row.href);
+  };
+
+  add(ticket.paymentReceiptURL);
+  const extra = asRecord(ticket.extraData);
+  if (extra) {
+    add(extra.paymentReceiptURL);
+    add(extra.paymentProof);
+    add(extra.paymentProofURL);
+    add(extra.paymentProofUrl);
+    add(extra.receiptUrl);
+    add(extra.receiptURL);
+    add(extra["payment-proof"]);
+    add(extra.paymentProofs);
+    add(extra.files);
+    add(extra.documents);
+    add(extra.receipts);
+  }
+  return Array.from(found);
+}
+
 function initialsFromName(name: string) {
   return (
     name
@@ -164,7 +217,8 @@ function toAddedParticipant(ticket: EngagementParticipantTicket): AddedParticipa
   const waiver = parseWaiverFromTicket(ticket);
   const bucket = resolveVerificationBucket(ticket);
   const txRef = pickString(ticket.transactionReference, waiver?.transactionReference);
-  const receiptUrl = pickString(ticket.paymentReceiptURL);
+  const proofUrls = collectProofUrls(ticket);
+  const receiptUrl = proofUrls[0] || pickString(ticket.paymentReceiptURL);
 
   return {
     id: pickString(ticket.ticketID, ticket.reference, ticket.passCode, email, name) || `p-${Date.now()}`,
@@ -202,6 +256,7 @@ function toAddedParticipant(ticket: EngagementParticipantTicket): AddedParticipa
     transactionReference: txRef || undefined,
     displayPaymentReference: stripVerifiedPrefix(txRef) || undefined,
     paymentReceiptURL: receiptUrl || undefined,
+    paymentProofUrls: proofUrls.length ? proofUrls : undefined,
     verificationBucket: bucket,
     passAllowed: canIssueEventPass(ticket),
   };
@@ -284,6 +339,12 @@ export async function sumEngagementParticipantCounts(
   return { total, pendingVerification, confirmed, waived, byId };
 }
 
+export type CreateAdminParticipantWaiver = {
+  reason: WaiverReason;
+  agencyName?: string;
+  sponsorTicketID?: string;
+};
+
 export type CreateAdminParticipantInput = {
   engagementID: string;
   participationType: ParticipationType;
@@ -299,6 +360,8 @@ export type CreateAdminParticipantInput = {
   accessibility?: string;
   /** Optional ticket price; omit or 0 when admin is registering without charge. */
   ticketPrice?: number;
+  /** When set, create as waived / complimentary (skips payment). */
+  waiver?: CreateAdminParticipantWaiver;
 };
 
 /**
@@ -313,7 +376,34 @@ export async function createAdminParticipant(
   const token = getValidAuthToken();
   if (!token) throw new Error("Sign in as admin to add a participant.");
 
-  const userType = toTicketingUserType(input.participationType);
+  const waiver = input.waiver;
+  if (waiver?.reason === "gov_speaker" && !waiver.agencyName?.trim()) {
+    throw new Error("Enter the government agency for this speaker waiver.");
+  }
+  if (waiver?.reason === "sponsor_allocation" && !waiver.sponsorTicketID?.trim()) {
+    throw new Error("Select which sponsor this complimentary seat belongs to.");
+  }
+
+  const userType =
+    waiver?.reason === "gov_speaker"
+      ? "speaker"
+      : toTicketingUserType(input.participationType);
+
+  const paymentMode = waiver
+    ? waiver.reason === "sponsor_allocation"
+      ? "complimentary"
+      : "waived"
+    : undefined;
+  const waiverRef = waiver
+    ? encodeWaiverReference({
+        reason: waiver.reason,
+        agencyName: waiver.agencyName,
+        sponsorTicketID: waiver.sponsorTicketID,
+      })
+    : undefined;
+  const transactionReference =
+    waiverRef || encodeVerifiedReference("ADMIN-ADD");
+
   const body: Record<string, unknown> = {
     engagementID,
     fullName: input.fullName.trim(),
@@ -327,10 +417,13 @@ export async function createAdminParticipant(
     country: input.country.trim(),
     city: input.city.trim(),
     currency: "KES",
-    ticketPrice: Number.isFinite(input.ticketPrice) ? Number(input.ticketPrice) : 0,
+    ticketPrice: waiver
+      ? 0
+      : Number.isFinite(input.ticketPrice)
+        ? Number(input.ticketPrice)
+        : 0,
     status: "registered",
-    // Admin-created participants are treated as already verified.
-    transactionReference: encodeVerifiedReference("ADMIN-ADD"),
+    transactionReference,
     extraData: {
       organisation: input.organisation.trim(),
       jobTitle: input.jobTitle.trim(),
@@ -342,9 +435,26 @@ export async function createAdminParticipant(
       userType,
       paymentVerified: true,
       verifiedAt: new Date().toISOString(),
-      source: "admin-add",
+      source: waiver ? "admin-add-waiver" : "admin-add",
+      ...(paymentMode ? { paymentMode } : {}),
+      ...(waiver ? { waiverReason: waiver.reason } : {}),
+      ...(waiver?.agencyName?.trim()
+        ? { agencyName: waiver.agencyName.trim() }
+        : {}),
+      ...(waiver?.sponsorTicketID?.trim()
+        ? { sponsorTicketID: waiver.sponsorTicketID.trim() }
+        : {}),
     },
   };
+
+  if (paymentMode) {
+    body.paymentMode = paymentMode;
+    body.waiverReason = waiver!.reason;
+  }
+  if (waiver?.agencyName?.trim()) body.agencyName = waiver.agencyName.trim();
+  if (waiver?.sponsorTicketID?.trim()) {
+    body.sponsorTicketID = waiver.sponsorTicketID.trim();
+  }
 
   const result = await apiForm<Record<string, unknown>>("/ticketing", {
     method: "POST",
@@ -354,7 +464,8 @@ export async function createAdminParticipant(
 
   const ticket = (result.ticket || result) as EngagementParticipantTicket;
   const ticketID = pickString(ticket.ticketID);
-  if (ticketID) {
+  // Non-waiver admin adds get an explicit VERIFIED stamp; waivers use WAIVER-* refs.
+  if (ticketID && !waiver) {
     try {
       await stampTicketVerified(ticketID, "ADMIN-ADD");
     } catch {
@@ -374,10 +485,20 @@ export async function createAdminParticipant(
     country: pickString(ticket.country) || input.country.trim(),
     city: pickString(ticket.city) || input.city.trim(),
     title: pickString(ticket.title) || input.title.trim(),
-    transactionReference: encodeVerifiedReference("ADMIN-ADD"),
+    paymentMode: paymentMode || ticket.paymentMode,
+    waiverReason: waiver?.reason || ticket.waiverReason,
+    transactionReference,
     extraData: {
       ...(asRecord(ticket.extraData) || {}),
       paymentVerified: true,
+      ...(paymentMode ? { paymentMode } : {}),
+      ...(waiver ? { waiverReason: waiver.reason } : {}),
+      ...(waiver?.agencyName?.trim()
+        ? { agencyName: waiver.agencyName.trim() }
+        : {}),
+      ...(waiver?.sponsorTicketID?.trim()
+        ? { sponsorTicketID: waiver.sponsorTicketID.trim() }
+        : {}),
     },
   });
 }
@@ -446,3 +567,37 @@ export async function toggleParticipantPayment(ticketID: string): Promise<Toggle
 
 /** @deprecated Prefer toggleParticipantPayment */
 export const confirmParticipantPayment = toggleParticipantPayment;
+
+/**
+ * Cancel an engagement ticket (POST /ticketing with status=cancelled).
+ * No dedicated cancel route is published in OpenAPI.
+ */
+export async function cancelParticipantTicket(
+  ticketID: string,
+  engagementID?: string,
+): Promise<EngagementParticipantTicket> {
+  const id = ticketID.trim();
+  if (!id) throw new Error("A ticket ID is required to cancel.");
+
+  const token = getValidAuthToken();
+  if (!token) throw new Error("Sign in as admin to cancel a ticket.");
+
+  const body: Record<string, unknown> = {
+    ticketID: id,
+    status: "cancelled",
+  };
+  if (engagementID?.trim()) body.engagementID = engagementID.trim();
+
+  const result = await apiForm<Record<string, unknown>>("/ticketing", {
+    method: "POST",
+    token,
+    formData: toFormData(body),
+  });
+
+  const ticket = (result.ticket || result) as EngagementParticipantTicket;
+  return {
+    ...ticket,
+    ticketID: pickString(ticket.ticketID) || id,
+    status: pickString(ticket.status).toLowerCase() || "cancelled",
+  };
+}

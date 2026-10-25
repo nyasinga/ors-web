@@ -3,11 +3,13 @@ import { Check, Download, Plus, Printer, Search, Timer, Users } from "lucide-rea
 import { AddParticipantModal, type AddedParticipant } from "./AddParticipantModal";
 import { GrantWaiverModal } from "./GrantWaiverModal";
 import { ParticipantDetailModal } from "./ParticipantDetailModal";
+import { PaymentProofReviewModal } from "./PaymentProofReviewModal";
 import { EventPassPreviewModal } from "../tickets/EventPassPreviewModal";
 import { useToast } from "../ui/Toast";
 import { ApiError } from "../../lib/api";
 import { cn } from "../../lib/cn";
 import {
+  cancelParticipantTicket,
   createAdminParticipant,
   listEventParticipants,
   toggleParticipantPayment,
@@ -18,6 +20,9 @@ import {
   type WaiverReason,
 } from "../../lib/participantWaiver";
 import { fetchEventPassPdfUrl } from "../../lib/printParticipantTicket";
+
+/** Temporarily off until POST /ticketing waiver payload is confirmed with backend. */
+const WAIVER_ENABLED = false;
 
 const avatarToneClass: Record<string, string> = {
   blue: "bg-blue-200 text-blue-700",
@@ -36,6 +41,9 @@ function statusPillClass(status: string) {
   if (status === "Complimentary") return "rounded-md bg-violet-100 px-2 py-0.5 text-[13px] font-semibold text-violet-800";
   if (status === "Pending verification") {
     return "rounded-md bg-amber-100 px-2 py-0.5 text-[13px] font-semibold text-amber-800";
+  }
+  if (status === "Draft") {
+    return "rounded-md bg-orange-100 px-2 py-0.5 text-[13px] font-semibold text-orange-800";
   }
   if (status === "Registered" || status === "Pending") {
     return "rounded-md bg-slate-100 px-2 py-0.5 text-[13px] font-semibold text-slate-700";
@@ -77,6 +85,8 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
   const [waiverBusy, setWaiverBusy] = useState(false);
   const [addBusy, setAddBusy] = useState(false);
   const [detailTarget, setDetailTarget] = useState<AddedParticipant | null>(null);
+  const [proofTarget, setProofTarget] = useState<AddedParticipant | null>(null);
+  const [cancelBusyId, setCancelBusyId] = useState<string | null>(null);
   const [passPreview, setPassPreview] = useState<{
     url: string;
     passCode: string;
@@ -181,6 +191,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
   };
 
   const canGrantWaiver = (p: AddedParticipant) => {
+    if (!WAIVER_ENABLED) return false;
     if (isWaived(p) || isPaymentPaid(p)) return false;
     if (p.status === "Cancelled") return false;
     const ticketID = p.ticketID || (p.id && !p.id.startsWith("p-") ? p.id : "");
@@ -305,6 +316,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
       setApiRows((prev) => prev.map((row) => (row.id === p.id ? { ...row, ...patch } : row)));
       setLocalRows((prev) => prev.map((row) => (row.id === p.id ? { ...row, ...patch } : row)));
       setDetailTarget((prev) => (prev?.id === p.id ? { ...prev, ...patch } : prev));
+      setProofTarget((prev) => (prev?.id === p.id ? { ...prev, ...patch } : prev));
       toast.success(message || `Payment verified for ${p.name}. Pass can now be issued.`);
       void reloadParticipants();
     } catch (err) {
@@ -324,6 +336,69 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     } finally {
       setConfirmingId(null);
     }
+  };
+
+  const handleCancelTicket = async (p: AddedParticipant) => {
+    const ticketID = p.ticketID || (p.id && !p.id.startsWith("p-") ? p.id : "");
+    if (!ticketID) {
+      toast.error("No ticket ID on this registration — cannot cancel.");
+      return;
+    }
+    if (p.status === "Cancelled") {
+      toast.info("This registration is already cancelled.");
+      return;
+    }
+    const ok = window.confirm(
+      `Cancel registration for ${p.name}? Their event pass will no longer be valid.`,
+    );
+    if (!ok) return;
+
+    setCancelBusyId(p.id);
+    try {
+      await cancelParticipantTicket(ticketID, eventId);
+      const patch = {
+        status: "Cancelled" as const,
+        rawStatus: "cancelled",
+        verificationBucket: "cancelled" as const,
+        passAllowed: false,
+        checkIn: "—",
+      };
+      setApiRows((prev) => prev.map((row) => (row.id === p.id ? { ...row, ...patch } : row)));
+      setLocalRows((prev) => prev.map((row) => (row.id === p.id ? { ...row, ...patch } : row)));
+      setDetailTarget((prev) => (prev?.id === p.id ? { ...prev, ...patch } : prev));
+      setProofTarget(null);
+      toast.success(`Cancelled registration for ${p.name}.`);
+      void reloadParticipants();
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Could not cancel ticket.",
+      );
+    } finally {
+      setCancelBusyId(null);
+    }
+  };
+
+  const canReviewProof = (p: AddedParticipant) => {
+    if (p.status === "Cancelled") return false;
+    if (p.verificationBucket === "pending_verification") return true;
+    if (p.status === "Pending verification" || p.status === "Draft" || p.status === "Registered") {
+      return true;
+    }
+    const raw = (p.rawStatus || "").toLowerCase();
+    if (raw === "draft" || raw === "issued" || raw === "registered") return true;
+    return Boolean(p.paymentReceiptURL || p.paymentProofUrls?.length || p.displayPaymentReference);
+  };
+
+  const openParticipantReview = (p: AddedParticipant) => {
+    if (canReviewProof(p) && !isPaymentPaid(p)) {
+      setProofTarget(p);
+      return;
+    }
+    setDetailTarget(p);
   };
 
   const source = useMemo(() => {
@@ -429,6 +504,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
       <AddParticipantModal
         open={addOpen}
         busy={addBusy}
+        participants={source}
         onClose={() => {
           if (!addBusy) setAddOpen(false);
         }}
@@ -451,9 +527,14 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
               city: draft.details.city,
               dietary: draft.details.dietary,
               accessibility: draft.details.accessibility,
+              waiver: draft.waiver,
             });
             setLocalRows((prev) => [created, ...prev]);
-            toast.success(`${created.name} added as ${created.type}.`);
+            toast.success(
+              draft.waiver
+                ? `${created.name} added with ${waiverReasonLabel(draft.waiver.reason)}.`
+                : `${created.name} added as ${created.type}.`,
+            );
             void reloadParticipants();
           } catch (err) {
             const message =
@@ -487,13 +568,41 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
         open={Boolean(detailTarget)}
         participant={detailTarget}
         verifyBusy={confirmingId === detailTarget?.id}
+        cancelBusy={cancelBusyId === detailTarget?.id}
         onClose={() => setDetailTarget(null)}
         onVerify={(p) => {
           void handleTogglePayment(p);
         }}
-        onWaiver={(p) => {
+        onCancelTicket={(p) => {
+          void handleCancelTicket(p);
+        }}
+        onViewProof={(p) => {
           setDetailTarget(null);
-          setWaiverTarget(p);
+          setProofTarget(p);
+        }}
+        onWaiver={
+          WAIVER_ENABLED
+            ? (p) => {
+                setDetailTarget(null);
+                setWaiverTarget(p);
+              }
+            : undefined
+        }
+      />
+
+      <PaymentProofReviewModal
+        open={Boolean(proofTarget)}
+        participant={proofTarget}
+        approveBusy={confirmingId === proofTarget?.id}
+        cancelBusy={cancelBusyId === proofTarget?.id}
+        onClose={() => {
+          if (!confirmingId && !cancelBusyId) setProofTarget(null);
+        }}
+        onApprove={(p) => {
+          void handleTogglePayment(p);
+        }}
+        onCancelTicket={(p) => {
+          void handleCancelTicket(p);
         }}
       />
 
@@ -569,6 +678,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="">All status</option>
+            <option>Draft</option>
             <option>Registered</option>
             <option>Pending verification</option>
             <option>Confirmed</option>
@@ -677,7 +787,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                         <button
                           type="button"
                           className="text-left font-semibold text-blue-700 hover:underline"
-                          onClick={() => setDetailTarget(p)}
+                          onClick={() => openParticipantReview(p)}
                         >
                           {p.name}
                         </button>
@@ -812,6 +922,15 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                           <Printer size={12} />
                           {printingId === p.id ? "…" : "Print"}
                         </button>
+                        {canReviewProof(p) && !isPaymentPaid(p) ? (
+                          <button
+                            type="button"
+                            className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[12px] font-semibold text-amber-900 hover:bg-amber-100"
+                            onClick={() => setProofTarget(p)}
+                          >
+                            Proof
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           className="inline-flex items-center rounded-md border border-blue-100 px-2 py-0.5 text-[12px] font-semibold text-blue-700 hover:bg-blue-50"

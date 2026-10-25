@@ -15,6 +15,7 @@ import { parseWaiverFromTicket } from "./participantWaiver";
 export const VERIFIED_PREFIX = "VERIFIED|";
 
 export type VerificationBucket =
+  | "draft"
   | "registered"
   | "pending_verification"
   | "confirmed"
@@ -68,19 +69,22 @@ export function resolveVerificationBucket(ticket: {
     String(extra?.paymentVerified || "").toLowerCase() === "true" ||
     Boolean(extra?.verifiedAt);
 
-  if (isAdminVerifiedReference(ref) || receipt || flagged) return "confirmed";
+  // Receipt / ref alone means proof submitted — admin must still approve.
+  if (isAdminVerifiedReference(ref) || flagged) return "confirmed";
 
-  if (ref) return "pending_verification";
+  if (ref || receipt) return "pending_verification";
 
-  if (status === "draft" || status === "issued" || status === "registered" || !status) {
-    return "registered";
-  }
+  if (status === "draft" || status === "issued") return "draft";
+
+  if (status === "registered" || !status) return "registered";
 
   return "registered";
 }
 
 export function verificationBucketLabel(bucket: VerificationBucket): string {
   switch (bucket) {
+    case "draft":
+      return "Draft";
     case "pending_verification":
       return "Pending verification";
     case "confirmed":

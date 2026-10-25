@@ -9,8 +9,11 @@ type Props = {
   participant: AddedParticipant | null;
   onClose: () => void;
   onVerify?: (p: AddedParticipant) => void;
+  onCancelTicket?: (p: AddedParticipant) => void;
+  onViewProof?: (p: AddedParticipant) => void;
   onWaiver?: (p: AddedParticipant) => void;
   verifyBusy?: boolean;
+  cancelBusy?: boolean;
 };
 
 function Row({ label, value }: { label: string; value: ReactNode }) {
@@ -27,37 +30,69 @@ export function ParticipantDetailModal({
   participant,
   onClose,
   onVerify,
+  onCancelTicket,
+  onViewProof,
   onWaiver,
   verifyBusy,
+  cancelBusy,
 }: Props) {
   const p = participant;
-  const pending = p?.status === "Pending verification";
-  const canAct = pending || p?.status === "Registered";
+  const busy = Boolean(verifyBusy || cancelBusy);
+  const pending =
+    p?.status === "Pending verification" ||
+    p?.status === "Draft" ||
+    p?.status === "Registered";
+  const canApprove =
+    pending &&
+    p?.status !== "Cancelled" &&
+    p?.status !== "Confirmed" &&
+    p?.status !== "Waived" &&
+    p?.status !== "Complimentary";
+  const canCancel = p && p.status !== "Cancelled";
+  const hasProof = Boolean(p?.paymentReceiptURL || p?.paymentProofUrls?.length);
 
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={busy ? () => undefined : onClose}
       title="Registration details"
       className="md:max-w-lg"
       footer={
         <div className="flex flex-wrap justify-end gap-2">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
             Close
           </Button>
-          {p && canAct && onWaiver ? (
+          {p && canCancel && onCancelTicket ? (
+            <Button
+              variant="danger"
+              disabled={busy}
+              onClick={() => onCancelTicket(p)}
+            >
+              {cancelBusy ? "Cancelling…" : "Cancel ticket"}
+            </Button>
+          ) : null}
+          {p && onWaiver && canApprove ? (
             <Button
               variant="ghost"
-              disabled={verifyBusy}
+              disabled={busy}
               onClick={() => onWaiver(p)}
               className="!text-sky-800"
             >
               Grant waiver
             </Button>
           ) : null}
-          {p && canAct && onVerify ? (
-            <Button disabled={verifyBusy} onClick={() => onVerify(p)}>
-              {verifyBusy ? "Verifying…" : "Verify payment"}
+          {p && hasProof && onViewProof ? (
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={() => onViewProof(p)}
+            >
+              View payment proof
+            </Button>
+          ) : null}
+          {p && canApprove && onVerify ? (
+            <Button disabled={busy} onClick={() => onVerify(p)}>
+              {verifyBusy ? "Approving…" : "Approve payment"}
             </Button>
           ) : null}
         </div>
@@ -72,7 +107,17 @@ export function ParticipantDetailModal({
           <Row label="Job title" value={p.jobTitle} />
           <Row label="Type" value={p.type} />
           <Row label="Country / city" value={[p.country, p.city].filter(Boolean).join(", ")} />
-          <Row label="Status" value={p.status} />
+          <Row
+            label="Status"
+            value={
+              <>
+                {p.status}
+                {p.rawStatus ? (
+                  <span className="text-slate-500"> · API: {p.rawStatus}</span>
+                ) : null}
+              </>
+            }
+          />
           <Row label="Registered" value={`${p.date}${p.time ? ` · ${p.time}` : ""}`} />
           <Row
             label="Payment reference"
@@ -86,18 +131,28 @@ export function ParticipantDetailModal({
               value={`${waiverReasonLabel(p.waiverReason)}${p.agencyName ? ` · ${p.agencyName}` : ""}`}
             />
           ) : null}
-          {p.paymentReceiptURL ? (
+          {hasProof ? (
             <Row
               label="Proof / receipt"
               value={
-                <a
-                  href={p.paymentReceiptURL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-blue-600 underline"
-                >
-                  Open file
-                </a>
+                onViewProof ? (
+                  <button
+                    type="button"
+                    className="font-semibold text-blue-600 underline"
+                    onClick={() => onViewProof(p)}
+                  >
+                    Open payment proof
+                  </button>
+                ) : (
+                  <a
+                    href={p.paymentReceiptURL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-blue-600 underline"
+                  >
+                    Open file
+                  </a>
+                )
               }
             />
           ) : (
@@ -105,7 +160,7 @@ export function ParticipantDetailModal({
               label="Proof / receipt"
               value={
                 pending
-                  ? "Proof submitted — open via backend storage if linked; verify using payment reference."
+                  ? "No proof file linked yet — approve using payment reference if provided."
                   : "—"
               }
             />
