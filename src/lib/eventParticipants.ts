@@ -575,8 +575,8 @@ export async function cancelParticipantTicket(
   };
   if (engagementID?.trim()) body.engagementID = engagementID.trim();
 
-  const result = await apiForm<Record<string, unknown>>("/ticketing", {
-    method: "POST",
+  const result = await apiForm<Record<string, unknown>>(`/ticketing/${ticketID}`, {
+    method: "PATCH",
     token,
     formData: toFormData(body),
   });

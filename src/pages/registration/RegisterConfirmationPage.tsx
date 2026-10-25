@@ -31,7 +31,7 @@ export function RegisterConfirmationPage() {
     canIssueEventPass({
       status: details.status,
       transactionReference: details.paymentReference || details.reference,
-      paymentMode: details.verificationStatus === "waived" ? "waived" : undefined,
+      paymentMode: (details.verificationStatus as any) === "waived" ? "waived" : undefined,
     });
 
   // Proof just submitted → always pending until admin verifies (even if passCode exists).
