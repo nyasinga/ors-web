@@ -223,16 +223,7 @@ export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<G
     body,
   });
 
-<<<<<<< HEAD
-  const confirmResult = await apiRequest<Record<string, unknown>>(
-    `/ticketing/${encodeURIComponent(ticketID)}/confirm`,
-    { method: "GET", token },
-  );
-
-  const ticket = pickTicket(confirmResult, ticketID);
-=======
   const ticket = pickTicket(result, input.ticketID);
->>>>>>> 91b7a27 (testing)
   const message =
     typeof result.message === "string" && result.message.trim() ? result.message.trim() : undefined;
 
