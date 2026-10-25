@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Download, Plus, Printer, Search, Timer, Users, X } from "lucide-react";
+import { Check, Download, Plus, Printer, Search, Timer, Users } from "lucide-react";
 import { AddParticipantModal, type AddedParticipant } from "./AddParticipantModal";
+import { GrantWaiverModal } from "./GrantWaiverModal";
 import { EventPassPreviewModal } from "../tickets/EventPassPreviewModal";
 import { useToast } from "../ui/Toast";
 import { ApiError } from "../../lib/api";
@@ -9,6 +10,11 @@ import {
   listEventParticipants,
   toggleParticipantPayment,
 } from "../../lib/eventParticipants";
+import {
+  grantParticipantWaiver,
+  waiverReasonLabel,
+  type WaiverReason,
+} from "../../lib/participantWaiver";
 import { fetchEventPassPdfUrl } from "../../lib/printParticipantTicket";
 
 const avatarToneClass: Record<string, string> = {
@@ -24,6 +30,8 @@ const avatarToneClass: Record<string, string> = {
 
 function statusPillClass(status: string) {
   if (status === "Confirmed") return "rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700";
+  if (status === "Waived") return "rounded-md bg-sky-100 px-2 py-0.5 text-[10px] font-semibold text-sky-800";
+  if (status === "Complimentary") return "rounded-md bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800";
   if (status === "Pending") return "rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700";
   if (status === "Cancelled") return "rounded-md bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600";
   return "rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600";
@@ -58,6 +66,8 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   /** Brief flash when toggle-on fails so the switch snaps back visibly. */
   const [toggleFailedId, setToggleFailedId] = useState<string | null>(null);
+  const [waiverTarget, setWaiverTarget] = useState<AddedParticipant | null>(null);
+  const [waiverBusy, setWaiverBusy] = useState(false);
   const [passPreview, setPassPreview] = useState<{
     url: string;
     passCode: string;
@@ -139,7 +149,14 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     };
   }, [eventId, fromApi]);
 
+  const isWaived = (p: AddedParticipant) =>
+    p.paymentMode === "waived" ||
+    p.paymentMode === "complimentary" ||
+    p.status === "Waived" ||
+    p.status === "Complimentary";
+
   const isPaymentPaid = (p: AddedParticipant) => {
+    if (isWaived(p)) return true;
     const raw = (p.rawStatus || "").toLowerCase();
     // registered = pending verification; only checked-in (or UI Confirmed) counts as paid
     if (raw === "checked-in" || raw === "checked_in") return true;
@@ -154,15 +171,101 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     return true;
   };
 
+  const canGrantWaiver = (p: AddedParticipant) => {
+    if (isWaived(p) || isPaymentPaid(p)) return false;
+    if (p.status === "Cancelled") return false;
+    const ticketID = p.ticketID || (p.id && !p.id.startsWith("p-") ? p.id : "");
+    return Boolean(ticketID);
+  };
+
+  const applyWaiverLocally = (
+    p: AddedParticipant,
+    patch: {
+      paymentMode: "waived" | "complimentary";
+      waiverReason: WaiverReason;
+      agencyName?: string;
+      sponsorTicketID?: string;
+      transactionReference?: string;
+      rawStatus?: string;
+    },
+  ) => {
+    const status = patch.paymentMode === "complimentary" ? "Complimentary" : "Waived";
+    const next = {
+      ...p,
+      status,
+      paymentMode: patch.paymentMode,
+      waiverReason: patch.waiverReason,
+      agencyName: patch.agencyName,
+      sponsorTicketID: patch.sponsorTicketID,
+      transactionReference: patch.transactionReference,
+      rawStatus: patch.rawStatus || p.rawStatus || "registered",
+    };
+    setApiRows((prev) => prev.map((row) => (row.id === p.id ? { ...row, ...next } : row)));
+    setLocalRows((prev) => prev.map((row) => (row.id === p.id ? { ...row, ...next } : row)));
+  };
+
+  const handleGrantWaiver = async (input: {
+    reason: WaiverReason;
+    agencyName?: string;
+    sponsorTicketID?: string;
+  }) => {
+    const p = waiverTarget;
+    if (!p) return;
+    const ticketID = p.ticketID || (p.id && !p.id.startsWith("p-") ? p.id : "");
+    if (!ticketID) {
+      toast.error("No ticket ID on this registration — cannot grant waiver.");
+      return;
+    }
+    setWaiverBusy(true);
+    try {
+      const { ticket, waiver, message } = await grantParticipantWaiver({
+        ticketID,
+        reason: input.reason,
+        agencyName: input.agencyName,
+        sponsorTicketID: input.sponsorTicketID,
+      });
+      const mode: "waived" | "complimentary" =
+        input.reason === "sponsor_allocation" ? "complimentary" : "waived";
+      applyWaiverLocally(p, {
+        paymentMode: mode,
+        waiverReason: waiver.waiverReason || input.reason,
+        agencyName: waiver.agencyName,
+        sponsorTicketID: waiver.sponsorTicketID,
+        transactionReference: waiver.transactionReference,
+        rawStatus: String(ticket.status || "registered").toLowerCase(),
+      });
+      toast.success(
+        message ||
+          `${waiverReasonLabel(input.reason)} granted for ${p.name}.`,
+      );
+      setWaiverTarget(null);
+      void reloadParticipants();
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Could not grant waiver.",
+      );
+    } finally {
+      setWaiverBusy(false);
+    }
+  };
+
   const handleTogglePayment = async (p: AddedParticipant) => {
     const ticketID = p.ticketID || (p.id && !p.id.startsWith("p-") ? p.id : "");
     if (!ticketID) {
       toast.error("No ticket ID on this registration — cannot toggle payment.");
       return;
     }
-    // Already paid — API cannot unconfirm; keep switch on.
+    // Already paid / waived — API cannot unconfirm; keep switch on.
     if (isPaymentPaid(p)) {
-      toast.info("Payment is already confirmed. Unconfirm is not supported yet.");
+      toast.info(
+        isWaived(p)
+          ? "This registration is waived — payment toggle is not needed."
+          : "Payment is already confirmed. Unconfirm is not supported yet.",
+      );
       return;
     }
     setToggleFailedId(null);
@@ -233,9 +336,13 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
   const visible = filtered.slice(pageStart, pageStart + pageSize);
   const pageEnd = filtered.length === 0 ? 0 : Math.min(pageStart + visible.length, filtered.length);
 
-  const confirmedCount = source.filter((p) => p.status === "Confirmed").length;
+  const confirmedCount = source.filter(
+    (p) => p.status === "Confirmed" || p.status === "Waived" || p.status === "Complimentary",
+  ).length;
   const pendingCount = source.filter((p) => p.status === "Pending").length;
-  const cancelledCount = source.filter((p) => p.status === "Cancelled").length;
+  const waivedCount = source.filter(
+    (p) => p.status === "Waived" || p.status === "Complimentary",
+  ).length;
   const checkedInCount = source.filter((p) => p.checkIn === "Checked In").length;
   const listBusy = listLoading || (fromApi && loading);
 
@@ -243,7 +350,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     { label: "Total", value: listBusy ? "…" : String(source.length), Icon: Users, tone: "blue" },
     { label: "Confirmed", value: listBusy ? "…" : String(confirmedCount), Icon: Check, tone: "green" },
     { label: "Pending", value: listBusy ? "…" : String(pendingCount), Icon: Timer, tone: "amber" },
-    { label: "Cancelled", value: listBusy ? "…" : String(cancelledCount), Icon: X, tone: "red" },
+    { label: "Waived", value: listBusy ? "…" : String(waivedCount), Icon: Check, tone: "sky" },
     { label: "Checked in", value: listBusy ? "…" : String(checkedInCount), Icon: Users, tone: "purple" },
   ];
 
@@ -253,6 +360,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     amber: "bg-amber-50 text-amber-500",
     red: "bg-red-50 text-red-500",
     purple: "bg-purple-50 text-purple-600",
+    sky: "bg-sky-50 text-sky-600",
   };
 
   const orgs = useMemo(
@@ -285,6 +393,19 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
         onAdd={(participant) => {
           setLocalRows((prev) => [participant, ...prev]);
           toast.success(`${participant.name} added as ${participant.type}.`);
+        }}
+      />
+
+      <GrantWaiverModal
+        open={Boolean(waiverTarget)}
+        participant={waiverTarget}
+        participants={source}
+        busy={waiverBusy}
+        onClose={() => {
+          if (!waiverBusy) setWaiverTarget(null);
+        }}
+        onGrant={(input) => {
+          void handleGrantWaiver(input);
         }}
       />
 
@@ -345,6 +466,8 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
             <option value="">All status</option>
             <option>Confirmed</option>
             <option>Pending</option>
+            <option>Waived</option>
+            <option>Complimentary</option>
             <option>Cancelled</option>
           </select>
           <select
@@ -452,7 +575,15 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                     <td className="border-b border-blue-50 px-2 py-1.5">{p.org}</td>
                     <td className="border-b border-blue-50 px-2 py-1.5">{p.type}</td>
                     <td className="border-b border-blue-50 px-2 py-1.5">
-                      <span className={statusPillClass(p.status)}>{p.status}</span>
+                      <div className="flex flex-col items-start gap-0.5">
+                        <span className={statusPillClass(p.status)}>{p.status}</span>
+                        {p.waiverReason ? (
+                          <span className="text-[9px] text-slate-500">
+                            {waiverReasonLabel(p.waiverReason)}
+                            {p.agencyName ? ` · ${p.agencyName}` : ""}
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="border-b border-blue-50 px-2 py-1.5 whitespace-nowrap">
                       {p.date}
@@ -463,7 +594,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                     </td>
                     <td className="border-b border-blue-50 px-2 py-1.5 text-center">
                       <div className="inline-flex flex-wrap items-center justify-center gap-1.5">
-                        {showPaymentToggle(p) ? (
+                        {showPaymentToggle(p) && !isWaived(p) ? (
                           <label
                             className="inline-flex items-center gap-1.5"
                             title={
@@ -517,6 +648,17 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                               />
                             </button>
                           </label>
+                        ) : null}
+                        {canGrantWaiver(p) ? (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-800 hover:bg-sky-100"
+                            aria-label={`Grant waiver for ${p.name}`}
+                            title="Grant staff / gov speaker / sponsor free-seat waiver"
+                            onClick={() => setWaiverTarget(p)}
+                          >
+                            Waiver
+                          </button>
                         ) : null}
                         <button
                           type="button"

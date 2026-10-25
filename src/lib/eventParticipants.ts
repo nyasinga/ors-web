@@ -9,6 +9,7 @@ import { apiRequest } from "./api";
 import { getValidAuthToken } from "./auth";
 import type { AddedParticipant } from "../components/admin/AddParticipantModal";
 import type { ParticipationType } from "../data/registration";
+import { parseWaiverFromTicket } from "./participantWaiver";
 
 export type EngagementParticipantTicket = {
   ticketID?: string;
@@ -34,6 +35,8 @@ export type EngagementParticipantTicket = {
   title?: string;
   dietary?: string;
   accessibility?: string;
+  transactionReference?: string;
+  paymentReceiptURL?: string | null;
   extraData?: Record<string, unknown> | null;
   [key: string]: unknown;
 };
@@ -109,6 +112,11 @@ function uiTypeLabel(ticket: EngagementParticipantTicket) {
 function uiStatus(ticket: EngagementParticipantTicket): string {
   const status = pickString(ticket.status).toLowerCase();
   if (status === "cancelled" || status === "canceled") return "Cancelled";
+
+  const waiver = parseWaiverFromTicket(ticket);
+  if (waiver?.paymentMode === "complimentary") return "Complimentary";
+  if (waiver?.paymentMode === "waived") return "Waived";
+
   // draft / issued / registered = awaiting payment verification → Pending
   if (status === "draft" || status === "issued" || status === "registered") return "Pending";
   if (status === "checked-in" || status === "checked_in") return "Confirmed";
@@ -149,6 +157,8 @@ function toAddedParticipant(ticket: EngagementParticipantTicket): AddedParticipa
   const typeKey = pickString(ticket.participationType).toLowerCase() || "delegate";
 
   const passCode = pickString(ticket.passCode).replace(/\D/g, "").slice(0, 6);
+  const waiver = parseWaiverFromTicket(ticket);
+  const txRef = pickString(ticket.transactionReference, waiver?.transactionReference);
 
   return {
     id: pickString(ticket.ticketID, ticket.reference, ticket.passCode, email, name) || `p-${Date.now()}`,
@@ -179,6 +189,11 @@ function toAddedParticipant(ticket: EngagementParticipantTicket): AddedParticipa
     ticketID: pickString(ticket.ticketID) || undefined,
     reference: pickString(ticket.reference),
     rawStatus: pickString(ticket.status).toLowerCase() || undefined,
+    paymentMode: waiver?.paymentMode,
+    waiverReason: waiver?.waiverReason,
+    agencyName: waiver?.agencyName,
+    sponsorTicketID: waiver?.sponsorTicketID,
+    transactionReference: txRef || undefined,
   };
 }
 

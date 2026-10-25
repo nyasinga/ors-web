@@ -35,6 +35,13 @@ export type AddedParticipant = {
   reference?: string;
   /** Raw API ticket status (issued | registered | checked-in | cancelled). */
   rawStatus?: string;
+  /** payable | waived | complimentary — set when admin grants a waiver. */
+  paymentMode?: "payable" | "waived" | "complimentary";
+  waiverReason?: "staff" | "gov_speaker" | "sponsor_allocation";
+  agencyName?: string;
+  /** Paid sponsor ticket this complimentary seat is charged against. */
+  sponsorTicketID?: string;
+  transactionReference?: string;
 };
 
 const emptyDetails: RegistrationDetails = {
