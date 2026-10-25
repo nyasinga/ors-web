@@ -938,6 +938,23 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                         >
                           Details
                         </button>
+                        {p.status !== "Cancelled" ? (
+                          <button
+                            type="button"
+                            disabled={
+                              cancelBusyId === p.id ||
+                              !(p.ticketID || (p.id && !p.id.startsWith("p-")))
+                            }
+                            className="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-[12px] font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            aria-label={`Cancel ticket for ${p.name}`}
+                            title="Cancel this registration"
+                            onClick={() => {
+                              void handleCancelTicket(p);
+                            }}
+                          >
+                            {cancelBusyId === p.id ? "…" : "Cancel"}
+                          </button>
+                        ) : null}
                       </div>
                     </td>
                   </tr>
