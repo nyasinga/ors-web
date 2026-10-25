@@ -1,11 +1,12 @@
 /**
  * Admin-only registration waivers.
  *
- * Grant: POST /ticketing  (JWT required)
+ * Grant: POST /ticketing multipart (JWT required; JSON → 415)
  * Re-hydrate from paymentMode / transactionReference / extraData on list.
  */
 
-import { apiRequest } from "./api";
+import { toTicketingUserType } from "../data/registration";
+import { apiForm, toFormData } from "./api";
 import { getValidAuthToken } from "./auth";
 import type { EngagementParticipantTicket } from "./eventParticipants";
 
@@ -158,7 +159,7 @@ function pickTicket(result: Record<string, unknown>, fallbackId?: string): Engag
 }
 
 /**
- * Admin grant waiver via POST /ticketing.
+ * Admin grant waiver via POST /ticketing (multipart — JSON returns 415).
  */
 export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<GrantWaiverResult> {
   const engagementID = input.engagementID.trim();
@@ -188,10 +189,18 @@ export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<G
     }),
   };
 
+  // Backend validates `userType` against a fixed allow-list (not participationType).
+  const userType =
+    input.reason === "gov_speaker"
+      ? "speaker"
+      : toTicketingUserType(input.participationType, "delegate");
+
   const body: Record<string, unknown> = {
     engagementID,
     ticketPrice: 0,
     currency: "KES",
+    userType,
+    participationType: userType,
     paymentMode: waiver.paymentMode,
     waiverReason: waiver.waiverReason,
     transactionReference: waiver.transactionReference,
@@ -199,6 +208,7 @@ export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<G
     extraData: {
       paymentMode: waiver.paymentMode,
       waiverReason: waiver.waiverReason,
+      userType,
       ...(waiver.agencyName ? { agencyName: waiver.agencyName } : {}),
       ...(waiver.sponsorTicketID ? { sponsorTicketID: waiver.sponsorTicketID } : {}),
     },
@@ -208,7 +218,6 @@ export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<G
   if (input.fullName?.trim()) body.fullName = input.fullName.trim();
   if (input.email?.trim()) body.email = input.email.trim();
   if (input.phoneNo?.trim()) body.phoneNo = input.phoneNo.trim();
-  if (input.participationType?.trim()) body.participationType = input.participationType.trim();
   if (input.organisation?.trim()) body.organisation = input.organisation.trim();
   if (input.jobTitle?.trim()) body.jobTitle = input.jobTitle.trim();
   if (input.country?.trim()) body.country = input.country.trim();
@@ -217,10 +226,10 @@ export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<G
   if (waiver.agencyName) body.agencyName = waiver.agencyName;
   if (waiver.sponsorTicketID) body.sponsorTicketID = waiver.sponsorTicketID;
 
-  const result = await apiRequest<Record<string, unknown>>("/ticketing", {
+  const result = await apiForm<Record<string, unknown>>("/ticketing", {
     method: "POST",
     token,
-    body,
+    formData: toFormData(body),
   });
 
   const ticket = pickTicket(result, input.ticketID);

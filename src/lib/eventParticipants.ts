@@ -5,10 +5,10 @@
  * @see https://ciprop.mustsacco.co.ke/explorer/#/EngagementTicketController
  */
 
-import { apiRequest } from "./api";
+import { apiForm, apiRequest, toFormData } from "./api";
 import { getValidAuthToken } from "./auth";
 import type { AddedParticipant } from "../components/admin/AddParticipantModal";
-import type { ParticipationType } from "../data/registration";
+import { toTicketingUserType, type ParticipationType } from "../data/registration";
 import {
   canIssueEventPass,
   encodeVerifiedReference,
@@ -302,7 +302,7 @@ export type CreateAdminParticipantInput = {
 };
 
 /**
- * Admin creates a participant ticket via POST /ticketing.
+ * Admin creates a participant ticket via POST /ticketing (multipart — JSON returns 415).
  */
 export async function createAdminParticipant(
   input: CreateAdminParticipantInput,
@@ -313,12 +313,14 @@ export async function createAdminParticipant(
   const token = getValidAuthToken();
   if (!token) throw new Error("Sign in as admin to add a participant.");
 
+  const userType = toTicketingUserType(input.participationType);
   const body: Record<string, unknown> = {
     engagementID,
     fullName: input.fullName.trim(),
     email: input.email.trim(),
     phoneNo: input.phone.trim(),
-    participationType: input.participationType,
+    userType,
+    participationType: userType,
     title: input.title.trim(),
     organisation: input.organisation.trim(),
     jobTitle: input.jobTitle.trim(),
@@ -337,16 +339,17 @@ export async function createAdminParticipant(
       title: input.title.trim(),
       country: input.country.trim(),
       city: input.city.trim(),
+      userType,
       paymentVerified: true,
       verifiedAt: new Date().toISOString(),
       source: "admin-add",
     },
   };
 
-  const result = await apiRequest<Record<string, unknown>>("/ticketing", {
+  const result = await apiForm<Record<string, unknown>>("/ticketing", {
     method: "POST",
     token,
-    body,
+    formData: toFormData(body),
   });
 
   const ticket = (result.ticket || result) as EngagementParticipantTicket;

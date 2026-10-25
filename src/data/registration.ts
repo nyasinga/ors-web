@@ -1,5 +1,36 @@
 export type ParticipationType = "delegate" | "speaker" | "sponsor" | "virtual";
 
+/** Values accepted by POST /ticketing (and signup) as `userType`. */
+export const TICKETING_USER_TYPES = [
+  "delegate",
+  "exhibitor",
+  "speaker",
+  "participant",
+  "sponsor",
+] as const;
+
+export type TicketingUserType = (typeof TICKETING_USER_TYPES)[number];
+
+/**
+ * Map UI participation type (or any raw ticket type) to an API `userType`.
+ * `virtual` → `participant` (not in the backend allow-list).
+ */
+export function toTicketingUserType(
+  raw?: string | null,
+  fallback: TicketingUserType = "delegate",
+): TicketingUserType {
+  const v = String(raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+  if (v === "virtual" || v === "virtual_participant" || v === "online") return "participant";
+  if (v === "exhibitor" || v === "sponsor_exhibitor") return "exhibitor";
+  if ((TICKETING_USER_TYPES as readonly string[]).includes(v)) {
+    return v as TicketingUserType;
+  }
+  return fallback;
+}
+
 export const participationTypes = [
   {
     id: "delegate" as const,

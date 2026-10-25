@@ -101,6 +101,25 @@ type UrlEncodedOptions = Omit<RequestInit, "body"> & {
 };
 
 /**
+ * Build FormData the same way as registration `signup-isippe`:
+ * scalars as strings, nested objects as JSON strings.
+ */
+export function toFormData(fields: Record<string, unknown>): FormData {
+  const formData = new FormData();
+  for (const [key, value] of Object.entries(fields)) {
+    if (value === undefined || value === null) continue;
+    if (value instanceof File || value instanceof Blob) {
+      formData.append(key, value);
+    } else if (typeof value === "object") {
+      formData.append(key, JSON.stringify(value));
+    } else {
+      formData.append(key, String(value));
+    }
+  }
+  return formData;
+}
+
+/**
  * Multipart / form-data request — do not set Content-Type so the browser
  * adds `multipart/form-data; boundary=…` (same pattern as signup-isippe).
  */
