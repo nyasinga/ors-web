@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
+import { TENANT_ID } from "../../lib/api";
 import type { AddedParticipant } from "./AddParticipantModal";
 
 type Props = {
@@ -18,6 +20,146 @@ function isPdf(url: string) {
 
 function isImage(url: string) {
   return /\.(png|jpe?g|gif|webp|bmp)($|\?)/i.test(url) || url.startsWith("data:image/");
+}
+
+function authToken(): string | null {
+  return (
+    localStorage.getItem("ors_auth_token") ||
+    sessionStorage.getItem("ors_auth_token") ||
+    null
+  );
+}
+
+async function sniffKind(blob: Blob): Promise<"image" | "pdf" | "other"> {
+  const type = (blob.type || "").toLowerCase();
+  if (type.startsWith("image/")) return "image";
+  if (type.includes("pdf")) return "pdf";
+
+  const head = new Uint8Array(await blob.slice(0, 8).arrayBuffer());
+  // %PDF
+  if (head[0] === 0x25 && head[1] === 0x50 && head[2] === 0x44 && head[3] === 0x46) {
+    return "pdf";
+  }
+  // JPEG / PNG / GIF / WEBP
+  if (head[0] === 0xff && head[1] === 0xd8) return "image";
+  if (head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4e && head[3] === 0x47) return "image";
+  if (head[0] === 0x47 && head[1] === 0x49 && head[2] === 0x46) return "image";
+  if (head[0] === 0x52 && head[1] === 0x49 && head[2] === 0x46 && head[3] === 0x46) return "image";
+
+  return "other";
+}
+
+type PreviewState =
+  | { status: "loading" }
+  | { status: "ready"; kind: "image" | "pdf"; src: string }
+  | { status: "error"; message: string };
+
+function ProofPreview({ url, label }: { url: string; label: string }) {
+  const [state, setState] = useState<PreviewState>({ status: "loading" });
+  const [imgFailed, setImgFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | undefined;
+
+    async function load() {
+      setImgFailed(false);
+
+      // Direct URLs with a clear extension can render without fetching.
+      if (isImage(url) && !/\/resources\/download\//i.test(url)) {
+        if (!cancelled) setState({ status: "ready", kind: "image", src: url });
+        return;
+      }
+      if (isPdf(url) && !/\/resources\/download\//i.test(url)) {
+        if (!cancelled) setState({ status: "ready", kind: "pdf", src: url });
+        return;
+      }
+
+      try {
+        const token = authToken();
+        const res = await fetch(url, {
+          headers: {
+            Accept: "*/*",
+            "x-tenant-id": TENANT_ID,
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+        if (!res.ok) {
+          throw new Error(`Could not load proof (${res.status})`);
+        }
+        const blob = await res.blob();
+        const kind = await sniffKind(blob);
+        objectUrl = URL.createObjectURL(
+          kind === "pdf" && !blob.type.includes("pdf")
+            ? new Blob([blob], { type: "application/pdf" })
+            : blob,
+        );
+        if (cancelled) {
+          URL.revokeObjectURL(objectUrl);
+          return;
+        }
+        if (kind === "image" || kind === "pdf") {
+          setState({ status: "ready", kind, src: objectUrl });
+        } else {
+          // Unknown binary — try as image first; UI falls back to iframe on error.
+          setState({ status: "ready", kind: "image", src: objectUrl });
+        }
+      } catch {
+        // CORS or network — still try embedding the raw URL in an iframe/img.
+        if (cancelled) return;
+        if (isImage(url)) {
+          setState({ status: "ready", kind: "image", src: url });
+        } else {
+          setState({ status: "ready", kind: "pdf", src: url });
+        }
+      }
+    }
+
+    void load();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [url]);
+
+  if (state.status === "loading") {
+    return (
+      <div className="flex h-[320px] items-center justify-center bg-white text-[13px] text-blue-800">
+        Loading proof preview…
+      </div>
+    );
+  }
+
+  if (state.status === "error") {
+    return (
+      <div className="px-3 py-4 text-[13px] text-amber-950">
+        <p className="m-0 mb-2">{state.message}</p>
+        <a href={url} target="_blank" rel="noopener noreferrer" className="font-semibold text-blue-600 underline">
+          Open proof file
+        </a>
+      </div>
+    );
+  }
+
+  if (state.kind === "image" && !imgFailed) {
+    return (
+      <img
+        src={state.src}
+        alt={label}
+        className="max-h-[480px] w-full object-contain bg-white"
+        onError={() => setImgFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <iframe
+      title={label}
+      src={state.src}
+      className="h-[480px] w-full border-0 bg-white"
+    />
+  );
 }
 
 export function PaymentProofReviewModal({
@@ -49,7 +191,7 @@ export function PaymentProofReviewModal({
       open={open}
       onClose={busy ? () => undefined : onClose}
       title="Payment proof review"
-      className="md:max-w-2xl"
+      className="md:max-w-3xl"
       footer={
         <div className="flex flex-wrap justify-end gap-2">
           <Button variant="ghost" onClick={onClose} disabled={busy}>
@@ -109,32 +251,7 @@ export function PaymentProofReviewModal({
                   key={url}
                   className="overflow-hidden rounded-lg border border-blue-100 bg-slate-50"
                 >
-                  {isImage(url) ? (
-                    <a href={url} target="_blank" rel="noopener noreferrer" className="block">
-                      <img
-                        src={url}
-                        alt={`Payment proof for ${p.name}`}
-                        className="max-h-[420px] w-full object-contain bg-white"
-                      />
-                    </a>
-                  ) : isPdf(url) ? (
-                    <iframe
-                      title={`Payment proof PDF for ${p.name}`}
-                      src={url}
-                      className="h-[420px] w-full border-0 bg-white"
-                    />
-                  ) : (
-                    <div className="px-3 py-4 text-[13px]">
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-semibold text-blue-600 underline"
-                      >
-                        Open proof file
-                      </a>
-                    </div>
-                  )}
+                  <ProofPreview url={url} label={`Payment proof for ${p.name}`} />
                   <div className="border-t border-blue-50 px-3 py-1.5 text-[12px]">
                     <a
                       href={url}
