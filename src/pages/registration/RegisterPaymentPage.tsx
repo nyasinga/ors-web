@@ -138,7 +138,9 @@ export function RegisterPaymentPage() {
 
       const ticket = (result.ticket || result) as Record<string, unknown>;
       setDetails({
-        status: ticket.status ? String(ticket.status) : details.status || "issued",
+        status: "pending_verification",
+        verificationStatus: "pending_verification",
+        paymentReference: transactionReference.trim(),
         reference: ticket.reference ? String(ticket.reference) : invoiceRef,
         passCode: ticket.passCode ? String(ticket.passCode) : details.passCode,
         engagementID: ticket.engagementID
@@ -147,7 +149,7 @@ export function RegisterPaymentPage() {
       });
 
       setProofOpen(false);
-      toast.success("Payment proof submitted — registration is pending verification.");
+      toast.success("Payment proof submitted — awaiting admin verification before your pass is issued.");
       navigate("/register/confirmation");
     } catch (err) {
       toast.error(

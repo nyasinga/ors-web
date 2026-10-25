@@ -249,7 +249,7 @@ function InfoRow({
         <Icon size={16} />
       </span>
       <div className="min-w-0">
-        <p className="text-xs text-mute">{label}</p>
+        <p className="text-sm text-mute">{label}</p>
         <p className="inline-flex flex-wrap items-center gap-2 font-semibold text-navy">
           {value}
           {badge ? <Pill tone="green">{badge}</Pill> : null}
@@ -525,7 +525,7 @@ function AccountSection() {
             <Button variant="outline" size="sm" disabled title="Photo upload is not available yet">
               Change photo
             </Button>
-            <p className="mt-1 text-xs text-mute">JPG or PNG, max 2MB</p>
+            <p className="mt-1 text-sm text-mute">JPG or PNG, max 2MB</p>
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -666,7 +666,7 @@ function AddUserModal({
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password"
         />
-        <p className="text-xs text-mute">
+        <p className="text-sm text-mute">
           If no password is set, the user can complete signup or reset via email later.
         </p>
       </div>
@@ -759,7 +759,7 @@ function SecuritySection({
     <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
       <Card padded={false} className="self-start overflow-hidden">
         <div className="border-b border-slate-100 px-4 py-3">
-          <p className="text-xs font-bold tracking-wide text-navy uppercase">Security Settings</p>
+          <p className="text-sm font-bold tracking-wide text-navy uppercase">Security Settings</p>
         </div>
         <nav className="grid p-2" aria-label="Security">
           {securityPanels.map((p) => {
@@ -881,7 +881,7 @@ function PasswordPanel() {
                   />
                 ))}
               </div>
-              <p className="text-xs text-mute">Password strength</p>
+              <p className="text-sm text-mute">Password strength</p>
             </div>
           </div>
           <Input
@@ -932,7 +932,7 @@ function PasswordPanel() {
               </span>
               <div>
                 <p className="text-sm font-semibold text-navy">{label}</p>
-                <p className="text-xs text-mute">{desc}</p>
+                <p className="text-sm text-mute">{desc}</p>
               </div>
             </li>
           ))}
@@ -1092,7 +1092,7 @@ function AccessControlPanel() {
             </span>
             <div>
               <p className="font-semibold text-navy">User Management</p>
-              <p className="mt-0.5 text-xs text-mute">Live users from GET /users.</p>
+              <p className="mt-0.5 text-sm text-mute">Live users from GET /users.</p>
               <p className="mt-2 text-xl font-extrabold text-navy">
                 {loading ? "…" : `${rows.length} Total Users`}
               </p>
@@ -1106,7 +1106,7 @@ function AccessControlPanel() {
             </span>
             <div>
               <p className="font-semibold text-navy">Roles in use</p>
-              <p className="mt-0.5 text-xs text-mute">Derived from live userType values.</p>
+              <p className="mt-0.5 text-sm text-mute">Derived from live userType values.</p>
               <p className="mt-2 text-xl font-extrabold text-navy">
                 {loading ? "…" : `${Object.keys(roleCounts).length} Roles`}
               </p>
@@ -1120,7 +1120,7 @@ function AccessControlPanel() {
             </span>
             <div>
               <p className="font-semibold text-navy">Roles API</p>
-              <p className="mt-0.5 text-xs text-mute">No /roles endpoint on this backend yet.</p>
+              <p className="mt-0.5 text-sm text-mute">No /roles endpoint on this backend yet.</p>
               <div className="mt-2">
                 <Pill tone="neutral">Unavailable</Pill>
               </div>
@@ -1160,7 +1160,7 @@ function AccessControlPanel() {
                 header: "Name",
                 render: (r) => (
                   <span className="inline-flex items-center gap-2 font-semibold text-navy">
-                    <span className="grid h-8 w-8 place-items-center rounded-full bg-soft text-xs font-bold text-blue">
+                    <span className="grid h-8 w-8 place-items-center rounded-full bg-soft text-sm font-bold text-blue">
                       {r.initials}
                     </span>
                     {r.name}
@@ -1248,7 +1248,7 @@ function SessionsPanel() {
               render: (r) => (
                 <span>
                   {r.location}
-                  <span className="block text-xs text-mute">{r.ip}</span>
+                  <span className="block text-sm text-mute">{r.ip}</span>
                 </span>
               ),
             },
@@ -1287,11 +1287,11 @@ function SessionsPanel() {
         <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {sessionSummary.map((s) => (
             <div key={s.label} className="rounded-lg border border-slate-200 p-3">
-              <p className="text-xs text-mute">{s.label}</p>
+              <p className="text-sm text-mute">{s.label}</p>
               <p className="mt-1 text-xl font-extrabold text-navy">{s.value}</p>
               <p
                 className={cn(
-                  "mt-1 text-xs font-semibold",
+                  "mt-1 text-sm font-semibold",
                   s.tone === "green" && "text-green",
                   s.tone === "orange" && "text-orange-600",
                   s.tone === "red" && "text-red",
@@ -1316,7 +1316,7 @@ function SessionsPanel() {
                       style={{ height: `${(d.value / maxLogin) * 100}%` }}
                     />
                   </div>
-                  <span className="text-[10px] text-mute">{d.day.replace(" Sep", "")}</span>
+                  <span className="text-[13px] text-mute">{d.day.replace(" Sep", "")}</span>
                 </div>
               ))}
             </div>
@@ -1454,7 +1454,7 @@ function DataSecurityPanel() {
               </span>
               <div>
                 <p className="text-sm font-semibold text-navy">Encryption at rest</p>
-                <p className="text-xs text-mute">
+                <p className="text-sm text-mute">
                   All data stored in databases and file storage is encrypted using AES-256.
                 </p>
               </div>
@@ -1465,7 +1465,7 @@ function DataSecurityPanel() {
               </span>
               <div>
                 <p className="text-sm font-semibold text-navy">Encryption in transit</p>
-                <p className="text-xs text-mute">
+                <p className="text-sm text-mute">
                   All communication is secured using HTTPS/TLS 1.2 or higher.
                 </p>
               </div>
@@ -1492,7 +1492,7 @@ function DataSecurityPanel() {
               </span>
               <div>
                 <p className="text-sm font-semibold text-navy">Role-based access control</p>
-                <p className="text-xs text-mute">
+                <p className="text-sm text-mute">
                   Access to data and features is restricted based on user roles.
                 </p>
               </div>
@@ -1503,7 +1503,7 @@ function DataSecurityPanel() {
               </span>
               <div>
                 <p className="text-sm font-semibold text-navy">Account protection</p>
-                <p className="text-xs text-mute">
+                <p className="text-sm text-mute">
                   Login is protected with Google reCAPTCHA and optional OTP verification.
                 </p>
               </div>
@@ -1573,7 +1573,7 @@ function IntegrationsSection({
             <Card key={item.id}>
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-mute">
+                  <p className="text-sm font-semibold uppercase tracking-wide text-mute">
                     {item.category}
                   </p>
                   <h3 className="font-bold text-navy">{item.name}</h3>
@@ -1651,7 +1651,7 @@ function AppearanceSection() {
             ) : null}
             <t.icon size={20} className="text-blue" />
             <p className="mt-2 font-semibold text-navy">{t.label}</p>
-            <p className="text-xs text-mute">{t.desc}</p>
+            <p className="text-sm text-mute">{t.desc}</p>
           </button>
         ))}
       </div>
@@ -1672,7 +1672,7 @@ function AppearanceSection() {
                 color === c.id && "ring-2 ring-offset-2 ring-blue",
               )}
             />
-            <span className="text-xs font-medium text-mute">{c.label}</span>
+            <span className="text-sm font-medium text-mute">{c.label}</span>
           </button>
         ))}
       </div>
@@ -1702,7 +1702,7 @@ function AppearanceSection() {
             ) : null}
             <LayoutTemplate size={20} className="text-blue" />
             <p className="mt-2 font-semibold text-navy">{l.label}</p>
-            <p className="text-xs text-mute">{l.desc}</p>
+            <p className="text-sm text-mute">{l.desc}</p>
           </button>
         ))}
       </div>
@@ -1716,7 +1716,7 @@ function AppearanceSection() {
             </span>
             <div>
               <p className="text-sm font-semibold text-navy">Font Size</p>
-              <p className="text-xs text-mute">Set the base font size for the application.</p>
+              <p className="text-sm text-mute">Set the base font size for the application.</p>
             </div>
           </div>
           <Select

@@ -1,13 +1,11 @@
 /**
  * Admin-only registration waivers.
  *
- * Backend has no dedicated waiver route yet. We persist intent via:
- *   PATCH /ticketing/{ticketID}/reference  (transactionReference = WAIVER-…)
- *   GET   /ticketing/{ticketID}/confirm
- * and re-hydrate from transactionReference / extraData on list.
+ * Grant: POST /ticketing  (JWT required)
+ * Re-hydrate from paymentMode / transactionReference / extraData on list.
  */
 
-import { apiForm, apiRequest } from "./api";
+import { apiRequest } from "./api";
 import { getValidAuthToken } from "./auth";
 import type { EngagementParticipantTicket } from "./eventParticipants";
 
@@ -26,12 +24,24 @@ export type WaiverInfo = {
 };
 
 export type GrantWaiverInput = {
-  ticketID: string;
+  /** Existing ticket to waive (when converting a pending registration). */
+  ticketID?: string;
+  engagementID: string;
   reason: WaiverReason;
   /** Required when reason is gov_speaker */
   agencyName?: string;
   /** Required when reason is sponsor_allocation — the paid sponsor ticket */
   sponsorTicketID?: string;
+  /** Snapshot fields forwarded on POST /ticketing */
+  fullName?: string;
+  email?: string;
+  phoneNo?: string;
+  participationType?: string;
+  organisation?: string;
+  jobTitle?: string;
+  country?: string;
+  city?: string;
+  title?: string;
 };
 
 export type GrantWaiverResult = {
@@ -67,23 +77,31 @@ export function parseWaiverFromTicket(ticket: {
   transactionReference?: unknown;
   extraData?: unknown;
   ticketPrice?: unknown;
+  paymentMode?: unknown;
+  waiverReason?: unknown;
 }): WaiverInfo | null {
   const extra =
     ticket.extraData && typeof ticket.extraData === "object" && !Array.isArray(ticket.extraData)
       ? (ticket.extraData as Record<string, unknown>)
       : null;
 
-  const modeRaw = String(extra?.paymentMode || extra?.payment_mode || "").toLowerCase();
-  const reasonRaw = String(extra?.waiverReason || extra?.waiver_reason || "").toLowerCase();
+  const modeRaw = String(
+    ticket.paymentMode || extra?.paymentMode || extra?.payment_mode || "",
+  ).toLowerCase();
+  const reasonRaw = String(
+    ticket.waiverReason || extra?.waiverReason || extra?.waiver_reason || "",
+  ).toLowerCase();
   const ref = String(ticket.transactionReference || extra?.waiverReference || "").trim();
 
   if (modeRaw === "waived" || modeRaw === "complimentary") {
-    const reason = normalizeReason(reasonRaw) || (modeRaw === "complimentary" ? "sponsor_allocation" : "staff");
+    const reason =
+      normalizeReason(reasonRaw) || (modeRaw === "complimentary" ? "sponsor_allocation" : "staff");
     return {
       paymentMode: modeRaw === "complimentary" ? "complimentary" : "waived",
       waiverReason: reason,
       agencyName: String(extra?.agencyName || extra?.agency || "").trim() || undefined,
-      sponsorTicketID: String(extra?.sponsorTicketID || extra?.sponsor_ticket_id || "").trim() || undefined,
+      sponsorTicketID:
+        String(extra?.sponsorTicketID || extra?.sponsor_ticket_id || "").trim() || undefined,
       transactionReference: ref || encodeWaiverReference({ reason }),
     };
   }
@@ -113,7 +131,6 @@ export function parseWaiverFromTicket(ticket: {
     };
   }
 
-  // Generic WAIVER-* → treated as staff waiver
   if (upper.startsWith(WAIVER_PREFIX)) {
     return { paymentMode: "waived", waiverReason: "staff", transactionReference: ref };
   }
@@ -123,25 +140,29 @@ export function parseWaiverFromTicket(ticket: {
 
 function normalizeReason(raw: string): WaiverReason | undefined {
   if (raw === "staff") return "staff";
-  if (raw === "gov_speaker" || raw === "gov-speaker" || raw === "government_speaker") return "gov_speaker";
-  if (raw === "sponsor_allocation" || raw === "sponsor" || raw === "complimentary") return "sponsor_allocation";
+  if (raw === "gov_speaker" || raw === "gov-speaker" || raw === "government_speaker") {
+    return "gov_speaker";
+  }
+  if (raw === "sponsor_allocation" || raw === "sponsor" || raw === "complimentary") {
+    return "sponsor_allocation";
+  }
   return undefined;
 }
 
-function pickTicket(result: Record<string, unknown>, fallbackId: string): EngagementParticipantTicket {
+function pickTicket(result: Record<string, unknown>, fallbackId?: string): EngagementParticipantTicket {
   const ticket = (result.ticket || result) as EngagementParticipantTicket;
   return {
     ...ticket,
-    ticketID: String(ticket.ticketID || fallbackId),
+    ticketID: String(ticket.ticketID || fallbackId || ""),
   };
 }
 
 /**
- * Admin grant: write waiver reference, then confirm ticket (marks registration complete).
+ * Admin grant waiver via POST /ticketing.
  */
 export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<GrantWaiverResult> {
-  const ticketID = input.ticketID.trim();
-  if (!ticketID) throw new Error("A ticket ID is required to grant a waiver.");
+  const engagementID = input.engagementID.trim();
+  if (!engagementID) throw new Error("Engagement ID is required to grant a waiver.");
 
   if (input.reason === "gov_speaker" && !input.agencyName?.trim()) {
     throw new Error("Enter the government agency for this speaker waiver.");
@@ -153,8 +174,10 @@ export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<G
   const token = getValidAuthToken();
   if (!token) throw new Error("Sign in as admin to grant a waiver.");
 
+  const paymentMode: PaymentMode =
+    input.reason === "sponsor_allocation" ? "complimentary" : "waived";
   const waiver: WaiverInfo = {
-    paymentMode: input.reason === "sponsor_allocation" ? "complimentary" : "waived",
+    paymentMode,
     waiverReason: input.reason,
     agencyName: input.agencyName?.trim() || undefined,
     sponsorTicketID: input.sponsorTicketID?.trim() || undefined,
@@ -165,36 +188,63 @@ export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<G
     }),
   };
 
-  const formData = new FormData();
-  formData.append("transactionReference", waiver.transactionReference);
-  // Hint for backends that accept extra fields on the same multipart
-  formData.append("paymentMode", waiver.paymentMode);
-  formData.append("waiverReason", waiver.waiverReason || "");
-  if (waiver.agencyName) formData.append("agencyName", waiver.agencyName);
-  if (waiver.sponsorTicketID) formData.append("sponsorTicketID", waiver.sponsorTicketID);
+  const body: Record<string, unknown> = {
+    engagementID,
+    ticketPrice: 0,
+    currency: "KES",
+    paymentMode: waiver.paymentMode,
+    waiverReason: waiver.waiverReason,
+    transactionReference: waiver.transactionReference,
+    status: "registered",
+    extraData: {
+      paymentMode: waiver.paymentMode,
+      waiverReason: waiver.waiverReason,
+      ...(waiver.agencyName ? { agencyName: waiver.agencyName } : {}),
+      ...(waiver.sponsorTicketID ? { sponsorTicketID: waiver.sponsorTicketID } : {}),
+    },
+  };
 
-  await apiForm<Record<string, unknown>>(`/ticketing/${encodeURIComponent(ticketID)}/reference`, {
-    method: "PATCH",
-    formData,
+  if (input.ticketID?.trim()) body.ticketID = input.ticketID.trim();
+  if (input.fullName?.trim()) body.fullName = input.fullName.trim();
+  if (input.email?.trim()) body.email = input.email.trim();
+  if (input.phoneNo?.trim()) body.phoneNo = input.phoneNo.trim();
+  if (input.participationType?.trim()) body.participationType = input.participationType.trim();
+  if (input.organisation?.trim()) body.organisation = input.organisation.trim();
+  if (input.jobTitle?.trim()) body.jobTitle = input.jobTitle.trim();
+  if (input.country?.trim()) body.country = input.country.trim();
+  if (input.city?.trim()) body.city = input.city.trim();
+  if (input.title?.trim()) body.title = input.title.trim();
+  if (waiver.agencyName) body.agencyName = waiver.agencyName;
+  if (waiver.sponsorTicketID) body.sponsorTicketID = waiver.sponsorTicketID;
+
+  const result = await apiRequest<Record<string, unknown>>("/ticketing", {
+    method: "POST",
     token,
+    body,
   });
 
+<<<<<<< HEAD
   const confirmResult = await apiRequest<Record<string, unknown>>(
     `/ticketing/${encodeURIComponent(ticketID)}/confirm`,
     { method: "GET", token },
   );
 
   const ticket = pickTicket(confirmResult, ticketID);
+=======
+  const ticket = pickTicket(result, input.ticketID);
+>>>>>>> 91b7a27 (testing)
   const message =
-    typeof confirmResult.message === "string" && confirmResult.message.trim()
-      ? confirmResult.message.trim()
-      : undefined;
+    typeof result.message === "string" && result.message.trim() ? result.message.trim() : undefined;
 
   return { ticket, waiver, message };
 }
 
 export function countSponsorComplimentaryUsed(
-  participants: Array<{ paymentMode?: PaymentMode; waiverReason?: WaiverReason; sponsorTicketID?: string }>,
+  participants: Array<{
+    paymentMode?: PaymentMode;
+    waiverReason?: WaiverReason;
+    sponsorTicketID?: string;
+  }>,
   sponsorTicketID: string,
 ): number {
   const id = sponsorTicketID.trim();
@@ -208,7 +258,11 @@ export function countSponsorComplimentaryUsed(
 }
 
 export function sponsorSeatsRemaining(
-  participants: Array<{ paymentMode?: PaymentMode; waiverReason?: WaiverReason; sponsorTicketID?: string }>,
+  participants: Array<{
+    paymentMode?: PaymentMode;
+    waiverReason?: WaiverReason;
+    sponsorTicketID?: string;
+  }>,
   sponsorTicketID: string,
   limit = SPONSOR_COMPLIMENTARY_SEATS,
 ): number {

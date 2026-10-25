@@ -175,12 +175,17 @@ export function ProofOfPaymentModal({
             disabled={submitting}
             onClick={() => {
               const ref = transactionReference.trim();
-              if (!ref) {
-                setError("Enter your transaction reference.");
+              if (ref.length < 4) {
+                setError("Enter a valid transaction reference (at least 4 characters).");
                 return;
               }
               if (!files.length) {
-                setError("Select at least one proof file.");
+                setError("Upload at least one proof of payment file (PDF or image).");
+                return;
+              }
+              const tooLarge = files.find((f) => f.size > 10 * 1024 * 1024);
+              if (tooLarge) {
+                setError(`“${tooLarge.name}” is over 10 MB. Choose a smaller file.`);
                 return;
               }
               void onSubmit({ transactionReference: ref, files });

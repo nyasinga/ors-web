@@ -276,13 +276,13 @@ export function PaymentsDashboard({
                 <Icon size={24} strokeWidth={2} />
               </div>
               <div className="min-w-0">
-                <div className="text-xs text-slate-600">{kpi.label}</div>
+                <div className="text-sm text-slate-600">{kpi.label}</div>
                 <b className="block truncate text-base font-extrabold text-blue-950 sm:text-lg">
                   {kpi.value}
                 </b>
                 <span
                   className={cn(
-                    "text-xs",
+                    "text-sm",
                     live
                       ? "font-semibold text-slate-400"
                       : kpi.tone === "green"
@@ -312,14 +312,14 @@ export function PaymentsDashboard({
                 aria-label="Revenue by source"
               />
               <div className="absolute inset-[19%] flex flex-col items-center justify-center rounded-full bg-white text-center">
-                <span className="text-[10px] text-slate-500">KES</span>
+                <span className="text-[13px] text-slate-500">KES</span>
                 <strong className="text-sm font-extrabold leading-4 text-blue-950">
                   {live ? "0" : "4.25M"}
                 </strong>
-                <span className="text-[9px] text-slate-500">Total</span>
+                <span className="text-[12px] text-slate-500">Total</span>
               </div>
             </div>
-            <div className="min-w-[200px] flex-[1.2] space-y-3 text-xs">
+            <div className="min-w-[200px] flex-[1.2] space-y-3 text-sm">
               {sources.map((s) => (
                 <div key={s.label} className="flex items-center gap-2">
                   <i className="h-3 w-3 shrink-0 rounded-full" style={{ background: s.color }} />
@@ -336,7 +336,7 @@ export function PaymentsDashboard({
           <div className="mb-1 flex items-center justify-between gap-2">
             <h2 className="text-sm font-extrabold text-blue-950">Revenue Trend</h2>
             <select
-              className={cn(field, "!py-1.5 !text-xs")}
+              className={cn(field, "!py-1.5 !text-sm")}
               value={trendPeriod}
               onChange={(e) => setTrendPeriod(e.target.value as TrendPeriod)}
               aria-label="Trend period"
@@ -410,7 +410,7 @@ export function PaymentsDashboard({
               );
             })}
           </svg>
-          <div className="mt-2 flex flex-wrap justify-center gap-3 text-[11px]">
+          <div className="mt-2 flex flex-wrap justify-center gap-3 text-[14px]">
             {revenueTrendSeries.map((s) => (
               <span key={s.key} style={{ color: s.color }}>
                 ● {s.label}
@@ -424,7 +424,7 @@ export function PaymentsDashboard({
         <div className={cn(panel, "p-4")}>
           <h2 className="mb-2 text-sm font-extrabold text-blue-950">Revenue Breakdown</h2>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[520px] border-collapse text-left text-[11px]">
+            <table className="w-full min-w-[520px] border-collapse text-left text-[14px]">
               <thead>
                 <tr className="bg-[#f4f8ff] text-[#0b176d]">
                   <th className="px-2.5 py-2.5 font-bold">Source</th>
@@ -448,7 +448,7 @@ export function PaymentsDashboard({
                       {live ? (
                         <span className="text-slate-400">—</span>
                       ) : (
-                        <span className="rounded-md bg-[#d8f9e8] px-2.5 py-1 text-[11px] font-semibold text-[#05844c]">
+                        <span className="rounded-md bg-[#d8f9e8] px-2.5 py-1 text-[14px] font-semibold text-[#05844c]">
                           {r.status}
                         </span>
                       )}
@@ -470,7 +470,7 @@ export function PaymentsDashboard({
         <div className="space-y-3">
           <div className={cn(panel, "p-4")}>
             <h2 className="mb-3 text-sm font-extrabold text-blue-950">Payment Methods</h2>
-            <div className="space-y-3 text-xs">
+            <div className="space-y-3 text-sm">
               {methods.map((m) => (
                 <div key={m.label} className="flex items-center gap-3">
                   <span className="w-5 text-lg" style={{ color: m.color }}>
@@ -491,7 +491,7 @@ export function PaymentsDashboard({
           </div>
           <div className={cn(panel, "p-4")}>
             <h2 className="mb-3 text-sm font-extrabold text-blue-950">Payment Status</h2>
-            <div className="space-y-2 text-xs">
+            <div className="space-y-2 text-sm">
               {statuses.map((s) => (
                 <div key={s.label} className="flex items-center gap-3">
                   <span style={{ color: s.color }}>●</span>
@@ -542,7 +542,7 @@ export function PaymentsDashboard({
           </button>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] border-collapse whitespace-nowrap text-left text-[11px]">
+          <table className="w-full min-w-[860px] border-collapse whitespace-nowrap text-left text-[14px]">
             <thead>
               <tr className="bg-[#f4f8ff] text-[#0b176d]">
                 <th className="px-2.5 py-2.5 font-bold">Date &amp; Time</th>
@@ -576,7 +576,7 @@ export function PaymentsDashboard({
                     <td className="px-2.5 py-2.5">
                       <span
                         className={cn(
-                          "rounded-md px-2 py-1 text-[11px] font-semibold",
+                          "rounded-md px-2 py-1 text-[14px] font-semibold",
                           statusPill(r.status),
                         )}
                       >

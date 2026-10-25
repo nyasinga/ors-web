@@ -8,11 +8,10 @@ import { participationTypes } from "../../data/registration";
 import { formatMoney } from "../../i18n/format";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import * as r from "../../components/registration/registerStyles";
-import { API_BASE_URL, TENANT_ID } from "../../lib/api";
 import { fetchEventPassPdfUrl } from "../../lib/printParticipantTicket";
-import type { EngagementTicketStatus } from "../../types/ticket";
+import { canIssueEventPass } from "../../lib/paymentVerification";
 
-/** Registration step 4 — structure & CSS from HTML package */
+/** Registration step 4 — pending verification until admin confirms payment. */
 export function RegisterConfirmationPage() {
   const event = useEventCopy();
   const toast = useToast();
@@ -22,9 +21,26 @@ export function RegisterConfirmationPage() {
   const displayEmail = details.email.trim();
   const displayOrg = details.organisation.trim();
   const totalPaid = feeKes > 0 ? feeKes + 50 : 0;
-  const { googleCalendarURL, passCodeQR, passCode, status: paymentStatus } = details;
+  const { googleCalendarURL, passCodeQR, passCode } = details;
   const [passLoading, setPassLoading] = useState(false);
   const [passPreview, setPassPreview] = useState<{ url: string; passCode: string } | null>(null);
+
+  const verified =
+    details.verificationStatus === "confirmed" ||
+    details.verificationStatus === "waived" ||
+    canIssueEventPass({
+      status: details.status,
+      transactionReference: details.paymentReference || details.reference,
+      paymentMode: details.verificationStatus === "waived" ? "waived" : undefined,
+    });
+
+  // Proof just submitted → always pending until admin verifies (even if passCode exists).
+  const pendingVerification =
+    details.verificationStatus === "pending_verification" ||
+    details.status === "pending_verification" ||
+    (!verified && Boolean(details.paymentReference || details.status === "registered"));
+
+  const passAllowed = verified && !pendingVerification;
 
   const closePassPreview = () => {
     setPassPreview((prev) => {
@@ -41,6 +57,10 @@ export function RegisterConfirmationPage() {
   }, []);
 
   const openEventPass = async () => {
+    if (!passAllowed) {
+      toast.info("Your event pass will be available after an administrator verifies your payment.");
+      return;
+    }
     if (!passCode) {
       toast.error("No pass code available for this ticket.");
       return;
@@ -57,7 +77,7 @@ export function RegisterConfirmationPage() {
     }
   };
 
-  const paidAt = new Date().toLocaleString("en-GB", {
+  const submittedAt = new Date().toLocaleString("en-GB", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -77,14 +97,27 @@ export function RegisterConfirmationPage() {
         <div className={r.container}>
           <div className={r.confirmLayout}>
             <section className={r.success}>
-              <div className={r.successMark}>✓</div>
-              <h2 className={r.successTitle}>Registration Successful!</h2>
+              <div className={r.successMark}>{passAllowed ? "✓" : "…"}</div>
+              <h2 className={r.successTitle}>
+                {passAllowed ? "Registration verified" : "Registration received"}
+              </h2>
               <p className={r.successText}>
-                Your registration for {event.name || "the event"} has been confirmed and payment has
-                been received.
-                <br />
-                A confirmation email with your registration details has been sent to your email
-                address.
+                {passAllowed ? (
+                  <>
+                    Your registration for {event.name || "the event"} has been verified.
+                    <br />
+                    You can download your event pass below.
+                  </>
+                ) : (
+                  <>
+                    Thank you — your registration and payment proof for {event.name || "the event"}{" "}
+                    have been received and are <strong>pending admin verification</strong>.
+                    <br />
+                    Your event pass and entry QR will be available only after an administrator
+                    confirms your payment. You will be able to access them from your participant
+                    account once verified.
+                  </>
+                )}
               </p>
 
               <div className={r.detailColumns}>
@@ -125,21 +158,28 @@ export function RegisterConfirmationPage() {
                   <div className={r.drow}>
                     <span aria-hidden>{"\u25A3"}</span>
                     <span>
-                      <b className={r.drowLabel}>Transaction Reference</b>
-                      {reference || "—"}
+                      <b className={r.drowLabel}>Registration reference</b>
+                      {reference || details.reference || "—"}
                     </span>
                   </div>
                   <div className={r.drow}>
                     <span aria-hidden>{"\u25A3"}</span>
                     <span>
-                      <b className={r.drowLabel}>Payment Date</b>
-                      {paidAt}
+                      <b className={r.drowLabel}>Payment reference submitted</b>
+                      {details.paymentReference || "—"}
                     </span>
                   </div>
                   <div className={r.drow}>
                     <span aria-hidden>{"\u25A3"}</span>
                     <span>
-                      <b className={r.drowLabel}>Amount Paid</b>
+                      <b className={r.drowLabel}>Submitted</b>
+                      {submittedAt}
+                    </span>
+                  </div>
+                  <div className={r.drow}>
+                    <span aria-hidden>{"\u25A3"}</span>
+                    <span>
+                      <b className={r.drowLabel}>Amount</b>
                       {feeKes > 0 ? (
                         <>
                           {formatMoney(totalPaid, "KES")}
@@ -154,8 +194,10 @@ export function RegisterConfirmationPage() {
                   <div className={r.drow}>
                     <span aria-hidden>{"\u25A3"}</span>
                     <span>
-                      <b className={r.drowLabel}>Payment Status</b>
-                      <span className="text-[#078047]">{paymentStatus as EngagementTicketStatus}</span>
+                      <b className={r.drowLabel}>Status</b>
+                      <span className={passAllowed ? "text-[#078047]" : "text-[#b45309]"}>
+                        {passAllowed ? "Verified" : "Pending verification"}
+                      </span>
                     </span>
                   </div>
                 </div>
@@ -164,27 +206,22 @@ export function RegisterConfirmationPage() {
               <div className={r.confirmActions}>
                 <button
                   type="button"
-                  className={`${r.smallBtn} hidden`}
-                  onClick={() => {
-                    if (!passCode) return;
-                    const link = document.createElement("a");
-                    link.href = `${API_BASE_URL}/ticketing/${passCode}/ecitizen?tenant-id=${TENANT_ID}`;
-                    link.target = "_blank";
-                    link.download = `receipt-${passCode}.pdf`;
-                    link.click();
-                  }}
-                >
-                  Download Receipt
-                </button>
-                <button
-                  type="button"
                   className={r.smallBtn}
-                  disabled={!passCode || passLoading}
+                  disabled={!passAllowed || !passCode || passLoading}
+                  title={
+                    passAllowed
+                      ? "Download event pass"
+                      : "Available after admin verifies your payment"
+                  }
                   onClick={() => {
                     void openEventPass();
                   }}
                 >
-                  {passLoading ? "Loading…" : "Download QR Ticket"}
+                  {passLoading
+                    ? "Loading…"
+                    : passAllowed
+                      ? "Download QR Ticket"
+                      : "Pass locked until verified"}
                 </button>
                 {googleCalendarURL && (
                   <a
@@ -204,21 +241,41 @@ export function RegisterConfirmationPage() {
 
             <aside>
               <div className={r.pass}>
-                <h3 className={r.passTitle}>Your Event Pass</h3>
+                <h3 className={r.passTitle}>
+                  {passAllowed ? "Your Event Pass" : "Event pass pending"}
+                </h3>
                 <p className={r.passText}>
-                  Present this QR code at the registration counter to collect your badge.
+                  {passAllowed
+                    ? "Present this QR code at the registration counter to collect your badge."
+                    : "Your QR code and entry tag will appear here after an administrator verifies your payment proof."}
                 </p>
-                {passCodeQR && (
+                {passAllowed && passCodeQR ? (
                   <img
                     className={r.qr}
                     src={passCode ? `data:image/png;base64,${passCodeQR}` : "/assets/qr-ticket.png"}
                     alt="Event pass QR code"
                   />
+                ) : (
+                  <div
+                    className={r.qr}
+                    style={{
+                      display: "grid",
+                      placeItems: "center",
+                      background: "#f1f5f9",
+                      color: "#64748b",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      textAlign: "center",
+                      padding: 16,
+                    }}
+                  >
+                    QR reserved until verification
+                  </div>
                 )}
                 <div className={r.passId}>
                   Pass Code
                   <br />
-                  {passCode || "—"}
+                  {passAllowed ? passCode || "—" : "Issued after verification"}
                 </div>
               </div>
 
@@ -231,7 +288,7 @@ export function RegisterConfirmationPage() {
                   <div>
                     <strong className={r.nextRowTitle}>Check your email</strong>
                     <p className={r.nextRowText}>
-                      We have sent a confirmation email with event details and updates.
+                      We will notify you when your payment has been verified.
                     </p>
                   </div>
                 </div>
@@ -240,9 +297,13 @@ export function RegisterConfirmationPage() {
                     {"\u25A3"}
                   </span>
                   <div>
-                    <strong className={r.nextRowTitle}>Collect your badge</strong>
+                    <strong className={r.nextRowTitle}>
+                      {passAllowed ? "Collect your badge" : "Wait for verification"}
+                    </strong>
                     <p className={r.nextRowText}>
-                      Present your QR code at registration desk on arrival.
+                      {passAllowed
+                        ? "Present your QR code at the registration desk on arrival."
+                        : "Admin will review your proof. Your pass unlocks once confirmed."}
                     </p>
                   </div>
                 </div>

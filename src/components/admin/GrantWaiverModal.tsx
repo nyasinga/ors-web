@@ -10,11 +10,11 @@ import {
 } from "../../lib/participantWaiver";
 import { cn } from "../../lib/cn";
 
-const labelClass = "mb-1 block text-[11px] font-semibold text-[#26468e]";
+const labelClass = "mb-1 block text-[14px] font-semibold text-[#26468e]";
 const fieldClass =
-  "h-9 w-full rounded-md border border-blue-100 bg-white px-2.5 text-[12px] text-[#07135f] outline-none focus:border-blue-400";
+  "h-9 w-full rounded-md border border-blue-100 bg-white px-2.5 text-[15px] text-[#07135f] outline-none focus:border-blue-400";
 const fieldSelectClass = cn(fieldClass, "register-field-select");
-const errorClass = "mt-0.5 block text-[10px] text-red-600";
+const errorClass = "mt-0.5 block text-[13px] text-red-600";
 
 type Props = {
   open: boolean;
@@ -117,8 +117,8 @@ export function GrantWaiverModal({
       }
     >
       {participant ? (
-        <div className="grid gap-3 text-[12px] text-[#07135f]">
-          <p className="rounded-md border border-blue-50 bg-blue-50/60 px-2.5 py-2 text-[11px] text-blue-900">
+        <div className="grid gap-3 text-[15px] text-[#07135f]">
+          <p className="rounded-md border border-blue-50 bg-blue-50/60 px-2.5 py-2 text-[14px] text-blue-900">
             <strong className="font-bold">{participant.name}</strong>
             <span className="text-blue-700"> · {participant.type}</span>
             {participant.email ? (
@@ -163,7 +163,7 @@ export function GrantWaiverModal({
                 Sponsor package <span className="text-red-500">*</span>
               </label>
               {sponsors.length === 0 ? (
-                <p className="rounded-md border border-amber-100 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-900">
+                <p className="rounded-md border border-amber-100 bg-amber-50 px-2.5 py-2 text-[14px] text-amber-900">
                   No sponsors with remaining free seats. A sponsor must be registered first;
                   each paid package gets {SPONSOR_COMPLIMENTARY_SEATS} complimentary seats.
                 </p>
@@ -185,7 +185,7 @@ export function GrantWaiverModal({
                 </select>
               )}
               {sponsorTicketID ? (
-                <p className="mt-1 text-[10px] text-blue-700">
+                <p className="mt-1 text-[13px] text-blue-700">
                   {selectedRemaining} complimentary seat{selectedRemaining === 1 ? "" : "s"} remaining
                   for this sponsor.
                 </p>
@@ -193,7 +193,7 @@ export function GrantWaiverModal({
             </div>
           ) : null}
 
-          <p className="text-[10px] leading-relaxed text-blue-700">
+          <p className="text-[13px] leading-relaxed text-blue-700">
             Admin only. Skips bank payment / proof. The ticket is marked{" "}
             {reason === "sponsor_allocation" ? "complimentary" : "waived"} and confirmed.
           </p>

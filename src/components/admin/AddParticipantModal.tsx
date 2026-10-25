@@ -42,6 +42,18 @@ export type AddedParticipant = {
   /** Paid sponsor ticket this complimentary seat is charged against. */
   sponsorTicketID?: string;
   transactionReference?: string;
+  /** User-facing payment ref (VERIFIED| prefix stripped). */
+  displayPaymentReference?: string;
+  paymentReceiptURL?: string;
+  verificationBucket?:
+    | "registered"
+    | "pending_verification"
+    | "confirmed"
+    | "waived"
+    | "complimentary"
+    | "cancelled";
+  /** Whether event pass / QR may be issued. */
+  passAllowed?: boolean;
 };
 
 const emptyDetails: RegistrationDetails = {
@@ -57,53 +69,37 @@ const emptyDetails: RegistrationDetails = {
   accessibility: "",
 };
 
-const typeLabel: Record<ParticipationType, string> = {
-  delegate: "Delegate",
-  speaker: "Speaker",
-  sponsor: "Exhibitor",
-  virtual: "Virtual Participant",
-};
-
-const typeTone: Record<ParticipationType, string> = {
-  delegate: "blue",
-  speaker: "red",
-  sponsor: "green",
-  virtual: "purple",
-};
-
-function initialsFromName(name: string) {
-  return (
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((w) => w[0]?.toUpperCase() || "")
-      .join("") || "?"
-  );
-}
-
 const fieldClass =
-  "h-9 w-full rounded-md border border-blue-100 bg-white px-2.5 text-[12px] text-[#07135f] outline-none focus:border-blue-400";
+  "h-9 w-full rounded-md border border-blue-100 bg-white px-2.5 text-[15px] text-[#07135f] outline-none focus:border-blue-400";
 const fieldSelectClass = cn(fieldClass, "register-field-select");
-const labelClass = "mb-1 block text-[11px] font-semibold text-[#26468e]";
-const errorClass = "mt-0.5 block text-[10px] text-red-600";
+const labelClass = "mb-1 block text-[14px] font-semibold text-[#26468e]";
+const errorClass = "mt-0.5 block text-[13px] text-red-600";
+
+export type AddParticipantDraft = {
+  participationType: ParticipationType;
+  details: RegistrationDetails;
+};
 
 type Props = {
   open: boolean;
+  busy?: boolean;
   onClose: () => void;
-  onAdd: (participant: AddedParticipant) => void;
+  /** Persist participant (API). Throw to keep the modal open. */
+  onAdd: (draft: AddParticipantDraft) => void | Promise<void>;
 };
 
-export function AddParticipantModal({ open, onClose, onAdd }: Props) {
+export function AddParticipantModal({ open, busy, onClose, onAdd }: Props) {
   const [participationType, setParticipationType] = useState<ParticipationType>("delegate");
   const [details, setDetails] = useState<RegistrationDetails>(emptyDetails);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setParticipationType("delegate");
     setDetails(emptyDetails);
     setErrors({});
+    setSubmitError(null);
   }, [open]);
 
   const patch = (next: Partial<RegistrationDetails>) => {
@@ -124,51 +120,37 @@ export function AddParticipantModal({ open, onClose, onAdd }: Props) {
     return Object.keys(next).length === 0;
   };
 
-  const submit = () => {
+  const submit = async () => {
+    if (busy) return;
     if (!validate()) return;
-    const now = new Date();
-    const name = details.fullName.trim();
-    onAdd({
-      id: `p-${Date.now()}`,
-      name,
-      email: details.email.trim(),
-      org: details.organisation.trim(),
-      type: typeLabel[participationType],
-      category: "",
-      status: "Confirmed",
-      date: now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-      time: now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
-      checkIn: "—",
-      initials: initialsFromName(name),
-      avatarTone: typeTone[participationType],
-      title: details.title,
-      phone: details.phone.trim(),
-      jobTitle: details.jobTitle.trim(),
-      country: details.country,
-      city: details.city.trim(),
-      dietary: details.dietary,
-      accessibility: details.accessibility,
-      participationType,
-    });
-    onClose();
+    setSubmitError(null);
+    try {
+      await onAdd({ participationType, details });
+      onClose();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Could not add participant.");
+    }
   };
 
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={busy ? () => undefined : onClose}
       title="Add Participant"
       className="md:max-w-2xl"
       footer={
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
             Cancel
           </Button>
-          <Button onClick={submit}>Add Participant</Button>
+          <Button onClick={() => void submit()} disabled={busy}>
+            {busy ? "Saving…" : "Add Participant"}
+          </Button>
         </div>
       }
     >
       <div className="grid gap-4">
+        {submitError ? <p className={errorClass}>{submitError}</p> : null}
         <div>
           <label className={labelClass}>
             Participation Type <span className="text-red-500">*</span>
@@ -176,6 +158,7 @@ export function AddParticipantModal({ open, onClose, onAdd }: Props) {
           <select
             className={fieldSelectClass}
             value={participationType}
+            disabled={busy}
             onChange={(e) => setParticipationType(e.target.value as ParticipationType)}
           >
             {participationTypes.map((t) => (
@@ -187,7 +170,7 @@ export function AddParticipantModal({ open, onClose, onAdd }: Props) {
         </div>
 
         <div>
-          <h3 className="mb-2 text-[12px] font-extrabold text-[#07135f]">Personal Information</h3>
+          <h3 className="mb-2 text-[15px] font-extrabold text-[#07135f]">Personal Information</h3>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className={labelClass}>
@@ -309,7 +292,7 @@ export function AddParticipantModal({ open, onClose, onAdd }: Props) {
         </div>
 
         <div>
-          <h3 className="mb-2 text-[12px] font-extrabold text-[#07135f]">
+          <h3 className="mb-2 text-[15px] font-extrabold text-[#07135f]">
             Additional Information (Optional)
           </h3>
           <div className="grid gap-3 sm:grid-cols-2">

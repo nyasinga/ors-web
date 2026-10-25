@@ -21,6 +21,7 @@ import type {
 import { FileUploadTypes } from "../types/registration";
 import { apiForm, apiRequest } from "./api";
 import { getAuthUser, getValidAuthToken } from "./auth";
+import { parseKesPrice } from "./ticketAnalytics";
 
 function authToken() {
   return getValidAuthToken();
@@ -836,10 +837,9 @@ function countryMeta(codeOrName?: string) {
   return { name: name || raw, flag: "🌍" };
 }
 
+/** Prefer KES from dual-currency strings like "KES 60,000 / USD 470". */
 function parseTicketPrice(price?: string) {
-  if (!price) return 0;
-  const n = Number(String(price).replace(/[^0-9.]/g, ""));
-  return Number.isFinite(n) ? n : 0;
+  return parseKesPrice(price);
 }
 
 export function summarizeEngagementKpis(rows: Engagement[]): EngagementKpiSummary {

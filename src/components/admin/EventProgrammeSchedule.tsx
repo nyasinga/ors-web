@@ -202,7 +202,7 @@ function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
               <td className="px-5 py-3">
                 <span
                   className={cn(
-                    "inline-flex items-center whitespace-nowrap rounded-[5px] px-3 py-1.5 text-[12px] font-semibold",
+                    "inline-flex items-center whitespace-nowrap rounded-[5px] px-3 py-1.5 text-[15px] font-semibold",
                     typeToneClass[row.typeTone],
                   )}
                 >
@@ -219,7 +219,7 @@ function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
                     src={row.venueThumb || DEFAULT_THUMB}
                     alt=""
                   />
-                  <span className="text-[12px] font-semibold leading-[1.35] text-[#172033]">
+                  <span className="text-[15px] font-semibold leading-[1.35] text-[#172033]">
                     {row.venue}
                     {row.venueSub ? (
                       <>

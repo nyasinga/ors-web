@@ -31,6 +31,10 @@ export type RegistrationDetails = {
   status?: string;
   passCode?: string;
   engagementID?: string;
+  /** Bank / M-Pesa ref submitted with proof (pending until admin verifies). */
+  paymentReference?: string;
+  /** Set after proof submit — gates pass until admin verifies. */
+  verificationStatus?: "pending_verification" | "confirmed" | "waived";
 };
 
 /** Invoice created after Details submit — shown before bank payment. */

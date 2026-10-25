@@ -76,10 +76,13 @@ import {
 import { cn } from "../../lib/cn";
 import { clearPublicEngagementCache } from "../../lib/publicEvent";
 import { printParticipantTicket } from "../../lib/printParticipantTicket";
+import { listEventParticipants } from "../../lib/eventParticipants";
 import {
+  analyzeTicketSales,
   fetchEventTransactions,
   parseKesPrice,
   type PaymentTransaction,
+  type TicketSalesAnalytics,
 } from "../../lib/ticketAnalytics";
 import type {
   Engagement,
@@ -116,21 +119,21 @@ const edCh =
 const edCi = "grid place-items-center text-[#0764e8]";
 const edBtnBase =
   "inline-flex cursor-pointer items-center whitespace-nowrap border border-[#1267ee] font-[inherit] font-semibold no-underline";
-const edBtn = `${edBtnBase} h-[37px] gap-1.5 rounded-md bg-white px-[13px] text-[10px] !text-[#0764e8] hover:bg-[#f3f8ff]`;
-const edBtnPrimary = `${edBtnBase} h-[37px] gap-1.5 rounded-md border-[#0764e8] bg-[#0764e8] px-[13px] text-[10px] !text-white shadow-[0_4px_12px_rgba(7,100,232,.22)] hover:bg-[#0658cf]`;
-const edEdit = `${edBtnBase} ml-auto h-7 gap-1.5 rounded-[5px] bg-white px-2.5 text-[9px] !text-[#0764e8] hover:bg-[#f3f8ff]`;
-const edLinkAll = "ml-auto text-[9px] font-semibold !text-[#0864e8] no-underline hover:underline";
+const edBtn = `${edBtnBase} h-[37px] gap-1.5 rounded-md bg-white px-[13px] text-[13px] !text-[#0764e8] hover:bg-[#f3f8ff]`;
+const edBtnPrimary = `${edBtnBase} h-[37px] gap-1.5 rounded-md border-[#0764e8] bg-[#0764e8] px-[13px] text-[13px] !text-white shadow-[0_4px_12px_rgba(7,100,232,.22)] hover:bg-[#0658cf]`;
+const edEdit = `${edBtnBase} ml-auto h-7 gap-1.5 rounded-[5px] bg-white px-2.5 text-[12px] !text-[#0764e8] hover:bg-[#f3f8ff]`;
+const edLinkAll = "ml-auto text-[12px] font-semibold !text-[#0864e8] no-underline hover:underline";
 const edRow =
   "grid grid-cols-[92px_1fr] items-start gap-2 max-[500px]:grid-cols-[78px_1fr] [&_b]:font-bold [&_b]:text-[#09165f] [&_span]:leading-[1.4] [&_span]:text-[#566b9c]";
-const edMi = "flex items-start gap-2.5 text-[10px] [&_b]:block [&_b]:font-bold [&_b]:text-[#09165f] [&_small]:mt-[3px] [&_small]:block [&_small]:text-[10px] [&_small]:text-[#63749b]";
+const edMi = "flex items-start gap-2.5 text-[13px] [&_b]:block [&_b]:font-bold [&_b]:text-[#09165f] [&_small]:mt-[3px] [&_small]:block [&_small]:text-[13px] [&_small]:text-[#63749b]";
 const edMiIco = "grid h-7 w-7 flex-none place-items-center rounded-lg bg-[#eaf4ff] text-[#0764e8]";
-const edPillBase = "inline-block rounded-md px-[9px] py-[5px] text-[9px] font-bold";
+const edPillBase = "inline-block rounded-md px-[9px] py-[5px] text-[12px] font-bold";
 const edPill = `${edPillBase} bg-[#c9f2dd] text-[#08784a]`;
 const edPillPending = `${edPillBase} bg-[#fff0d2] text-[#cf7900]`;
 const edStrow =
   "grid grid-cols-[125px_1fr] gap-2 [&_b]:font-bold [&_b]:text-[#09165f] [&>span:not([class])]:text-[#5068a0]";
 const edQuickLink =
-  "mb-[7px] flex h-[41px] items-center gap-2.5 rounded-[7px] border border-[#dce8f4] bg-[#f7fbff] px-[11px] text-[10px] font-semibold !text-[#09165f] no-underline hover:border-[#c5daf0] hover:bg-[#eef6ff] [&_b]:ml-auto [&_b]:font-bold [&_b]:text-[#0764e8]";
+  "mb-[7px] flex h-[41px] items-center gap-2.5 rounded-[7px] border border-[#dce8f4] bg-[#f7fbff] px-[11px] text-[13px] font-semibold !text-[#09165f] no-underline hover:border-[#c5daf0] hover:bg-[#eef6ff] [&_b]:ml-auto [&_b]:font-bold [&_b]:text-[#0764e8]";
 const edQuickIco = "grid place-items-center text-[#079653]";
 const edTh = "bg-[#edf5fc] p-[7px] text-left font-bold text-[#09165f]";
 const edTd =
@@ -159,12 +162,12 @@ const tmTableWrap = (small = false) =>
 const tmTable = (small = false) =>
   cn(
     "w-full border-separate border-spacing-0 text-[#263e9a]",
-    small ? "min-w-[390px] text-[11px]" : "min-w-[680px] text-xs",
+    small ? "min-w-[390px] text-[14px]" : "min-w-[680px] text-sm",
   );
 const tmTh = (small = false) =>
   cn(
     "whitespace-nowrap border-y border-[#dce9fb] bg-[#edf6ff] px-2 text-center font-bold text-[#07165e] first:rounded-tl-[5px] first:border-l last:rounded-tr-[5px] last:border-r",
-    small ? "h-[27px] text-[10px]" : "h-[35px]",
+    small ? "h-[27px] text-[13px]" : "h-[35px]",
   );
 const tmTdBase = (small = false) =>
   cn(
@@ -522,7 +525,7 @@ export function EventDetailsPage() {
         <p className="mb-3 text-sm text-mute">Loading event…</p>
       ) : null}
 
-      <div className="mb-2.5 ml-2 flex min-h-[30px] flex-wrap items-center gap-[15px] text-[11px] text-[#244582] [&>b]:font-bold [&>b]:text-[#09165f]">
+      <div className="mb-2.5 ml-2 flex min-h-[30px] flex-wrap items-center gap-[15px] text-[14px] text-[#244582] [&>b]:font-bold [&>b]:text-[#09165f]">
         <Link
           to="/admin/events"
           className="inline-grid place-items-center !text-[#244582] no-underline hover:!text-[#0764e8]"
@@ -560,7 +563,7 @@ export function EventDetailsPage() {
                 <Link
                   role="menuitem"
                   to={`/admin/events/${id}/edit`}
-                  className="flex items-center gap-2 px-3 py-2 text-[11px] font-semibold !text-[#09165f] no-underline hover:bg-[#f3f8ff]"
+                  className="flex items-center gap-2 px-3 py-2 text-[14px] font-semibold !text-[#09165f] no-underline hover:bg-[#f3f8ff]"
                   onClick={() => setMoreOpen(false)}
                 >
                   <Pencil size={13} /> Edit Event
@@ -568,7 +571,7 @@ export function EventDetailsPage() {
                 <button
                   type="button"
                   role="menuitem"
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] font-semibold text-[#09165f] hover:bg-[#f3f8ff] disabled:opacity-50"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[14px] font-semibold text-[#09165f] hover:bg-[#f3f8ff] disabled:opacity-50"
                   disabled={actionBusy || !fromApi}
                   onClick={async () => {
                     setMoreOpen(false);
@@ -595,7 +598,7 @@ export function EventDetailsPage() {
                 <Link
                   role="menuitem"
                   to={`/admin/events/${id}/reports`}
-                  className="flex items-center gap-2 px-3 py-2 text-[11px] font-semibold !text-[#09165f] no-underline hover:bg-[#f3f8ff]"
+                  className="flex items-center gap-2 px-3 py-2 text-[14px] font-semibold !text-[#09165f] no-underline hover:bg-[#f3f8ff]"
                   onClick={() => setMoreOpen(false)}
                 >
                   <Download size={13} /> View Reports
@@ -603,7 +606,7 @@ export function EventDetailsPage() {
                 <button
                   type="button"
                   role="menuitem"
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] font-semibold text-[#ed1c2e] hover:bg-[#fff1f2] disabled:opacity-50"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[14px] font-semibold text-[#ed1c2e] hover:bg-[#fff1f2] disabled:opacity-50"
                   disabled={actionBusy || !fromApi}
                   onClick={async () => {
                     const name = detail.name || "this event";
@@ -648,15 +651,15 @@ export function EventDetailsPage() {
         <div className="min-w-0 flex-1">
           <h1 className="my-[3px] flex flex-wrap items-center gap-2 text-[25px] font-extrabold tracking-[-0.7px] text-[#09165f] max-[500px]:text-[22px]">
             {detail.name}
-            <span className="ml-1 inline-block rounded-md bg-[#c9f2dd] px-2.5 py-[7px] align-middle text-[10px] font-bold text-[#08784a]">{detail.statusLabel}</span>
+            <span className="ml-1 inline-block rounded-md bg-[#c9f2dd] px-2.5 py-[7px] align-middle text-[13px] font-bold text-[#08784a]">{detail.statusLabel}</span>
           </h1>
-          <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px]">
+          <div className="mb-2 flex flex-wrap items-center gap-2 text-[14px]">
             <span className="font-semibold text-[#687aa0]">Engagement Code</span>
             <span className="rounded-md bg-[#edf6ff] px-2 py-0.5 font-bold text-[#0764e8]">
               {detail.engagementCode || "—"}
             </span>
           </div>
-          <div className="mb-[13px] line-clamp-2 max-w-[720px] overflow-hidden text-xs text-[#63749b]">{detail.theme}</div>
+          <div className="mb-[13px] line-clamp-2 max-w-[720px] overflow-hidden text-sm text-[#63749b]">{detail.theme}</div>
           <div className="flex flex-wrap gap-[30px] max-[500px]:flex-col max-[500px]:gap-2">
             <div className={edMi}>
               <span className={edMiIco}>
@@ -712,10 +715,10 @@ export function EventDetailsPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-[18px] font-extrabold leading-[1.15] text-[#09165f]">{kpi.value}</div>
-                  <div className="mt-[3px] text-[10px] text-[#63749b]">{kpi.label}</div>
+                  <div className="mt-[3px] text-[13px] text-[#63749b]">{kpi.label}</div>
                   <div
                     className={cn(
-                      "mt-[7px] text-[11px]",
+                      "mt-[7px] text-[14px]",
                       mutedTrend ? "font-semibold text-[#9aabc4]" : "font-bold text-[#079653]",
                     )}
                   >{kpi.trend}</div>
@@ -750,7 +753,7 @@ export function EventDetailsPage() {
             type="button"
             data-nav-id={t.id}
             className={cn(
-              "relative flex h-full min-w-max cursor-pointer items-center justify-center whitespace-nowrap border-0 bg-transparent px-[27px] font-[inherit] text-[10px] max-[500px]:px-[13px]",
+              "relative flex h-full min-w-max cursor-pointer items-center justify-center whitespace-nowrap border-0 bg-transparent px-[27px] font-[inherit] text-[13px] max-[500px]:px-[13px]",
               validTab === t.id
                 ? "font-bold text-[#0764e8] after:absolute after:inset-x-0 after:bottom-0 after:h-[3px] after:bg-[#0764e8] after:content-['']"
                 : "text-[#26468e]",
@@ -779,6 +782,8 @@ export function EventDetailsPage() {
         <div className="mt-1">
           <TicketsTab
             eventId={id}
+            eventName={detail.name}
+            registered={Number(engagement?.registered ?? 0)}
             tickets={tickets}
             fromApi={fromApi}
             loading={loading}
@@ -838,7 +843,7 @@ export function EventDetailsPage() {
           />
         </div>
       ) : null}
-      {validTab === "venue-content" ? (
+      {validTab === "venue" || validTab === "venue-content" ? (
         <div className="mt-1">
           <EventVenueContentTab
             eventId={id}
@@ -987,7 +992,7 @@ function ClassificationEditModal({
               key={tag}
               type="button"
               onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}
-              className="inline-flex items-center gap-1 rounded-full bg-soft px-2.5 py-1 text-xs font-semibold text-blue"
+              className="inline-flex items-center gap-1 rounded-full bg-soft px-2.5 py-1 text-sm font-semibold text-blue"
             >
               {tag} <X size={12} />
             </button>
@@ -1007,7 +1012,7 @@ function ClassificationEditModal({
             className="min-w-[100px] flex-1 bg-transparent text-sm outline-none"
           />
         </div>
-        <p className="mt-1 text-xs text-mute">Press Enter to add a tag.</p>
+        <p className="mt-1 text-sm text-mute">Press Enter to add a tag.</p>
       </div>
     </Modal>
   );
@@ -1091,7 +1096,7 @@ function EventClassificationSettings({
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-ink">Active public event</p>
-              <p className="mt-0.5 text-[12px] leading-snug text-mute">
+              <p className="mt-0.5 text-[15px] leading-snug text-mute">
                 Only one event can be active. Activating this one publishes it on the
                 homepage and deactivates every other live event.
               </p>
@@ -1110,7 +1115,7 @@ function EventClassificationSettings({
             </Button>
           </div>
           {featureError ? (
-            <p className="mt-2 text-[12px] text-rose-600" role="alert">
+            <p className="mt-2 text-[15px] text-rose-600" role="alert">
               {featureError}
             </p>
           ) : null}
@@ -1290,7 +1295,7 @@ function OverviewTab({
   const participantTotal = 0;
 
   const edSocialItem =
-    "group grid grid-cols-[32px_1fr_12px] items-center gap-2 text-[9px] text-inherit no-underline";
+    "group grid grid-cols-[32px_1fr_12px] items-center gap-2 text-[12px] text-inherit no-underline";
 
   // Donut: conic-gradient stops built from the same slices as the legend.
   const donutBackground = (() => {
@@ -1329,7 +1334,7 @@ function OverviewTab({
               </Link>
             </div>
           </div>
-          <div className="grid grid-cols-[1.25fr_.85fr] gap-x-[35px] gap-y-2.5 text-[10px] max-[820px]:grid-cols-1">
+          <div className="grid grid-cols-[1.25fr_.85fr] gap-x-[35px] gap-y-2.5 text-[13px] max-[820px]:grid-cols-1">
             <div className={edRow}>
               <b>Event Name</b>
               <span>{detail.name}</span>
@@ -1440,12 +1445,12 @@ function OverviewTab({
               <span className={edPill}>{detail.statusLabel}</span>
             </div>
           </div>
-          <p className="mx-0 mb-[15px] mt-[9px] text-[10px] text-[#58709c]">
+          <p className="mx-0 mb-[15px] mt-[9px] text-[13px] text-[#58709c]">
             {detail.registration === "Open"
               ? "This event is live and accepting registrations."
               : "Registration is currently closed for this event."}
           </p>
-          <div className="grid gap-[7px] border-t border-[#cfe8dc] pt-2.5 text-[10px]">
+          <div className="grid gap-[7px] border-t border-[#cfe8dc] pt-2.5 text-[13px]">
             <div className={edStrow}>
               <b>Created By</b>
               <span>{detail.createdBy}</span>
@@ -1513,7 +1518,7 @@ function OverviewTab({
         <article
           className={cn(
             edCard,
-            "col-[1] max-[820px]:col-auto [&_p]:mx-0 [&_p]:mb-2 [&_p]:mt-0 [&_p]:text-[10px] [&_p]:leading-[1.65] [&_p]:text-[#526896]",
+            "col-[1] max-[820px]:col-auto [&_p]:mx-0 [&_p]:mb-2 [&_p]:mt-0 [&_p]:text-[13px] [&_p]:leading-[1.65] [&_p]:text-[#526896]",
           )}
         >
           <div className={edCh}>
@@ -1551,7 +1556,7 @@ function OverviewTab({
                 <>
                   <i
                     className={cn(
-                      "grid h-[30px] w-[30px] place-items-center rounded-full text-[11px] font-bold text-white",
+                      "grid h-[30px] w-[30px] place-items-center rounded-full text-[14px] font-bold text-white",
                       link.x ? "bg-black" : "bg-[#0764e8]",
                     )}
                   >
@@ -1604,7 +1609,7 @@ function OverviewTab({
               View All →
             </Link>
           </div>
-          <table className="w-full border-collapse text-[9px]">
+          <table className="w-full border-collapse text-[12px]">
             <thead>
               <tr>
                 <th className={edTh}>Name</th>
@@ -1700,7 +1705,7 @@ function OverviewTab({
                     {s.day}
                   </div>
                   <div>
-                    <div className="text-[9px] font-bold text-[#09165f]">{s.title}</div>
+                    <div className="text-[12px] font-bold text-[#09165f]">{s.title}</div>
                     <div className="mt-[3px] text-[8px] text-[#687aa0]">
                       ◉ {s.time}　|　⌖ {s.place}
                     </div>
@@ -1735,12 +1740,12 @@ function OverviewTab({
               className="relative h-[140px] w-[140px] flex-none rounded-full after:absolute after:inset-[38px] after:rounded-full after:bg-white after:content-['']"
               style={{ background: donutBackground }}
             >
-              <div className="absolute inset-0 z-[1] grid place-items-center text-center text-sm font-extrabold leading-[1.2] text-[#09165f] [&_small]:block [&_small]:text-[9px] [&_small]:font-semibold [&_small]:text-[#63749b]">
+              <div className="absolute inset-0 z-[1] grid place-items-center text-center text-sm font-extrabold leading-[1.2] text-[#09165f] [&_small]:block [&_small]:text-[12px] [&_small]:font-semibold [&_small]:text-[#63749b]">
                 {participantTotal.toLocaleString()}
                 <small>Participants</small>
               </div>
             </div>
-            <div className="grid gap-[11px] text-[9px] text-[#51689d]">
+            <div className="grid gap-[11px] text-[12px] text-[#51689d]">
               {participantSlices.map((slice) => (
                 <div key={slice.label}>
                   <i
@@ -1768,26 +1773,18 @@ type TicketRow = {
   status: string;
 };
 
-function toTicketRows(tickets: EngagementTicket[]): TicketRow[] {
-  return tickets.map((t, i) => ({
-    id: t.id || `tk-${i + 1}`,
-    name: t.name,
-    blurb: t.period || "Event ticket",
-    priceKes: parseKesPrice(t.price),
-    capacity: t.capacity || 0,
-    sold: 0,
-    status: "Active",
-  }));
-}
-
 function TicketsTab({
   eventId,
+  eventName,
+  registered,
   tickets,
   fromApi,
   loading,
   onChanged,
 }: {
   eventId: string;
+  eventName: string;
+  registered: number;
   tickets: EngagementTicket[];
   fromApi: boolean;
   loading: boolean;
@@ -1797,8 +1794,73 @@ function TicketsTab({
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<EngagementTicket | null>(null);
   const [saving, setSaving] = useState(false);
+  const [analytics, setAnalytics] = useState<TicketSalesAnalytics | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const toast = useToast();
-  const rows = toTicketRows(tickets);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!fromApi || !eventId) {
+        setAnalytics(
+          analyzeTicketSales({
+            eventId,
+            eventName,
+            tickets,
+            transactions: [],
+            registered,
+          }),
+        );
+        return;
+      }
+      setAnalyticsLoading(true);
+      try {
+        const [transactions, participants] = await Promise.all([
+          fetchEventTransactions(eventId, eventName),
+          listEventParticipants(eventId).catch(() => []),
+        ]);
+        if (cancelled) return;
+        // Prefer live participant count when engagement.registered is missing/0.
+        const registeredCount = Math.max(registered, participants.length);
+        setAnalytics(
+          analyzeTicketSales({
+            eventId,
+            eventName,
+            tickets,
+            transactions,
+            registered: registeredCount,
+          }),
+        );
+      } catch {
+        if (!cancelled) {
+          setAnalytics(
+            analyzeTicketSales({
+              eventId,
+              eventName,
+              tickets,
+              transactions: [],
+              registered,
+            }),
+          );
+        }
+      } finally {
+        if (!cancelled) setAnalyticsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId, eventName, fromApi, registered, tickets]);
+
+  const rows: TicketRow[] = (analytics?.rows || []).map((r) => ({
+    id: r.id,
+    name: r.name,
+    blurb: r.blurb,
+    priceKes: r.priceKes,
+    capacity: r.capacity,
+    sold: r.sold,
+    status: r.status,
+  }));
 
   const persistTickets = async (next: EngagementTicket[], message: string) => {
     if (!fromApi) {
@@ -1843,20 +1905,33 @@ function TicketsTab({
     const next = tickets.filter((t, i) => (t.id || `tk-${i + 1}`) !== row.id);
     await persistTickets(next, "Ticket type removed");
   };
-  const capacity = rows.reduce((s, t) => s + t.capacity, 0);
-  const sold = rows.reduce((s, t) => s + t.sold, 0);
-  const remaining = Math.max(capacity - sold, 0);
-  const paid = 0;
-  const canceled = 0;
-  const soldPct = capacity > 0 ? Math.round((sold / capacity) * 100) : 0;
-  const remainPct = capacity > 0 ? Math.round((remaining / capacity) * 100) : 0;
-  const totalRevenue = rows.reduce((s, t) => s + t.sold * t.priceKes, 0);
+
+  const capacity = analytics?.capacity ?? rows.reduce((s, t) => s + t.capacity, 0);
+  const sold = analytics?.sold ?? rows.reduce((s, t) => s + t.sold, 0);
+  const remaining = analytics?.remaining ?? Math.max(capacity - sold, 0);
+  const paid = analytics?.paid ?? 0;
+  const canceled = analytics?.canceled ?? 0;
+  const soldPct = analytics?.soldPct ?? (capacity > 0 ? Math.round((sold / capacity) * 100) : 0);
+  const remainPct =
+    analytics?.remainPct ?? (capacity > 0 ? Math.round((remaining / capacity) * 100) : 0);
+  const totalRevenue =
+    analytics?.totalRevenue ?? rows.reduce((s, t) => s + t.sold * t.priceKes, 0);
+  const sourceLabel =
+    analytics?.source === "transactions"
+      ? "From payments"
+      : analytics?.source === "registered"
+        ? "From registrations"
+        : analytics?.source === "ticket-fields"
+          ? "From ticket fields"
+          : analyticsLoading
+            ? "Loading…"
+            : "—";
 
   const kpis = [
     {
       label: "Total Tickets",
       value: capacity.toLocaleString(),
-      meta: live ? "—" : "↑ 12%",
+      meta: sourceLabel,
       tone: "blue" as const,
       stroke: "#0757ff",
       Icon: Ticket,
@@ -1864,7 +1939,7 @@ function TicketsTab({
     {
       label: "Tickets Sold",
       value: sold.toLocaleString(),
-      meta: live ? "—" : `${soldPct}%`,
+      meta: `${soldPct}%`,
       tone: "green" as const,
       stroke: "#00b65d",
       Icon: Check,
@@ -1872,7 +1947,7 @@ function TicketsTab({
     {
       label: "Tickets Remaining",
       value: remaining.toLocaleString(),
-      meta: live ? "—" : `${remainPct}%`,
+      meta: `${remainPct}%`,
       tone: "amber" as const,
       stroke: "#ff9200",
       Icon: Timer,
@@ -1880,7 +1955,7 @@ function TicketsTab({
     {
       label: "Paid Attendees",
       value: paid.toLocaleString(),
-      meta: live ? "—" : "88%",
+      meta: sourceLabel,
       tone: "purple" as const,
       stroke: "#ad00f5",
       Icon: Users,
@@ -1888,11 +1963,11 @@ function TicketsTab({
     {
       label: "Canceled Tickets",
       value: canceled.toLocaleString(),
-      meta: live ? "—" : "4%",
+      meta: canceled > 0 ? "Includes refunds/voids" : "—",
       tone: "red" as const,
       stroke: "#ff303c",
       Icon: X,
-      metaRed: !live,
+      metaRed: canceled > 0,
     },
   ];
 
@@ -1903,7 +1978,7 @@ function TicketsTab({
     <div>
       <section className="mb-3 grid grid-cols-5 gap-2.5 max-[900px]:grid-cols-2 max-[560px]:gap-[7px]">
         {kpis.map((kpi, kpiIdx) => {
-          const muted = live;
+          const muted = analyticsLoading || (!analytics?.source || analytics.source === "empty");
           return (
             <article
               key={kpi.label}
@@ -1924,7 +1999,7 @@ function TicketsTab({
                 <strong className="block whitespace-nowrap text-xl leading-[1.15] tracking-[-0.4px] text-[#07135c] max-[1200px]:text-[17px] max-[560px]:text-base">
                   {kpi.value}
                 </strong>
-                <span className="mt-[5px] block whitespace-nowrap text-xs text-[#2b4eaa] max-[1200px]:text-[11px] max-[560px]:whitespace-normal max-[560px]:text-[10px]">
+                <span className="mt-[5px] block whitespace-nowrap text-sm text-[#2b4eaa] max-[1200px]:text-[14px] max-[560px]:whitespace-normal max-[560px]:text-[13px]">
                   {kpi.label}
                 </span>
                 <em
@@ -1974,7 +2049,7 @@ function TicketsTab({
                 type="button"
                 onClick={openCreate}
                 disabled={saving}
-                className="inline-flex h-[33px] cursor-pointer items-center gap-2 whitespace-nowrap rounded-md border-0 bg-[#0757f5] px-3.5 font-[inherit] text-xs font-semibold text-white shadow-[0_2px_4px_rgba(7,87,245,.1)] hover:bg-[#064adb] disabled:opacity-60"
+                className="inline-flex h-[33px] cursor-pointer items-center gap-2 whitespace-nowrap rounded-md border-0 bg-[#0757f5] px-3.5 font-[inherit] text-sm font-semibold text-white shadow-[0_2px_4px_rgba(7,87,245,.1)] hover:bg-[#064adb] disabled:opacity-60"
               >
                 <Plus size={14} strokeWidth={3} /> Add Ticket Type
               </button>
@@ -2007,8 +2082,8 @@ function TicketsTab({
                         <tr key={t.id}>
                           <td className={tmTd()}>{i + 1}</td>
                           <td className={cn(tmTdBase(), "min-w-[140px] text-left")}>
-                            <strong className="mb-[3px] block text-xs text-[#07135f]">{t.name}</strong>
-                            <small className="block text-[11px] text-[#6576a9]">{t.blurb}</small>
+                            <strong className="mb-[3px] block text-sm text-[#07135f]">{t.name}</strong>
+                            <small className="block text-[14px] text-[#6576a9]">{t.blurb}</small>
                           </td>
                           <td className={tmTd()}>{t.priceKes.toLocaleString()}</td>
                           <td className={tmTd()}>{t.capacity.toLocaleString()}</td>
@@ -2197,7 +2272,7 @@ function TicketsTab({
                   key={label}
                   type="button"
                   onClick={action}
-                  className="flex h-[38px] w-full cursor-pointer items-center gap-[15px] rounded-lg border border-[#dceafe] bg-[linear-gradient(90deg,#f0f7ff,#fbfdff)] px-[13px] text-left font-[inherit] text-xs text-[#23429b] hover:bg-none hover:bg-[#e8f2ff]"
+                  className="flex h-[38px] w-full cursor-pointer items-center gap-[15px] rounded-lg border border-[#dceafe] bg-[linear-gradient(90deg,#f0f7ff,#fbfdff)] px-[13px] text-left font-[inherit] text-sm text-[#23429b] hover:bg-none hover:bg-[#e8f2ff]"
                 >
                   <span className={cn("grid w-[22px] place-items-center", tone)}>
                     <Icon size={18} strokeWidth={strokeWidth} />
@@ -2216,7 +2291,7 @@ function TicketsTab({
               </span>
               <h2>Ticket Sales Trend</h2>
               <select
-                className="ml-auto rounded-[7px] border border-[#dbe8fb] bg-white px-3 py-2 font-[inherit] text-[11px] text-[#07135f]"
+                className="ml-auto rounded-[7px] border border-[#dbe8fb] bg-white px-3 py-2 font-[inherit] text-[14px] text-[#07135f]"
                 aria-label="Chart period"
                 defaultValue="30"
               >
@@ -2319,7 +2394,7 @@ function TicketsTab({
                   ))}
                 </g>
               </svg>
-              <div className="mt-[5px] flex items-center justify-center gap-[7px] text-xs text-[#3152aa]">
+              <div className="mt-[5px] flex items-center justify-center gap-[7px] text-sm text-[#3152aa]">
                 <span className="inline-block h-3 w-3 rounded-full bg-[#0757ff]" />
                 Tickets Sold
               </div>
@@ -3021,10 +3096,10 @@ function SponsorsTab({
                 >
                   {kpi.value}
                 </div>
-                <div className="text-xs text-slate-500">{kpi.label}</div>
+                <div className="text-sm text-slate-500">{kpi.label}</div>
                 <div
                   className={cn(
-                    "mt-1 text-xs font-bold",
+                    "mt-1 text-sm font-bold",
                     live ? "font-semibold text-slate-400" : metaTone[kpi.tone],
                   )}
                 >
@@ -3086,7 +3161,7 @@ function SponsorsTab({
 
           <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
             <select
-              className="rounded-lg border border-blue-100 bg-white px-3 py-2 text-xs text-blue-950 outline-none focus:border-blue-500"
+              className="rounded-lg border border-blue-100 bg-white px-3 py-2 text-sm text-blue-950 outline-none focus:border-blue-500"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
             >
@@ -3098,7 +3173,7 @@ function SponsorsTab({
               ))}
             </select>
             <select
-              className="rounded-lg border border-blue-100 bg-white px-3 py-2 text-xs text-blue-950 outline-none focus:border-blue-500"
+              className="rounded-lg border border-blue-100 bg-white px-3 py-2 text-sm text-blue-950 outline-none focus:border-blue-500"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
@@ -3108,7 +3183,7 @@ function SponsorsTab({
               <option>Declined</option>
             </select>
             <select
-              className="rounded-lg border border-blue-100 bg-white px-3 py-2 text-xs text-blue-950 outline-none focus:border-blue-500"
+              className="rounded-lg border border-blue-100 bg-white px-3 py-2 text-sm text-blue-950 outline-none focus:border-blue-500"
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
             >
@@ -3122,8 +3197,8 @@ function SponsorsTab({
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-blue-100">
-            <table className="w-full min-w-[900px] border-collapse text-left text-[11px] text-blue-950">
-              <thead className="bg-blue-50 text-[10px] font-bold text-[#07145c]">
+            <table className="w-full min-w-[900px] border-collapse text-left text-[14px] text-blue-950">
+              <thead className="bg-blue-50 text-[13px] font-bold text-[#07145c]">
                 <tr>
                   <th className="w-9 px-3 py-3">
                     <input
@@ -3167,7 +3242,7 @@ function SponsorsTab({
                     </td>
                     <td className="px-2 py-3 text-slate-500">{start + i + 1}</td>
                     <td className="px-2 py-3">
-                      <span className="flex h-[30px] w-[30px] items-center justify-center rounded-[7px] bg-[#f1f7ff] text-[10px] font-extrabold text-[#075bff]">
+                      <span className="flex h-[30px] w-[30px] items-center justify-center rounded-[7px] bg-[#f1f7ff] text-[13px] font-extrabold text-[#075bff]">
                         {s.logo}
                       </span>
                     </td>
@@ -3177,7 +3252,7 @@ function SponsorsTab({
                     <td className="px-2 py-3">
                       <span
                         className={cn(
-                          "inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold whitespace-nowrap",
+                          "inline-flex items-center rounded-md px-2.5 py-1 text-sm font-semibold whitespace-nowrap",
                           sponsorStatusClass(s.status),
                         )}
                       >
@@ -3235,7 +3310,7 @@ function SponsorsTab({
             ) : null}
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
             <span>
               {summaryTotal
                 ? visible.length
@@ -3302,14 +3377,14 @@ function SponsorsTab({
                   aria-hidden
                 />
                 <div className="absolute inset-[18%] flex flex-col items-center justify-center rounded-full bg-white text-center">
-                  <span className="text-[10px] font-medium">KES</span>
+                  <span className="text-[13px] font-medium">KES</span>
                   <strong className="text-lg leading-5">
                     {live ? formatKesCompact(totalValue) || "0" : "12.5M"}
                   </strong>
-                  <span className="text-[10px] text-slate-500">Total Value</span>
+                  <span className="text-[13px] text-slate-500">Total Value</span>
                 </div>
               </div>
-              <ul className="flex-1 space-y-2 text-[11px]">
+              <ul className="flex-1 space-y-2 text-[14px]">
                 {tiers.map((t) => (
                   <li key={t.label} className="flex items-center justify-between gap-2">
                     <span className="inline-flex items-center gap-2">
@@ -3331,12 +3406,12 @@ function SponsorsTab({
               <h2 className="text-sm font-extrabold">
                 <span className="mr-1">▦</span> Sponsorship Categories
               </h2>
-              <button type="button" className="text-xs font-semibold text-blue-600">
+              <button type="button" className="text-sm font-semibold text-blue-600">
                 View All
               </button>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-[10px]">
+              <table className="w-full text-[13px]">
                 <thead className="bg-blue-50">
                   <tr>
                     <th className="p-2 text-left">Category</th>
@@ -3364,11 +3439,11 @@ function SponsorsTab({
               <h2 className="text-sm font-extrabold">
                 <span className="mr-1">♙</span> Top {Nouns}
               </h2>
-              <button type="button" className="text-xs font-semibold text-blue-600">
+              <button type="button" className="text-sm font-semibold text-blue-600">
                 View All
               </button>
             </div>
-            <div className="space-y-3 text-[11px]">
+            <div className="space-y-3 text-[14px]">
               {tops.map((t) => (
                 <div key={t.name}>
                   <div className="mb-1 flex justify-between">
@@ -3564,14 +3639,14 @@ function channelBadge(channel: string) {
   if (channel === "SMS") {
     return (
       <span className="inline-flex items-center gap-1">
-        <span className="rounded bg-emerald-600 px-1 py-0.5 text-[9px] text-white">SMS</span> SMS
+        <span className="rounded bg-emerald-600 px-1 py-0.5 text-[12px] text-white">SMS</span> SMS
       </span>
     );
   }
   if (channel === "WhatsApp") {
     return (
       <span className="inline-flex items-center gap-1">
-        <span className="rounded bg-emerald-600 px-1 py-0.5 text-[9px] text-white">WA</span> WhatsApp
+        <span className="rounded bg-emerald-600 px-1 py-0.5 text-[12px] text-white">WA</span> WhatsApp
       </span>
     );
   }
@@ -3681,8 +3756,8 @@ function CommunicationsTab({
             </div>
             <div className="min-w-0">
               <strong className="block text-base font-extrabold leading-6 sm:text-xl">{kpi.value}</strong>
-              <span className="block text-[10px] text-blue-700 sm:text-xs">{kpi.label}</span>
-              <b className={cn("mt-1 block text-xs sm:text-sm", live ? "font-semibold text-slate-400" : metaTone[kpi.tone])}>
+              <span className="block text-[13px] text-blue-700 sm:text-sm">{kpi.label}</span>
+              <b className={cn("mt-1 block text-sm sm:text-sm", live ? "font-semibold text-slate-400" : metaTone[kpi.tone])}>
                 {kpi.meta}
               </b>
             </div>
@@ -3714,7 +3789,7 @@ function CommunicationsTab({
               <button
                 type="button"
                 onClick={() => toast.info("Connect this button to your campaign creation form or API.")}
-                className="h-[30px] rounded-md bg-blue-600 px-3 text-xs font-semibold text-white hover:bg-blue-700"
+                className="h-[30px] rounded-md bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-700"
               >
                 <span className="inline-flex items-center gap-1">
                   <Plus size={12} strokeWidth={3} /> New Campaign
@@ -3733,7 +3808,7 @@ function CommunicationsTab({
                       type="button"
                       onClick={() => setChannel(tab)}
                       className={cn(
-                        "rounded border px-3 py-2 text-[10px]",
+                        "rounded border px-3 py-2 text-[13px]",
                         active
                           ? "border-blue-400 bg-blue-50 font-semibold text-blue-700"
                           : "border-blue-100",
@@ -3748,14 +3823,14 @@ function CommunicationsTab({
               <label className="flex h-[30px] w-[185px] items-center gap-1.5 rounded-md border border-blue-100 px-2.5">
                 <Search size={12} className="text-blue-400" />
                 <input
-                  className="w-full min-w-0 bg-transparent text-[10px] outline-none placeholder:text-blue-400"
+                  className="w-full min-w-0 bg-transparent text-[13px] outline-none placeholder:text-blue-400"
                   placeholder="Search campaigns..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
               </label>
               <select
-                className="h-[30px] rounded-md border border-blue-100 bg-white px-2 text-[10px]"
+                className="h-[30px] rounded-md border border-blue-100 bg-white px-2 text-[13px]"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
@@ -3767,7 +3842,7 @@ function CommunicationsTab({
             </div>
 
             <div className="overflow-x-auto px-3.5 pb-3">
-              <table className="w-full min-w-[780px] border-separate border-spacing-0 text-[10px] text-blue-900">
+              <table className="w-full min-w-[780px] border-separate border-spacing-0 text-[13px] text-blue-900">
                 <thead>
                   <tr className="bg-blue-50 text-left text-[#07165e]">
                     <th className="border-y border-l border-blue-100 px-2 py-2">#</th>
@@ -3850,14 +3925,14 @@ function CommunicationsTab({
                 <Zap size={18} className="text-blue-600" />
                 <h2 className="text-sm font-extrabold">Campaign Performance</h2>
                 <span className="flex-1" />
-                <select className="rounded-md border border-blue-100 bg-white px-2 py-1.5 text-[10px]">
+                <select className="rounded-md border border-blue-100 bg-white px-2 py-1.5 text-[13px]">
                   <option>Last 30 Days</option>
                   <option>Last 7 Days</option>
                   <option>Last 90 Days</option>
                 </select>
               </div>
               <div className={cn("relative pl-7", live && "opacity-40")}>
-                <div className="absolute inset-y-0 left-0 flex flex-col justify-between pb-5 text-[10px] text-blue-700">
+                <div className="absolute inset-y-0 left-0 flex flex-col justify-between pb-5 text-[13px] text-blue-700">
                   <span>400</span>
                   <span>300</span>
                   <span>200</span>
@@ -3875,7 +3950,7 @@ function CommunicationsTab({
                     </div>
                   ))}
                 </div>
-                <div className="flex justify-between pt-1 text-[9px] text-blue-700">
+                <div className="flex justify-between pt-1 text-[12px] text-blue-700">
                   <span>Sep 01</span>
                   <span>Sep 05</span>
                   <span>Sep 10</span>
@@ -3885,7 +3960,7 @@ function CommunicationsTab({
                   <span>Sep 30</span>
                 </div>
               </div>
-              <div className="mt-3 flex flex-wrap justify-center gap-4 text-[10px] text-blue-700">
+              <div className="mt-3 flex flex-wrap justify-center gap-4 text-[13px] text-blue-700">
                 <span>🔵 Emails</span>
                 <span>🟢 SMS</span>
                 <span>🟡 WhatsApp</span>
@@ -3905,10 +3980,10 @@ function CommunicationsTab({
                 >
                   <div className="relative z-10 text-center">
                     <strong className="block text-lg">0</strong>
-                    <span className="text-[10px] text-blue-700">Recipients</span>
+                    <span className="text-[13px] text-blue-700">Recipients</span>
                   </div>
                 </div>
-                <div className="min-w-[155px] flex-1 space-y-2.5 text-xs text-blue-700">
+                <div className="min-w-[155px] flex-1 space-y-2.5 text-sm text-blue-700">
                   {segments.map((s) => (
                     <div key={s.label} className="flex items-center gap-2">
                       <i className="h-3 w-3 rounded-full" style={{ background: s.color }} />
@@ -3946,7 +4021,7 @@ function CommunicationsTab({
                   onClick={() =>
                     toast.info(`${action.label} — connect this action to your communications workflow.`)
                   }
-                  className="flex h-[40px] w-full items-center gap-3 rounded-lg border border-blue-100 bg-blue-50/50 px-3 text-left text-[11px] hover:bg-blue-50"
+                  className="flex h-[40px] w-full items-center gap-3 rounded-lg border border-blue-100 bg-blue-50/50 px-3 text-left text-[14px] hover:bg-blue-50"
                 >
                   <span className={cn("grid w-7 place-items-center", action.tone)}>
                     <action.Icon size={18} />
@@ -3963,12 +4038,12 @@ function CommunicationsTab({
               <LayoutGrid size={18} className="text-blue-600" />
               <h2 className="text-sm font-extrabold">Message Templates</h2>
               <span className="flex-1" />
-              <button type="button" className="text-[11px] text-blue-600">
+              <button type="button" className="text-[14px] text-blue-600">
                 View All
               </button>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[260px] border-separate border-spacing-0 text-[10px] text-blue-800">
+              <table className="w-full min-w-[260px] border-separate border-spacing-0 text-[13px] text-blue-800">
                 <thead>
                   <tr className="bg-blue-50 text-left">
                     <th className="border-y border-l border-blue-100 px-2 py-2">Template Name</th>
@@ -3999,7 +4074,7 @@ function CommunicationsTab({
                 </tbody>
               </table>
             </div>
-            <div className="mt-3 flex gap-3 text-[10px] text-blue-600">
+            <div className="mt-3 flex gap-3 text-[13px] text-blue-600">
               <span className="inline-flex items-center gap-1">
                 <Phone size={12} /> {phone}
               </span>

@@ -1046,7 +1046,7 @@ export function CreateEventPage() {
                   />
                   <div className="text-center sm:text-left">
                     <p className="text-sm font-medium text-ink">Upload event logo</p>
-                    <p className="text-xs text-mute">Recommended 800×400px</p>
+                    <p className="text-sm text-mute">Recommended 800×400px</p>
                     <Button variant="outline" size="sm" className="mt-2">
                       <Upload size={14} /> Choose File
                     </Button>
@@ -1074,13 +1074,13 @@ export function CreateEventPage() {
                 />
                 <div className="flex items-center justify-between gap-2">
                   {fieldErrors.description ? (
-                    <span className="text-xs text-red" role="alert">
+                    <span className="text-sm text-red" role="alert">
                       {fieldErrors.description}
                     </span>
                   ) : (
                     <span />
                   )}
-                  <span className="text-right text-xs text-mute">{description.length}/300</span>
+                  <span className="text-right text-sm text-mute">{description.length}/300</span>
                 </div>
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -1137,7 +1137,7 @@ export function CreateEventPage() {
                       key={tag}
                       type="button"
                       onClick={() => setTags((prev) => prev.filter((t) => t !== tag))}
-                      className="create-wizard-chip-in inline-flex items-center gap-1 rounded-full bg-soft px-2.5 py-1 text-xs font-semibold text-blue transition hover:bg-blue/10"
+                      className="create-wizard-chip-in inline-flex items-center gap-1 rounded-full bg-soft px-2.5 py-1 text-sm font-semibold text-blue transition hover:bg-blue/10"
                     >
                       {tag} <X size={12} />
                     </button>
@@ -1157,11 +1157,11 @@ export function CreateEventPage() {
                     className="min-w-[100px] flex-1 bg-transparent text-sm outline-none"
                   />
                 </div>
-                <p className="mt-1 text-xs text-mute">Press Enter to add. Tags are saved with the event.</p>
+                <p className="mt-1 text-sm text-mute">Press Enter to add. Tags are saved with the event.</p>
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
                 <p className="text-sm font-semibold text-ink">Event support contacts</p>
-                <p className="mt-0.5 text-xs text-mute">
+                <p className="mt-0.5 text-sm text-mute">
                   Shown as “Need Assistance?” on registration (email / phone).
                 </p>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -1201,18 +1201,18 @@ export function CreateEventPage() {
             >
               <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
                 <p className="text-sm font-bold text-ink">Event Preview</p>
-                <button type="button" className="text-xs font-semibold text-blue">
+                <button type="button" className="text-sm font-semibold text-blue">
                   View Larger
                 </button>
               </div>
               <img src="/assets/admin-banner.jpg" alt="" className="h-28 w-full object-cover" />
               <div className="p-4">
                 <p className="font-semibold text-ink line-clamp-2">{title}</p>
-                <p className="mt-2 line-clamp-3 text-xs text-mute">{description}</p>
-                <p className="mt-3 flex items-center gap-1.5 text-xs text-mute">
+                <p className="mt-2 line-clamp-3 text-sm text-mute">{description}</p>
+                <p className="mt-3 flex items-center gap-1.5 text-sm text-mute">
                   <CalendarDays size={12} /> Date not set
                 </p>
-                <p className="mt-1 flex items-center gap-1.5 text-xs text-mute">
+                <p className="mt-1 flex items-center gap-1.5 text-sm text-mute">
                   <MapPin size={12} /> Venue not set
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -1328,7 +1328,7 @@ export function CreateEventPage() {
                   >
                     <m.icon size={18} className="text-blue" />
                     <p className="mt-2 font-semibold text-ink">{m.label}</p>
-                    <p className="text-xs text-mute">{m.desc}</p>
+                    <p className="text-sm text-mute">{m.desc}</p>
                   </button>
                 ))}
               </div>
@@ -1384,7 +1384,7 @@ export function CreateEventPage() {
                       aria-label="Country"
                     />
                     {fieldErrors.country ? (
-                      <span className="text-xs text-red" role="alert">
+                      <span className="text-sm text-red" role="alert">
                         {fieldErrors.country}
                       </span>
                     ) : null}
@@ -1430,7 +1430,7 @@ export function CreateEventPage() {
             >
               <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
                 <p className="text-sm font-bold text-ink">Event Preview</p>
-                <button type="button" className="text-xs font-semibold text-blue">
+                <button type="button" className="text-sm font-semibold text-blue">
                   View Larger
                 </button>
               </div>
@@ -1441,13 +1441,13 @@ export function CreateEventPage() {
               />
               <div className="p-4">
                 <p className="font-semibold text-ink line-clamp-2">{title || "Untitled event"}</p>
-                <p className="mt-2 flex items-center gap-1.5 text-xs text-mute">
+                <p className="mt-2 flex items-center gap-1.5 text-sm text-mute">
                   <CalendarDays size={12} /> {previewDate}
                 </p>
-                <p className="mt-1 flex items-center gap-1.5 text-xs text-mute">
+                <p className="mt-1 flex items-center gap-1.5 text-sm text-mute">
                   <Clock size={12} /> {startTime} – {endTime}
                 </p>
-                <p className="mt-1 flex items-center gap-1.5 text-xs text-mute">
+                <p className="mt-1 flex items-center gap-1.5 text-sm text-mute">
                   <MapPin size={12} /> {venueName || "Venue to be announced"}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -1511,7 +1511,7 @@ export function CreateEventPage() {
                         )}
                       >
                         Day {d.index}
-                        <span className="mt-0.5 block text-xs font-normal text-mute">{d.label}</span>
+                        <span className="mt-0.5 block text-sm font-normal text-mute">{d.label}</span>
                       </button>
                     ))
                   ) : (
@@ -1549,7 +1549,7 @@ export function CreateEventPage() {
                           )}
                           aria-hidden
                         />
-                        <div className="w-36 shrink-0 text-xs text-mute">{s.time}</div>
+                        <div className="w-36 shrink-0 text-sm text-mute">{s.time}</div>
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="font-semibold text-ink">{s.title}</p>
@@ -1558,7 +1558,7 @@ export function CreateEventPage() {
                             </Pill>
                           </div>
                           <p className="mt-1 text-sm text-mute">{s.description}</p>
-                          <p className="mt-2 flex flex-wrap items-center gap-3 text-xs text-mute">
+                          <p className="mt-2 flex flex-wrap items-center gap-3 text-sm text-mute">
                             <span className="inline-flex items-center gap-1">
                               <Users size={12} /> {s.speakers} speakers
                             </span>
@@ -1647,20 +1647,20 @@ export function CreateEventPage() {
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-ink">{sp.name}</p>
-                        <p className="text-xs text-mute">
+                        <p className="text-sm text-mute">
                           {sp.role} · {sp.org}
                         </p>
-                        <p className="text-xs text-blue">{sp.topic}</p>
+                        <p className="text-sm text-blue">{sp.topic}</p>
                         {!photoSrc ? (
-                          <p className="mt-0.5 text-[11px] font-medium text-amber-700">No photo yet</p>
+                          <p className="mt-0.5 text-[14px] font-medium text-amber-700">No photo yet</p>
                         ) : pendingSpeakerPhotos[sp.id] ? (
-                          <p className="mt-0.5 text-[11px] font-medium text-blue">Photo ready — saves with event</p>
+                          <p className="mt-0.5 text-[14px] font-medium text-blue">Photo ready — saves with event</p>
                         ) : null}
                       </div>
                       <div className="flex shrink-0 items-center gap-1.5">
                         <button
                           type="button"
-                          className="inline-flex h-8 items-center gap-1 rounded-lg border border-blue-200 bg-white px-2.5 text-xs font-semibold text-blue hover:bg-blue-50"
+                          className="inline-flex h-8 items-center gap-1 rounded-lg border border-blue-200 bg-white px-2.5 text-sm font-semibold text-blue hover:bg-blue-50"
                           aria-label={`Edit ${sp.name}`}
                           onClick={() => openEditSpeaker(sp)}
                         >
@@ -1712,17 +1712,17 @@ export function CreateEventPage() {
                       key={pkg.id}
                       className="flex flex-wrap items-start gap-3 rounded-lg border border-slate-200 p-3"
                     >
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-soft text-[10px] font-extrabold uppercase text-blue">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-soft text-[13px] font-extrabold uppercase text-blue">
                         {pkg.name.split(" ")[0].slice(0, 4)}
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-ink">{pkg.name}</p>
-                        <p className="text-xs text-mute">{pkg.subtitle}</p>
+                        <p className="text-sm text-mute">{pkg.subtitle}</p>
                         <p className="mt-1 text-sm font-bold text-ink">
                           KES {pkg.price.toLocaleString()}
                         </p>
-                        <p className="text-xs text-mute">{pkg.availability}</p>
-                        <ul className="mt-2 grid gap-1 text-xs text-mute">
+                        <p className="text-sm text-mute">{pkg.availability}</p>
+                        <ul className="mt-2 grid gap-1 text-sm text-mute">
                           {pkg.benefits.map((b) => (
                             <li key={b} className="flex gap-1.5">
                               <Check size={12} className="mt-0.5 shrink-0 text-green" /> {b}
@@ -1838,7 +1838,7 @@ export function CreateEventPage() {
                       <p className="text-sm text-mute">
                         {t.price} · Capacity {t.capacity}
                       </p>
-                      <p className="text-xs text-mute">{t.period}</p>
+                      <p className="text-sm text-mute">{t.period}</p>
                     </div>
                     <button
                       type="button"
@@ -1937,7 +1937,7 @@ export function CreateEventPage() {
                         {p.label}
                       </label>
                       {p.label !== "Free Registration" ? (
-                        <button type="button" className="text-xs font-semibold text-blue">
+                        <button type="button" className="text-sm font-semibold text-blue">
                           Configure
                         </button>
                       ) : null}
@@ -1945,7 +1945,7 @@ export function CreateEventPage() {
                   ))}
                 </ul>
                 {fieldErrors.payFree ? (
-                  <p className="mt-2 text-xs text-red" role="alert">
+                  <p className="mt-2 text-sm text-red" role="alert">
                     {fieldErrors.payFree}
                   </p>
                 ) : null}
@@ -1961,7 +1961,7 @@ export function CreateEventPage() {
               <img src="/assets/admin-banner.jpg" alt="" className="h-28 w-full object-cover" />
               <div className="p-4">
                 <p className="font-semibold text-ink line-clamp-2">{title}</p>
-                <p className="mt-2 text-xs text-mute">{previewDate}</p>
+                <p className="mt-2 text-sm text-mute">{previewDate}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Pill tone="green">{eventType}</Pill>
                   <Pill tone="blue">In-Person</Pill>
@@ -2156,7 +2156,7 @@ export function CreateEventPage() {
             >
               <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
                 <p className="text-sm font-bold text-ink">Event Preview</p>
-                <button type="button" className="text-xs font-semibold text-blue">
+                <button type="button" className="text-sm font-semibold text-blue">
                   View Full Event Page
                 </button>
               </div>
@@ -2164,7 +2164,7 @@ export function CreateEventPage() {
               <div className="p-4">
                 <Pill tone="green">{eventType}</Pill>
                 <p className="mt-2 font-semibold text-ink">{title}</p>
-                <ul className="mt-3 grid gap-1.5 text-xs text-mute">
+                <ul className="mt-3 grid gap-1.5 text-sm text-mute">
                   <li className="flex items-center gap-1.5">
                     <CalendarDays size={12} /> {previewDate}
                   </li>
@@ -2176,7 +2176,7 @@ export function CreateEventPage() {
                   </li>
                 </ul>
                 <p className="mt-3 line-clamp-3 text-sm text-mute">{description}</p>
-                <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="mt-4 grid grid-cols-3 gap-2 text-center text-sm">
                   <div className="rounded-lg bg-soft p-2 font-semibold text-blue">
                     {sessions.length} Sessions
                   </div>
@@ -2251,7 +2251,7 @@ export function CreateEventPage() {
         <div className="grid gap-4">
           <div className="rounded-lg border border-slate-100 bg-soft/60 px-3 py-2 text-sm text-mute">
             <p className="font-semibold text-ink">{title.trim() || "Untitled event"}</p>
-            <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
               <span className="inline-flex items-center gap-1">
                 <CalendarDays size={12} /> {previewDate}
               </span>
@@ -2277,9 +2277,9 @@ export function CreateEventPage() {
                 <header className="flex items-center justify-between gap-2 border-b border-slate-100 bg-slate-50 px-3 py-2">
                   <div>
                     <p className="text-sm font-bold text-ink">Day {d.index}</p>
-                    <p className="text-xs text-mute">{d.label}</p>
+                    <p className="text-sm text-mute">{d.label}</p>
                   </div>
-                  <span className="text-xs font-semibold text-mute">
+                  <span className="text-sm font-semibold text-mute">
                     {d.sessions.length} session{d.sessions.length === 1 ? "" : "s"}
                   </span>
                 </header>
@@ -2287,7 +2287,7 @@ export function CreateEventPage() {
                   <ul className="divide-y divide-slate-100">
                     {d.sessions.map((s) => (
                       <li key={s.id} className="flex gap-3 px-3 py-3">
-                        <div className="w-28 shrink-0 text-xs font-semibold text-blue">{s.time}</div>
+                        <div className="w-28 shrink-0 text-sm font-semibold text-blue">{s.time}</div>
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="font-semibold text-ink">{s.title}</p>
@@ -2308,7 +2308,7 @@ export function CreateEventPage() {
                           {s.description ? (
                             <p className="mt-1 text-sm text-mute">{s.description}</p>
                           ) : null}
-                          <p className="mt-1.5 flex flex-wrap gap-3 text-xs text-mute">
+                          <p className="mt-1.5 flex flex-wrap gap-3 text-sm text-mute">
                             <span className="inline-flex items-center gap-1">
                               <Users size={12} /> {s.speakers} speakers
                             </span>
@@ -2510,7 +2510,7 @@ export function CreateEventPage() {
                 setNewSpeakerPhotoFile(renamedFile);
               }}
             />
-            <p className="mt-2 text-xs text-mute">
+            <p className="mt-2 text-sm text-mute">
               Choose a picture and crop it before saving. The file will be uploaded later with your
               event save (multipart), same as registration.
             </p>

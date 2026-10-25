@@ -176,7 +176,7 @@ export function MessagesPage() {
 
   return (
     <div className="text-[#101b61]">
-      <nav className="mb-2 flex flex-wrap items-center gap-2 text-xs text-blue-700" aria-label="Breadcrumb">
+      <nav className="mb-2 flex flex-wrap items-center gap-2 text-sm text-blue-700" aria-label="Breadcrumb">
         <Link to="/admin/events" className="hover:text-blue-900">
           ‹ Events
         </Link>
@@ -274,7 +274,7 @@ export function MessagesPage() {
                   <span className="flex-1 text-left">{f.label}</span>
                   <span
                     className={cn(
-                      "rounded-lg px-2 py-0.5 text-[11px] font-bold",
+                      "rounded-lg px-2 py-0.5 text-[14px] font-bold",
                       "badge" in f && f.badge === "red"
                         ? "bg-red-500 text-white"
                         : "bg-[#edf4ff] text-[#0755f5]",
@@ -337,14 +337,14 @@ export function MessagesPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <b className="truncate text-sm text-blue-950">{m.name}</b>
-                      <span className="whitespace-nowrap text-xs text-blue-700">{m.time}</span>
+                      <span className="whitespace-nowrap text-sm text-blue-700">{m.time}</span>
                     </div>
-                    <div className="text-xs font-medium">{m.subject}</div>
-                    <div className="mt-1 truncate text-xs text-blue-600">{m.preview}</div>
+                    <div className="text-sm font-medium">{m.subject}</div>
+                    <div className="mt-1 truncate text-sm text-blue-600">{m.preview}</div>
                   </div>
                   <span
                     className={cn(
-                      "shrink-0 rounded-[7px] px-2.5 py-1 text-[11px] font-semibold",
+                      "shrink-0 rounded-[7px] px-2.5 py-1 text-[14px] font-semibold",
                       statusBadge(m.status),
                     )}
                   >
@@ -365,14 +365,14 @@ export function MessagesPage() {
                     <h2 className="text-base font-extrabold text-blue-950">{selected.subject}</h2>
                     <span
                       className={cn(
-                        "rounded-[7px] px-2.5 py-1 text-[11px] font-semibold",
+                        "rounded-[7px] px-2.5 py-1 text-[14px] font-semibold",
                         statusBadge(selected.status),
                       )}
                     >
                       {selected.status}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-blue-500">{selected.date}</p>
+                  <p className="mt-1 text-sm text-blue-500">{selected.date}</p>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -450,7 +450,7 @@ export function MessagesPage() {
                   </div>
                   <div className="hidden text-right sm:block">
                     <div className="text-sm font-extrabold text-blue-700">Event message</div>
-                    <div className="text-[10px] text-blue-800">
+                    <div className="text-[13px] text-blue-800">
                       Preview only — connect a messages API to send live mail.
                     </div>
                   </div>

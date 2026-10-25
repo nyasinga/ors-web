@@ -2,11 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, Download, Plus, Printer, Search, Timer, Users } from "lucide-react";
 import { AddParticipantModal, type AddedParticipant } from "./AddParticipantModal";
 import { GrantWaiverModal } from "./GrantWaiverModal";
+import { ParticipantDetailModal } from "./ParticipantDetailModal";
 import { EventPassPreviewModal } from "../tickets/EventPassPreviewModal";
 import { useToast } from "../ui/Toast";
 import { ApiError } from "../../lib/api";
 import { cn } from "../../lib/cn";
 import {
+  createAdminParticipant,
   listEventParticipants,
   toggleParticipantPayment,
 } from "../../lib/eventParticipants";
@@ -29,17 +31,22 @@ const avatarToneClass: Record<string, string> = {
 };
 
 function statusPillClass(status: string) {
-  if (status === "Confirmed") return "rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700";
-  if (status === "Waived") return "rounded-md bg-sky-100 px-2 py-0.5 text-[10px] font-semibold text-sky-800";
-  if (status === "Complimentary") return "rounded-md bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800";
-  if (status === "Pending") return "rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700";
-  if (status === "Cancelled") return "rounded-md bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-600";
-  return "rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600";
+  if (status === "Confirmed") return "rounded-md bg-emerald-100 px-2 py-0.5 text-[13px] font-semibold text-emerald-700";
+  if (status === "Waived") return "rounded-md bg-sky-100 px-2 py-0.5 text-[13px] font-semibold text-sky-800";
+  if (status === "Complimentary") return "rounded-md bg-violet-100 px-2 py-0.5 text-[13px] font-semibold text-violet-800";
+  if (status === "Pending verification") {
+    return "rounded-md bg-amber-100 px-2 py-0.5 text-[13px] font-semibold text-amber-800";
+  }
+  if (status === "Registered" || status === "Pending") {
+    return "rounded-md bg-slate-100 px-2 py-0.5 text-[13px] font-semibold text-slate-700";
+  }
+  if (status === "Cancelled") return "rounded-md bg-red-100 px-2 py-0.5 text-[13px] font-semibold text-red-600";
+  return "rounded-md bg-slate-100 px-2 py-0.5 text-[13px] font-semibold text-slate-600";
 }
 
 function checkInPillClass(checkIn: string) {
-  if (checkIn === "Checked In") return "rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] text-emerald-700";
-  return "rounded-md bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600";
+  if (checkIn === "Checked In") return "rounded-md bg-emerald-100 px-2 py-0.5 text-[13px] text-emerald-700";
+  return "rounded-md bg-slate-100 px-2 py-0.5 text-[13px] text-slate-600";
 }
 
 type Props = {
@@ -68,6 +75,8 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
   const [toggleFailedId, setToggleFailedId] = useState<string | null>(null);
   const [waiverTarget, setWaiverTarget] = useState<AddedParticipant | null>(null);
   const [waiverBusy, setWaiverBusy] = useState(false);
+  const [addBusy, setAddBusy] = useState(false);
+  const [detailTarget, setDetailTarget] = useState<AddedParticipant | null>(null);
   const [passPreview, setPassPreview] = useState<{
     url: string;
     passCode: string;
@@ -157,8 +166,8 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
 
   const isPaymentPaid = (p: AddedParticipant) => {
     if (isWaived(p)) return true;
+    if (p.passAllowed || p.verificationBucket === "confirmed") return true;
     const raw = (p.rawStatus || "").toLowerCase();
-    // registered = pending verification; only checked-in (or UI Confirmed) counts as paid
     if (raw === "checked-in" || raw === "checked_in") return true;
     return p.status === "Confirmed";
   };
@@ -220,9 +229,19 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     try {
       const { ticket, waiver, message } = await grantParticipantWaiver({
         ticketID,
+        engagementID: eventId,
         reason: input.reason,
         agencyName: input.agencyName,
         sponsorTicketID: input.sponsorTicketID,
+        fullName: p.name,
+        email: p.email,
+        phoneNo: p.phone,
+        participationType: p.participationType,
+        organisation: p.org !== "—" ? p.org : undefined,
+        jobTitle: p.jobTitle,
+        country: p.country,
+        city: p.city,
+        title: p.title,
       });
       const mode: "waived" | "complimentary" =
         input.reason === "sponsor_allocation" ? "complimentary" : "waived";
@@ -273,20 +292,20 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     try {
       const { ticket, message } = await toggleParticipantPayment(ticketID);
       const nextStatus = String(ticket.status || "registered").toLowerCase();
-      const ui =
-        nextStatus === "checked-in" || nextStatus === "checked_in"
-          ? "Confirmed"
-          : nextStatus === "draft" || nextStatus === "issued" || nextStatus === "registered"
-            ? "Pending"
-            : p.status;
       const patch = {
-        status: ui,
+        status: "Confirmed" as const,
         rawStatus: nextStatus,
+        verificationBucket: "confirmed" as const,
+        passAllowed: true,
+        transactionReference: String(ticket.transactionReference || p.transactionReference || ""),
+        displayPaymentReference:
+          p.displayPaymentReference || p.transactionReference || undefined,
         checkIn: nextStatus.includes("checked") ? "Checked In" : p.checkIn,
       };
       setApiRows((prev) => prev.map((row) => (row.id === p.id ? { ...row, ...patch } : row)));
       setLocalRows((prev) => prev.map((row) => (row.id === p.id ? { ...row, ...patch } : row)));
-      toast.success(message || `Payment confirmed for ${p.name}.`);
+      setDetailTarget((prev) => (prev?.id === p.id ? { ...prev, ...patch } : prev));
+      toast.success(message || `Payment verified for ${p.name}. Pass can now be issued.`);
       void reloadParticipants();
     } catch (err) {
       // Leave row Pending — switch snaps back off; flash red briefly.
@@ -336,22 +355,42 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
   const visible = filtered.slice(pageStart, pageStart + pageSize);
   const pageEnd = filtered.length === 0 ? 0 : Math.min(pageStart + visible.length, filtered.length);
 
-  const confirmedCount = source.filter(
-    (p) => p.status === "Confirmed" || p.status === "Waived" || p.status === "Complimentary",
+  const registeredCount = source.filter((p) => p.status === "Registered").length;
+  const pendingVerificationCount = source.filter(
+    (p) => p.status === "Pending verification",
   ).length;
-  const pendingCount = source.filter((p) => p.status === "Pending").length;
+  const confirmedCount = source.filter((p) => p.status === "Confirmed").length;
   const waivedCount = source.filter(
     (p) => p.status === "Waived" || p.status === "Complimentary",
   ).length;
-  const checkedInCount = source.filter((p) => p.checkIn === "Checked In").length;
   const listBusy = listLoading || (fromApi && loading);
 
   const kpis = [
     { label: "Total", value: listBusy ? "…" : String(source.length), Icon: Users, tone: "blue" },
-    { label: "Confirmed", value: listBusy ? "…" : String(confirmedCount), Icon: Check, tone: "green" },
-    { label: "Pending", value: listBusy ? "…" : String(pendingCount), Icon: Timer, tone: "amber" },
-    { label: "Waived", value: listBusy ? "…" : String(waivedCount), Icon: Check, tone: "sky" },
-    { label: "Checked in", value: listBusy ? "…" : String(checkedInCount), Icon: Users, tone: "purple" },
+    {
+      label: "Registered",
+      value: listBusy ? "…" : String(registeredCount),
+      Icon: Users,
+      tone: "blue",
+    },
+    {
+      label: "Pending verification",
+      value: listBusy ? "…" : String(pendingVerificationCount),
+      Icon: Timer,
+      tone: "amber",
+    },
+    {
+      label: "Confirmed",
+      value: listBusy ? "…" : String(confirmedCount),
+      Icon: Check,
+      tone: "green",
+    },
+    {
+      label: "Waived",
+      value: listBusy ? "…" : String(waivedCount),
+      Icon: Check,
+      tone: "sky",
+    },
   ];
 
   const iconTone: Record<string, string> = {
@@ -389,10 +428,45 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     <div className="text-[#07135f]">
       <AddParticipantModal
         open={addOpen}
-        onClose={() => setAddOpen(false)}
-        onAdd={(participant) => {
-          setLocalRows((prev) => [participant, ...prev]);
-          toast.success(`${participant.name} added as ${participant.type}.`);
+        busy={addBusy}
+        onClose={() => {
+          if (!addBusy) setAddOpen(false);
+        }}
+        onAdd={async (draft) => {
+          if (!fromApi || !eventId) {
+            throw new Error("Open a live event and sign in to add participants.");
+          }
+          setAddBusy(true);
+          try {
+            const created = await createAdminParticipant({
+              engagementID: eventId,
+              participationType: draft.participationType,
+              title: draft.details.title,
+              fullName: draft.details.fullName,
+              email: draft.details.email,
+              phone: draft.details.phone,
+              organisation: draft.details.organisation,
+              jobTitle: draft.details.jobTitle,
+              country: draft.details.country,
+              city: draft.details.city,
+              dietary: draft.details.dietary,
+              accessibility: draft.details.accessibility,
+            });
+            setLocalRows((prev) => [created, ...prev]);
+            toast.success(`${created.name} added as ${created.type}.`);
+            void reloadParticipants();
+          } catch (err) {
+            const message =
+              err instanceof ApiError
+                ? err.message
+                : err instanceof Error
+                  ? err.message
+                  : "Could not add participant.";
+            toast.error(message);
+            throw err instanceof Error ? err : new Error(message);
+          } finally {
+            setAddBusy(false);
+          }
         }}
       />
 
@@ -409,6 +483,20 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
         }}
       />
 
+      <ParticipantDetailModal
+        open={Boolean(detailTarget)}
+        participant={detailTarget}
+        verifyBusy={confirmingId === detailTarget?.id}
+        onClose={() => setDetailTarget(null)}
+        onVerify={(p) => {
+          void handleTogglePayment(p);
+        }}
+        onWaiver={(p) => {
+          setDetailTarget(null);
+          setWaiverTarget(p);
+        }}
+      />
+
       <EventPassPreviewModal
         open={Boolean(passPreview)}
         url={passPreview?.url ?? null}
@@ -417,6 +505,23 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
         onClose={closePassPreview}
         onError={(message) => toast.error(message)}
       />
+
+      {pendingVerificationCount > 0 && !listBusy ? (
+        <div className="mb-2.5 flex flex-wrap items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] text-amber-950">
+          <Timer size={16} className="shrink-0 text-amber-700" />
+          <span className="font-semibold">
+            {pendingVerificationCount} registration
+            {pendingVerificationCount === 1 ? "" : "s"} awaiting payment verification
+          </span>
+          <button
+            type="button"
+            className="ml-auto rounded-md border border-amber-300 bg-white px-2.5 py-1 text-[12px] font-semibold text-amber-900 hover:bg-amber-100"
+            onClick={() => setStatusFilter("Pending verification")}
+          >
+            Review queue
+          </button>
+        </div>
+      ) : null}
 
       <section className="mb-2.5 grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-5">
         {kpis.map((kpi) => (
@@ -429,7 +534,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
             </div>
             <div className="min-w-0">
               <strong className="block text-sm font-extrabold leading-tight">{kpi.value}</strong>
-              <span className="block truncate text-[10px] text-blue-700">{kpi.label}</span>
+              <span className="block truncate text-[13px] text-blue-700">{kpi.label}</span>
             </div>
           </article>
         ))}
@@ -440,14 +545,14 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
           <label className="flex h-8 min-w-[180px] flex-1 items-center gap-2 rounded-md border border-blue-100 px-2">
             <Search size={14} className="shrink-0 text-blue-700" />
             <input
-              className="w-full min-w-0 bg-transparent text-[11px] outline-none placeholder:text-blue-400"
+              className="w-full min-w-0 bg-transparent text-[14px] outline-none placeholder:text-blue-400"
               placeholder="Search name, email, org…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </label>
           <select
-            className="h-8 rounded-md border border-blue-100 bg-white px-2 text-[11px]"
+            className="h-8 rounded-md border border-blue-100 bg-white px-2 text-[14px]"
             value={ticketFilter}
             onChange={(e) => setTicketFilter(e.target.value)}
           >
@@ -459,19 +564,20 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
             <option>Student</option>
           </select>
           <select
-            className="h-8 rounded-md border border-blue-100 bg-white px-2 text-[11px]"
+            className="h-8 rounded-md border border-blue-100 bg-white px-2 text-[14px]"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="">All status</option>
+            <option>Registered</option>
+            <option>Pending verification</option>
             <option>Confirmed</option>
-            <option>Pending</option>
             <option>Waived</option>
             <option>Complimentary</option>
             <option>Cancelled</option>
           </select>
           <select
-            className="h-8 max-w-[160px] rounded-md border border-blue-100 bg-white px-2 text-[11px]"
+            className="h-8 max-w-[160px] rounded-md border border-blue-100 bg-white px-2 text-[14px]"
             value={orgFilter}
             onChange={(e) => setOrgFilter(e.target.value)}
           >
@@ -485,21 +591,21 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
           <button
             type="button"
             onClick={exportCsv}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-blue-100 px-2.5 text-[11px] font-semibold text-blue-600 hover:bg-blue-50"
+            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-blue-100 px-2.5 text-[14px] font-semibold text-blue-600 hover:bg-blue-50"
           >
             <Download size={13} /> Export
           </button>
           <button
             type="button"
             onClick={() => setAddOpen(true)}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md bg-blue-600 px-2.5 text-[11px] font-semibold text-white hover:bg-blue-700"
+            className="inline-flex h-8 items-center gap-1.5 rounded-md bg-blue-600 px-2.5 text-[14px] font-semibold text-white hover:bg-blue-700"
           >
             <Plus size={13} strokeWidth={3} /> Add
           </button>
         </div>
 
         <div className="max-h-[min(52vh,520px)] overflow-auto [scrollbar-width:thin]">
-          <table className="w-full min-w-[760px] border-separate border-spacing-0 text-[11px] text-blue-900">
+          <table className="w-full min-w-[760px] border-separate border-spacing-0 text-[14px] text-blue-900">
             <thead className="sticky top-0 z-10">
               <tr className="bg-blue-50 text-left text-[#07165e]">
                 <th className="border-b border-blue-100 px-2 py-1.5">
@@ -562,23 +668,29 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                       <div className="flex items-center gap-2 whitespace-nowrap">
                         <span
                           className={cn(
-                            "grid h-6 w-6 place-items-center rounded-full text-[10px] font-bold",
+                            "grid h-6 w-6 place-items-center rounded-full text-[13px] font-bold",
                             avatarToneClass[p.avatarTone] || avatarToneClass.blue,
                           )}
                         >
                           {p.initials}
                         </span>
-                        {p.name}
+                        <button
+                          type="button"
+                          className="text-left font-semibold text-blue-700 hover:underline"
+                          onClick={() => setDetailTarget(p)}
+                        >
+                          {p.name}
+                        </button>
                       </div>
                     </td>
-                    <td className="border-b border-blue-50 px-2 py-1.5 text-[10px]">{p.email}</td>
+                    <td className="border-b border-blue-50 px-2 py-1.5 text-[13px]">{p.email}</td>
                     <td className="border-b border-blue-50 px-2 py-1.5">{p.org}</td>
                     <td className="border-b border-blue-50 px-2 py-1.5">{p.type}</td>
                     <td className="border-b border-blue-50 px-2 py-1.5">
                       <div className="flex flex-col items-start gap-0.5">
                         <span className={statusPillClass(p.status)}>{p.status}</span>
                         {p.waiverReason ? (
-                          <span className="text-[9px] text-slate-500">
+                          <span className="text-[12px] text-slate-500">
                             {waiverReasonLabel(p.waiverReason)}
                             {p.agencyName ? ` · ${p.agencyName}` : ""}
                           </span>
@@ -609,7 +721,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                           >
                             <span
                               className={cn(
-                                "text-[9px] font-semibold",
+                                "text-[12px] font-semibold",
                                 toggleFailedId === p.id
                                   ? "text-red-600"
                                   : isPaymentPaid(p)
@@ -652,7 +764,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                         {canGrantWaiver(p) ? (
                           <button
                             type="button"
-                            className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-800 hover:bg-sky-100"
+                            className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 text-[13px] font-semibold text-sky-800 hover:bg-sky-100"
                             aria-label={`Grant waiver for ${p.name}`}
                             title="Grant staff / gov speaker / sponsor free-seat waiver"
                             onClick={() => setWaiverTarget(p)}
@@ -662,12 +774,26 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                         ) : null}
                         <button
                           type="button"
-                          disabled={printingId === p.id || !p.passCode}
-                          className="inline-flex items-center gap-1 rounded-md border border-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          disabled={
+                            printingId === p.id ||
+                            !p.passCode ||
+                            !(p.passAllowed || isPaymentPaid(p))
+                          }
+                          className="inline-flex items-center gap-1 rounded-md border border-blue-100 px-2 py-0.5 text-[13px] font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
                           aria-label={`Print ticket for ${p.name}`}
-                          title={p.passCode ? "Open event pass PDF" : "No pass code on this registration"}
+                          title={
+                            !(p.passAllowed || isPaymentPaid(p))
+                              ? "Verify payment before issuing pass"
+                              : p.passCode
+                                ? "Open event pass PDF"
+                                : "No pass code on this registration"
+                          }
                           onClick={() => {
                             void (async () => {
+                              if (!(p.passAllowed || isPaymentPaid(p))) {
+                                toast.info("Verify payment before printing the event pass.");
+                                return;
+                              }
                               setPrintingId(p.id);
                               try {
                                 closePassPreview();
@@ -686,6 +812,13 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                           <Printer size={12} />
                           {printingId === p.id ? "…" : "Print"}
                         </button>
+                        <button
+                          type="button"
+                          className="inline-flex items-center rounded-md border border-blue-100 px-2 py-0.5 text-[12px] font-semibold text-blue-700 hover:bg-blue-50"
+                          onClick={() => setDetailTarget(p)}
+                        >
+                          Details
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -695,7 +828,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
           </table>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 border-t border-blue-50 px-2.5 py-2 text-[10px] text-blue-800">
+        <div className="flex flex-wrap items-center gap-2 border-t border-blue-50 px-2.5 py-2 text-[13px] text-blue-800">
           <span>
             {filtered.length === 0
               ? "0 participants"
@@ -723,7 +856,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
             ›
           </button>
           <select
-            className="h-7 rounded-md border border-blue-100 bg-white px-2 text-[10px]"
+            className="h-7 rounded-md border border-blue-100 bg-white px-2 text-[13px]"
             value={pageSize}
             onChange={(e) => setPageSize(Number(e.target.value))}
           >

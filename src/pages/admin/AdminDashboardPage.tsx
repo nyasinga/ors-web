@@ -25,6 +25,7 @@ import {
   toUiListStatus,
   type DashboardUpcomingItem,
 } from "../../lib/engagements";
+import { sumEngagementParticipantCounts } from "../../lib/eventParticipants";
 import type { Engagement } from "../../types/engagement";
 
 const glass =
@@ -139,6 +140,11 @@ export function AdminDashboardPage() {
   const [engagements, setEngagements] = useState<Engagement[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [registrationsLive, setRegistrationsLive] = useState<{
+    total: number;
+    pendingVerification: number;
+    loading: boolean;
+  }>({ total: 0, pendingVerification: 0, loading: false });
 
   useEffect(() => {
     let cancelled = false;
@@ -164,6 +170,36 @@ export function AdminDashboardPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const ids = engagements
+        .map((row) => String(row.engagementID || "").trim())
+        .filter(Boolean);
+      if (!ids.length) {
+        if (!cancelled) {
+          setRegistrationsLive({ total: 0, pendingVerification: 0, loading: false });
+        }
+        return;
+      }
+      if (!cancelled) setRegistrationsLive((prev) => ({ ...prev, loading: true }));
+      try {
+        const { total, pendingVerification } = await sumEngagementParticipantCounts(ids);
+        if (!cancelled) {
+          setRegistrationsLive({ total, pendingVerification, loading: false });
+        }
+      } catch {
+        if (!cancelled) {
+          // Fall back to engagement.registered aggregates already in the snapshot.
+          setRegistrationsLive({ total: -1, pendingVerification: 0, loading: false });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [engagements]);
 
   const snapshot = useMemo(() => buildDashboardSnapshot(engagements), [engagements]);
 
@@ -195,6 +231,21 @@ export function AdminDashboardPage() {
 
   const paymentCards = useMemo(() => {
     const s = snapshot.kpis;
+    const regsFromParticipants = registrationsLive.total >= 0;
+    const registrationsValue = registrationsLive.loading
+      ? "…"
+      : regsFromParticipants
+        ? registrationsLive.total.toLocaleString()
+        : s.totalRegistrations.toLocaleString();
+    const registrationsTrend = registrationsLive.loading
+      ? "Updating…"
+      : regsFromParticipants
+        ? registrationsLive.total
+          ? "Across all events"
+          : "No registrations yet"
+        : s.totalRegistrations
+          ? "Across all events"
+          : "No registrations yet";
     return [
       {
         label: "Ticket Inventory Value",
@@ -213,11 +264,11 @@ export function AdminDashboardPage() {
       },
       {
         label: "Registrations",
-        value: eventsLoading ? "…" : s.totalRegistrations.toLocaleString(),
-        trend: s.totalRegistrations ? "Recorded on events" : "No registrant feed yet",
+        value: eventsLoading ? "…" : registrationsValue,
+        trend: registrationsTrend,
       },
     ];
-  }, [snapshot, eventsLoading]);
+  }, [snapshot, eventsLoading, registrationsLive]);
 
   const upcomingEvents = useMemo(() => {
     const items: DashboardUpcomingItem[] = [];
@@ -272,8 +323,27 @@ export function AdminDashboardPage() {
     ? `/admin/events/${featured.engagementID}/participants`
     : "/admin/events";
 
+  const pendingReview = Math.max(0, registrationsLive.pendingVerification);
+
   return (
     <div className="space-y-3 bg-[radial-gradient(ellipse_at_4%_10%,#dcefff_0,#eef7ff_45%,#e4f2ff_100%)] p-3 text-ink sm:p-4">
+      {pendingReview > 0 && !registrationsLive.loading ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[14px] text-amber-950 shadow-sm">
+          <Clock3 size={18} className="shrink-0 text-amber-700" />
+          <span className="font-semibold">
+            {pendingReview} registration{pendingReview === 1 ? "" : "s"} pending payment
+            verification
+          </span>
+          <span className="text-amber-800/80">Review proof and confirm before issuing passes.</span>
+          <Link
+            to={participantsLink}
+            className="ml-auto rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-[13px] font-semibold text-amber-950 hover:bg-amber-100"
+          >
+            Review participants
+          </Link>
+        </div>
+      ) : null}
+
       {/* Hero */}
       <section
         className="relative min-h-[170px] overflow-hidden rounded-xl shadow-[0_8px_28px_rgba(36,105,180,.10)]"
@@ -305,14 +375,14 @@ export function AdminDashboardPage() {
             <h1 className="mt-0.5 text-4xl font-extrabold leading-none tracking-tight sm:text-[44px]">
               {welcome}
             </h1>
-            <p className="mt-2 text-[12px] text-blue-50">
+            <p className="mt-2 text-[15px] text-blue-50">
               Live event activity from your engagements database.
             </p>
           </div>
 
           <div className="flex items-center gap-4 border-white/70 text-white sm:border-l sm:pl-6">
             <CalendarDays size={28} strokeWidth={1.8} className="shrink-0 opacity-95" aria-hidden />
-            <div className="text-[12px] leading-[1.6]">
+            <div className="text-[15px] leading-[1.6]">
               <b className="text-[13px]">{heroDates}</b>
               <br />
               {heroVenue}
@@ -329,7 +399,7 @@ export function AdminDashboardPage() {
                 className="h-14 w-auto object-contain drop-shadow-md sm:h-16"
               />
             ) : (
-              <div className="max-w-[140px] text-right text-[11px] font-bold leading-snug text-white/95 sm:text-xs">
+              <div className="max-w-[140px] text-right text-[14px] font-bold leading-snug text-white/95 sm:text-sm">
                 {heroName}
               </div>
             )}
@@ -367,8 +437,8 @@ export function AdminDashboardPage() {
                 </div>
                 <div>
                   <div className="text-[21px] font-extrabold">{kpi.value}</div>
-                  <div className="text-[11px] text-slate-600">{kpi.label}</div>
-                  <div className="mt-1 text-[12px] font-bold text-green-600">{kpi.trend}</div>
+                  <div className="text-[14px] text-slate-600">{kpi.label}</div>
+                  <div className="mt-1 text-[15px] font-bold text-green-600">{kpi.trend}</div>
                 </div>
               </div>
               <svg
@@ -397,8 +467,8 @@ export function AdminDashboardPage() {
               <CreditCard size={18} strokeWidth={2} className="text-blue-600" aria-hidden />
               Event Capacity Overview
             </h2>
-            <span className="rounded-lg border border-blue-100 bg-white px-3 py-1.5 text-[10px] text-slate-500">
-              From engagements
+            <span className="rounded-lg border border-blue-100 bg-white px-3 py-1.5 text-[13px] text-slate-500">
+              Capacity + participants
             </span>
           </div>
 
@@ -418,11 +488,11 @@ export function AdminDashboardPage() {
                       <Icon size={16} strokeWidth={2.25} aria-hidden />
                     </span>
                     <div>
-                      <b className="text-[12px]">{item.value}</b>
-                      <div className="text-[10px] text-slate-500">{item.label}</div>
+                      <b className="text-[15px]">{item.value}</b>
+                      <div className="text-[13px] text-slate-500">{item.label}</div>
                     </div>
                   </div>
-                  <div className={cn("mt-1 pl-11 text-[11px] font-bold", meta.trend)}>
+                  <div className={cn("mt-1 pl-11 text-[14px] font-bold", meta.trend)}>
                     {item.trend}
                   </div>
                 </div>
@@ -431,7 +501,7 @@ export function AdminDashboardPage() {
           </div>
 
           <div className="mt-3 grid grid-cols-[35px_minmax(0,1fr)_86px] gap-2">
-            <div className="flex h-[126px] flex-col justify-between pb-0.5 text-[10px] text-slate-500">
+            <div className="flex h-[126px] flex-col justify-between pb-0.5 text-[13px] text-slate-500">
               <span>Max</span>
               <span>—</span>
               <span>—</span>
@@ -447,11 +517,11 @@ export function AdminDashboardPage() {
               aria-hidden
             >
               {eventsLoading ? (
-                <span className="w-full self-center text-center text-[11px] text-slate-400">
+                <span className="w-full self-center text-center text-[14px] text-slate-400">
                   Loading…
                 </span>
               ) : snapshot.capacityBars.length === 0 ? (
-                <span className="w-full self-center text-center text-[11px] text-slate-400">
+                <span className="w-full self-center text-center text-[14px] text-slate-400">
                   No capacity data yet
                 </span>
               ) : (
@@ -467,7 +537,7 @@ export function AdminDashboardPage() {
                 ))
               )}
             </div>
-            <div className="flex flex-col justify-center gap-3 text-[10px]">
+            <div className="flex flex-col justify-center gap-3 text-[13px]">
               <span>
                 <i className="mr-2 inline-block h-3 w-3 rounded bg-blue-600" />
                 Capacity
@@ -487,14 +557,14 @@ export function AdminDashboardPage() {
               >
                 <span className="absolute inset-[22%] rounded-full bg-white" aria-hidden />
               </div>
-              <div className="absolute inset-0 z-[1] grid place-content-center text-center text-[11px] font-bold leading-[1.25]">
+              <div className="absolute inset-0 z-[1] grid place-content-center text-center text-[14px] font-bold leading-[1.25]">
                 {snapshot.kpis.currency}
                 <br />
                 <span className="text-[17px]">{snapshot.paymentMethods.length || 0}</span>
                 <span>Methods</span>
               </div>
             </div>
-            <div className="space-y-3 text-[11px]">
+            <div className="space-y-3 text-[14px]">
               {eventsLoading ? (
                 <span className="text-slate-400">Loading…</span>
               ) : snapshot.paymentMethods.length === 0 ? (
@@ -521,15 +591,15 @@ export function AdminDashboardPage() {
               <CalendarDays size={14} strokeWidth={2} className="text-blue-600" aria-hidden />
               Upcoming Events
             </h2>
-            <Link to="/admin/events" className="text-[10px] font-semibold text-blue-600">
+            <Link to="/admin/events" className="text-[13px] font-semibold text-blue-600">
               View All →
             </Link>
           </div>
           <div className="space-y-1.5">
             {eventsLoading ? (
-              <p className="py-4 text-center text-[11px] text-slate-500">Loading events…</p>
+              <p className="py-4 text-center text-[14px] text-slate-500">Loading events…</p>
             ) : upcomingEvents.length === 0 ? (
-              <p className="py-4 text-center text-[11px] text-slate-500">
+              <p className="py-4 text-center text-[14px] text-slate-500">
                 No upcoming events yet.{" "}
                 <Link to="/admin/events/new" className="font-semibold text-blue-600">
                   Create one
@@ -543,13 +613,13 @@ export function AdminDashboardPage() {
                   className="flex items-center gap-2 border-b border-blue-50 pb-2 last:border-0 last:pb-0 hover:bg-blue-50/40"
                 >
                   <div className="w-12 rounded-lg bg-blue-50 py-1 text-center">
-                    <small className="block text-[9px] text-blue-700">{ev.month}</small>
+                    <small className="block text-[12px] text-blue-700">{ev.month}</small>
                     <b className="text-lg">{ev.day}</b>
                   </div>
                   <div className="h-9 w-3 border-l-2 border-blue-500" />
                   <div className="min-w-0 flex-1">
-                    <b className="block truncate text-[10px]">{ev.title}</b>
-                    <span className="text-[9px] text-slate-500">
+                    <b className="block truncate text-[13px]">{ev.title}</b>
+                    <span className="text-[12px] text-slate-500">
                       ⌖ {ev.time}　|　{ev.place}
                     </span>
                   </div>
@@ -578,19 +648,19 @@ export function AdminDashboardPage() {
               <Users size={14} strokeWidth={2} className="text-blue-600" aria-hidden />
               Recent Events
             </h2>
-            <Link to="/admin/events" className="text-[10px] font-semibold text-blue-600">
+            <Link to="/admin/events" className="text-[13px] font-semibold text-blue-600">
               View All →
             </Link>
           </div>
           <div className="overflow-x-auto">
             {eventsLoading ? (
-              <p className="py-6 text-center text-[11px] text-slate-500">Loading…</p>
+              <p className="py-6 text-center text-[14px] text-slate-500">Loading…</p>
             ) : snapshot.recentEvents.length === 0 ? (
-              <p className="py-6 text-center text-[11px] text-slate-500">
+              <p className="py-6 text-center text-[14px] text-slate-500">
                 No events in the database yet.
               </p>
             ) : (
-              <table className="w-full border-collapse text-left text-[9px]">
+              <table className="w-full border-collapse text-left text-[12px]">
                 <thead>
                   <tr className="bg-blue-50 text-slate-600">
                     <th className="p-2 font-medium">Name</th>
@@ -636,11 +706,11 @@ export function AdminDashboardPage() {
               <span className="mr-2 text-blue-600">◉</span>
               Event Countries
             </h2>
-            <Link to={participantsLink} className="text-[10px] font-semibold text-blue-600">
+            <Link to={participantsLink} className="text-[13px] font-semibold text-blue-600">
               View All
             </Link>
           </div>
-          <div className="space-y-2 text-[10px]">
+          <div className="space-y-2 text-[13px]">
             {eventsLoading ? (
               <p className="py-4 text-center text-slate-500">Loading…</p>
             ) : snapshot.countries.length === 0 ? (
@@ -675,7 +745,7 @@ export function AdminDashboardPage() {
         </div>
         <Link
           to="/admin/events"
-          className="flex min-h-[54px] items-center gap-3 rounded-xl bg-blue-50 px-3 text-[11px] font-bold text-blue-800"
+          className="flex min-h-[54px] items-center gap-3 rounded-xl bg-blue-50 px-3 text-[14px] font-bold text-blue-800"
         >
           <CalendarDays size={18} strokeWidth={2} className="text-blue-600" aria-hidden />
           <span>Manage Event</span>
@@ -685,7 +755,7 @@ export function AdminDashboardPage() {
         </Link>
         <Link
           to="/admin/payments"
-          className="flex min-h-[54px] items-center gap-3 rounded-xl bg-green-50 px-3 text-[11px] font-bold text-green-800"
+          className="flex min-h-[54px] items-center gap-3 rounded-xl bg-green-50 px-3 text-[14px] font-bold text-green-800"
         >
           <CreditCard size={18} strokeWidth={2} className="text-green-600" aria-hidden />
           <span>View Payments</span>
@@ -695,7 +765,7 @@ export function AdminDashboardPage() {
         </Link>
         <Link
           to="/admin/messages"
-          className="flex min-h-[54px] items-center gap-3 rounded-xl bg-violet-50 px-3 text-[11px] font-bold text-violet-800"
+          className="flex min-h-[54px] items-center gap-3 rounded-xl bg-violet-50 px-3 text-[14px] font-bold text-violet-800"
         >
           <MessageSquare size={18} strokeWidth={2} className="text-violet-600" aria-hidden />
           <span>Send Message</span>
@@ -709,7 +779,7 @@ export function AdminDashboardPage() {
               ? `/admin/events/${featured.engagementID}/reports`
               : "/admin/events"
           }
-          className="flex min-h-[54px] items-center gap-3 rounded-xl bg-sky-50 px-3 text-[11px] font-bold text-blue-800"
+          className="flex min-h-[54px] items-center gap-3 rounded-xl bg-sky-50 px-3 text-[14px] font-bold text-blue-800"
         >
           <FileBarChart size={18} strokeWidth={2} className="text-blue-600" aria-hidden />
           <span>View Reports</span>

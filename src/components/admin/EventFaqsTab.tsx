@@ -176,7 +176,7 @@ export function EventFaqsTab({ eventId, engagement, fromApi, onChanged }: Props)
               onClick={() => setActiveId(cat.id)}
             >
               <span className="block truncate">{cat.label}</span>
-              <span className="text-[11px] font-medium text-mute">{cat.items.length} questions</span>
+              <span className="text-[14px] font-medium text-mute">{cat.items.length} questions</span>
             </button>
           ))}
         </div>
@@ -233,7 +233,7 @@ export function EventFaqsTab({ eventId, engagement, fromApi, onChanged }: Props)
           {active.items.map((item, index) => (
             <div key={item.id || index} className="rounded-lg border border-slate-200 p-3">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-mute">Question {index + 1}</span>
+                <span className="text-sm font-bold text-mute">Question {index + 1}</span>
                 <button
                   type="button"
                   className="text-red hover:underline"

@@ -33,7 +33,7 @@ const links = [
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
-    "flex h-[52px] items-center gap-3.5 rounded-xl px-3.5 text-[12px] font-medium text-[#07164d] transition",
+    "flex h-[52px] items-center gap-3.5 rounded-xl px-3.5 text-[15px] font-medium text-[#07164d] transition",
     isActive
       ? "bg-gradient-to-b from-[#e5f0ff] to-[#d8e9ff] font-bold text-[#065bd8] shadow-[inset_0_1px_0_rgba(255,255,255,.85),0_4px_14px_rgba(8,100,232,.12)]"
       : "hover:bg-[rgba(238,245,255,.85)]",
@@ -125,7 +125,7 @@ export function AdminLayout() {
             </span>
             {item.label}
             {item.badge ? (
-              <span className="ml-auto grid h-[18px] w-[18px] place-items-center rounded-full bg-[#ed2024] text-[9px] font-bold text-white shadow-[0_2px_6px_rgba(237,32,36,.35)]">
+              <span className="ml-auto grid h-[18px] w-[18px] place-items-center rounded-full bg-[#ed2024] text-[12px] font-bold text-white shadow-[0_2px_6px_rgba(237,32,36,.35)]">
                 {item.badge}
               </span>
             ) : null}
@@ -145,7 +145,7 @@ export function AdminLayout() {
         </NavLink>
         <button
           type="button"
-          className="flex h-[52px] w-full items-center gap-3.5 rounded-xl px-3.5 text-left text-[12px] font-medium text-[#d11f24] hover:bg-[#fff0f0]"
+          className="flex h-[52px] w-full items-center gap-3.5 rounded-xl px-3.5 text-left text-[15px] font-medium text-[#d11f24] hover:bg-[#fff0f0]"
           onClick={logout}
         >
           <span className="grid w-[23px] shrink-0 place-items-center">
@@ -181,7 +181,7 @@ export function AdminLayout() {
               {mobileNav ? <X size={18} /> : <Menu size={18} />}
             </button>
 
-            <label className="flex h-10 min-w-0 max-w-[min(720px,58%)] flex-1 items-center gap-3 rounded-[10px] bg-[#eaf4ff] px-3.5 text-[11px] text-[#657596]">
+            <label className="flex h-10 min-w-0 max-w-[min(720px,58%)] flex-1 items-center gap-3 rounded-[10px] bg-[#eaf4ff] px-3.5 text-[14px] text-[#657596]">
               <Search size={18} strokeWidth={2.25} className="shrink-0 text-[#07164d]" aria-hidden />
               <span className="sr-only">Search</span>
               <input
@@ -198,7 +198,7 @@ export function AdminLayout() {
                 aria-label="Notifications"
               >
                 <Bell size={22} strokeWidth={1.8} />
-                <span className="absolute -right-[7px] -top-[5px] grid h-[18px] w-[18px] place-items-center rounded-full bg-[#ed2024] text-[9px] font-bold text-white">
+                <span className="absolute -right-[7px] -top-[5px] grid h-[18px] w-[18px] place-items-center rounded-full bg-[#ed2024] text-[12px] font-bold text-white">
                   3
                 </span>
               </button>
@@ -213,12 +213,12 @@ export function AdminLayout() {
                   aria-controls={menuId}
                   onClick={() => setUserMenuOpen((v) => !v)}
                 >
-                  <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-full bg-[#0b51c6] text-[12px] font-bold text-white">
+                  <span className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-full bg-[#0b51c6] text-[15px] font-bold text-white">
                     {initials}
                   </span>
                   <div className="hidden text-left sm:block">
-                    <div className="text-[11px] font-bold">{name}</div>
-                    <div className="text-[9px] text-[#657596]">{role}</div>
+                    <div className="text-[14px] font-bold">{name}</div>
+                    <div className="text-[12px] text-[#657596]">{role}</div>
                   </div>
                   <ChevronDown
                     className={cn(
@@ -237,19 +237,19 @@ export function AdminLayout() {
                     className="absolute right-0 top-[calc(100%+10px)] z-40 w-[min(260px,78vw)] rounded-xl border border-[#e1ebf5] bg-white p-2 shadow-[0_12px_32px_rgba(7,22,77,.14)]"
                   >
                     <div className="mb-1.5 flex items-center gap-2.5 border-b border-[#eef3f9] px-2.5 pb-3 pt-2.5">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#0b51c6] text-[11px] font-bold text-white">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#0b51c6] text-[14px] font-bold text-white">
                         {initials}
                       </span>
                       <div className="min-w-0">
-                        <div className="text-[11px] font-bold">{name}</div>
-                        <div className="truncate text-[9px] text-[#657596]">
+                        <div className="text-[14px] font-bold">{name}</div>
+                        <div className="truncate text-[12px] text-[#657596]">
                           {user?.email || role}
                         </div>
                       </div>
                     </div>
                     <Link
                       role="menuitem"
-                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[12px] font-semibold text-[#07164d] hover:bg-[#eef5ff]"
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[15px] font-semibold text-[#07164d] hover:bg-[#eef5ff]"
                       to="/admin/settings/account"
                       onClick={() => setUserMenuOpen(false)}
                     >
@@ -258,7 +258,7 @@ export function AdminLayout() {
                     </Link>
                     <Link
                       role="menuitem"
-                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[12px] font-semibold text-[#07164d] hover:bg-[#eef5ff]"
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[15px] font-semibold text-[#07164d] hover:bg-[#eef5ff]"
                       to="/admin/settings/general"
                       onClick={() => setUserMenuOpen(false)}
                     >
@@ -268,7 +268,7 @@ export function AdminLayout() {
                     <button
                       type="button"
                       role="menuitem"
-                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[12px] font-semibold text-[#d11f24] hover:bg-[#fff0f0]"
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[15px] font-semibold text-[#d11f24] hover:bg-[#fff0f0]"
                       onClick={logout}
                     >
                       <LogOut size={16} strokeWidth={2} aria-hidden />

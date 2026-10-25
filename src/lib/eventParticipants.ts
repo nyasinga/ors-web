@@ -9,7 +9,19 @@ import { apiRequest } from "./api";
 import { getValidAuthToken } from "./auth";
 import type { AddedParticipant } from "../components/admin/AddParticipantModal";
 import type { ParticipationType } from "../data/registration";
+import {
+  canIssueEventPass,
+  encodeVerifiedReference,
+  resolveVerificationBucket,
+  stampTicketVerified,
+  stripVerifiedPrefix,
+  verificationBucketLabel,
+  type VerificationBucket,
+} from "./paymentVerification";
 import { parseWaiverFromTicket } from "./participantWaiver";
+
+export type { VerificationBucket };
+export { canIssueEventPass, verificationBucketLabel };
 
 export type EngagementParticipantTicket = {
   ticketID?: string;
@@ -37,6 +49,8 @@ export type EngagementParticipantTicket = {
   accessibility?: string;
   transactionReference?: string;
   paymentReceiptURL?: string | null;
+  paymentMode?: string;
+  waiverReason?: string;
   extraData?: Record<string, unknown> | null;
   [key: string]: unknown;
 };
@@ -110,17 +124,7 @@ function uiTypeLabel(ticket: EngagementParticipantTicket) {
 }
 
 function uiStatus(ticket: EngagementParticipantTicket): string {
-  const status = pickString(ticket.status).toLowerCase();
-  if (status === "cancelled" || status === "canceled") return "Cancelled";
-
-  const waiver = parseWaiverFromTicket(ticket);
-  if (waiver?.paymentMode === "complimentary") return "Complimentary";
-  if (waiver?.paymentMode === "waived") return "Waived";
-
-  // draft / issued / registered = awaiting payment verification → Pending
-  if (status === "draft" || status === "issued" || status === "registered") return "Pending";
-  if (status === "checked-in" || status === "checked_in") return "Confirmed";
-  return status ? status.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "Pending";
+  return verificationBucketLabel(resolveVerificationBucket(ticket));
 }
 
 function uiCheckIn(ticket: EngagementParticipantTicket): string {
@@ -158,7 +162,9 @@ function toAddedParticipant(ticket: EngagementParticipantTicket): AddedParticipa
 
   const passCode = pickString(ticket.passCode).replace(/\D/g, "").slice(0, 6);
   const waiver = parseWaiverFromTicket(ticket);
+  const bucket = resolveVerificationBucket(ticket);
   const txRef = pickString(ticket.transactionReference, waiver?.transactionReference);
+  const receiptUrl = pickString(ticket.paymentReceiptURL);
 
   return {
     id: pickString(ticket.ticketID, ticket.reference, ticket.passCode, email, name) || `p-${Date.now()}`,
@@ -194,6 +200,10 @@ function toAddedParticipant(ticket: EngagementParticipantTicket): AddedParticipa
     agencyName: waiver?.agencyName,
     sponsorTicketID: waiver?.sponsorTicketID,
     transactionReference: txRef || undefined,
+    displayPaymentReference: stripVerifiedPrefix(txRef) || undefined,
+    paymentReceiptURL: receiptUrl || undefined,
+    verificationBucket: bucket,
+    passAllowed: canIssueEventPass(ticket),
   };
 }
 
@@ -214,6 +224,159 @@ export async function listEventParticipants(
   const token = getValidAuthToken();
   const payload = await apiRequest<unknown>(path, token ? { token } : {});
   return normalizeTickets(payload).map(toAddedParticipant);
+}
+
+export type EngagementParticipantSummary = {
+  total: number;
+  pendingVerification: number;
+  confirmed: number;
+  waived: number;
+  registered: number;
+};
+
+/**
+ * Count participants for many engagements via GET …/participants (batched).
+ * Used by the admin dashboard when engagement.registered is missing/0.
+ */
+export async function sumEngagementParticipantCounts(
+  engagementIds: string[],
+  options: { concurrency?: number } = {},
+): Promise<{
+  total: number;
+  pendingVerification: number;
+  confirmed: number;
+  waived: number;
+  byId: Record<string, number>;
+}> {
+  const ids = [...new Set(engagementIds.map((id) => id.trim()).filter(Boolean))];
+  const byId: Record<string, number> = {};
+  let pendingVerification = 0;
+  let confirmed = 0;
+  let waived = 0;
+  if (!ids.length) {
+    return { total: 0, pendingVerification: 0, confirmed: 0, waived: 0, byId };
+  }
+
+  const concurrency = Math.max(1, Math.min(options.concurrency ?? 6, 12));
+  let cursor = 0;
+
+  async function worker() {
+    while (cursor < ids.length) {
+      const index = cursor;
+      cursor += 1;
+      const id = ids[index];
+      try {
+        const rows = await listEventParticipants(id);
+        byId[id] = rows.length;
+        for (const row of rows) {
+          if (row.status === "Pending verification") pendingVerification += 1;
+          else if (row.status === "Confirmed") confirmed += 1;
+          else if (row.status === "Waived" || row.status === "Complimentary") waived += 1;
+        }
+      } catch {
+        byId[id] = 0;
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, ids.length) }, () => worker()));
+  const total = Object.values(byId).reduce((sum, n) => sum + n, 0);
+  return { total, pendingVerification, confirmed, waived, byId };
+}
+
+export type CreateAdminParticipantInput = {
+  engagementID: string;
+  participationType: ParticipationType;
+  title: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  organisation: string;
+  jobTitle: string;
+  country: string;
+  city: string;
+  dietary?: string;
+  accessibility?: string;
+  /** Optional ticket price; omit or 0 when admin is registering without charge. */
+  ticketPrice?: number;
+};
+
+/**
+ * Admin creates a participant ticket via POST /ticketing.
+ */
+export async function createAdminParticipant(
+  input: CreateAdminParticipantInput,
+): Promise<AddedParticipant> {
+  const engagementID = input.engagementID.trim();
+  if (!engagementID) throw new Error("Engagement ID is required.");
+
+  const token = getValidAuthToken();
+  if (!token) throw new Error("Sign in as admin to add a participant.");
+
+  const body: Record<string, unknown> = {
+    engagementID,
+    fullName: input.fullName.trim(),
+    email: input.email.trim(),
+    phoneNo: input.phone.trim(),
+    participationType: input.participationType,
+    title: input.title.trim(),
+    organisation: input.organisation.trim(),
+    jobTitle: input.jobTitle.trim(),
+    country: input.country.trim(),
+    city: input.city.trim(),
+    currency: "KES",
+    ticketPrice: Number.isFinite(input.ticketPrice) ? Number(input.ticketPrice) : 0,
+    status: "registered",
+    // Admin-created participants are treated as already verified.
+    transactionReference: encodeVerifiedReference("ADMIN-ADD"),
+    extraData: {
+      organisation: input.organisation.trim(),
+      jobTitle: input.jobTitle.trim(),
+      dietary: input.dietary || "",
+      accessibility: input.accessibility || "",
+      title: input.title.trim(),
+      country: input.country.trim(),
+      city: input.city.trim(),
+      paymentVerified: true,
+      verifiedAt: new Date().toISOString(),
+      source: "admin-add",
+    },
+  };
+
+  const result = await apiRequest<Record<string, unknown>>("/ticketing", {
+    method: "POST",
+    token,
+    body,
+  });
+
+  const ticket = (result.ticket || result) as EngagementParticipantTicket;
+  const ticketID = pickString(ticket.ticketID);
+  if (ticketID) {
+    try {
+      await stampTicketVerified(ticketID, "ADMIN-ADD");
+    } catch {
+      // Ticket created; stamp is best-effort if reference endpoint rejects.
+    }
+  }
+
+  return toAddedParticipant({
+    ...ticket,
+    engagementID: pickString(ticket.engagementID) || engagementID,
+    fullName: pickString(ticket.fullName) || input.fullName.trim(),
+    email: pickString(ticket.email) || input.email.trim(),
+    phoneNo: pickString(ticket.phoneNo) || input.phone.trim(),
+    participationType: pickString(ticket.participationType) || input.participationType,
+    organisation: pickString(ticket.organisation, ticket.organization) || input.organisation.trim(),
+    jobTitle: pickString(ticket.jobTitle) || input.jobTitle.trim(),
+    country: pickString(ticket.country) || input.country.trim(),
+    city: pickString(ticket.city) || input.city.trim(),
+    title: pickString(ticket.title) || input.title.trim(),
+    transactionReference: encodeVerifiedReference("ADMIN-ADD"),
+    extraData: {
+      ...(asRecord(ticket.extraData) || {}),
+      paymentVerified: true,
+    },
+  });
 }
 
 export type TogglePaymentResult = {
@@ -257,10 +420,22 @@ export async function toggleParticipantPayment(ticketID: string): Promise<Toggle
     );
   }
 
+  // Persist admin verification so pass/QR unlocks and list shows Confirmed.
+  const stamped = await stampTicketVerified(
+    id,
+    pickString(ticket.transactionReference),
+  );
+
   const next: EngagementParticipantTicket = {
     ...ticket,
     ticketID: pickString(ticket.ticketID) || id,
     status: status || "registered",
+    transactionReference: stamped,
+    extraData: {
+      ...(asRecord(ticket.extraData) || {}),
+      paymentVerified: true,
+      verifiedAt: new Date().toISOString(),
+    },
   };
 
   return { ticket: next, paid: true, message };

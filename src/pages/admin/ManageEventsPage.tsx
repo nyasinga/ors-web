@@ -428,14 +428,14 @@ export function ManageEventsPage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              className="rounded-lg border border-blue-100 bg-white px-3 py-2 text-[12px] font-semibold text-slate-600 hover:bg-blue-50"
+              className="rounded-lg border border-blue-100 bg-white px-3 py-2 text-[15px] font-semibold text-slate-600 hover:bg-blue-50"
               onClick={() => setSelected([])}
             >
               Clear
             </button>
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-2 text-[12px] font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-2 text-[15px] font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
               disabled={busyId === "bulk"}
               onClick={() => setPendingDelete("bulk")}
             >
@@ -487,7 +487,7 @@ export function ManageEventsPage() {
               <span className="sr-only">Search events</span>
               <input
                 type="search"
-                className="w-full min-w-0 bg-transparent text-[12px] outline-none"
+                className="w-full min-w-0 bg-transparent text-[15px] outline-none"
                 placeholder="Search events..."
                 value={query}
                 onChange={(e) => {
@@ -501,7 +501,7 @@ export function ManageEventsPage() {
               <button
                 type="button"
                 className={cn(
-                  "flex h-[42px] items-center gap-2 rounded-lg bg-blue-50 px-4 text-[12px] font-semibold",
+                  "flex h-[42px] items-center gap-2 rounded-lg bg-blue-50 px-4 text-[15px] font-semibold",
                   typeFilter !== "all" && "ring-2 ring-[#075cff]/30",
                 )}
                 aria-expanded={filtersOpen}
@@ -522,7 +522,7 @@ export function ManageEventsPage() {
                     role="option"
                     aria-selected={typeFilter === "all"}
                     className={cn(
-                      "block w-full px-3 py-2 text-left text-[12px] hover:bg-blue-50",
+                      "block w-full px-3 py-2 text-left text-[15px] hover:bg-blue-50",
                       typeFilter === "all" && "font-bold text-[#075cff]",
                     )}
                     onClick={() => {
@@ -540,7 +540,7 @@ export function ManageEventsPage() {
                       role="option"
                       aria-selected={typeFilter === type}
                       className={cn(
-                        "block w-full px-3 py-2 text-left text-[12px] hover:bg-blue-50",
+                        "block w-full px-3 py-2 text-left text-[15px] hover:bg-blue-50",
                         typeFilter === type && "font-bold text-[#075cff]",
                       )}
                       onClick={() => {
@@ -558,7 +558,7 @@ export function ManageEventsPage() {
 
             <button
               type="button"
-              className="flex h-[42px] items-center gap-2 rounded-lg bg-blue-50 px-4 text-[12px] font-semibold hover:bg-blue-100"
+              className="flex h-[42px] items-center gap-2 rounded-lg bg-blue-50 px-4 text-[15px] font-semibold hover:bg-blue-100"
               onClick={handleExport}
               disabled={filtered.length === 0}
             >
@@ -569,7 +569,7 @@ export function ManageEventsPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] border-collapse text-left text-[12px]">
+          <table className="w-full min-w-[900px] border-collapse text-left text-[15px]">
             <thead className="bg-[#eef6ff] text-ink">
               <tr className="h-[43px] border-b border-blue-100">
                 <th className="w-12 px-4">
@@ -676,7 +676,7 @@ export function ManageEventsPage() {
                             {row.name}
                           </Link>
                           {row.isFeatured ? (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-[3px] text-[10px] font-semibold text-amber-800">
+                            <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-[3px] text-[13px] font-semibold text-amber-800">
                               <Star size={10} strokeWidth={2.5} aria-hidden />
                               Active
                             </span>
@@ -702,7 +702,7 @@ export function ManageEventsPage() {
                       <td className="px-2">
                         <span
                           className={cn(
-                            "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-[7px] text-[11px]",
+                            "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-[7px] text-[14px]",
                             typeClass(row.type),
                           )}
                         >
@@ -726,7 +726,7 @@ export function ManageEventsPage() {
                       <td className="px-2">
                         <span
                           className={cn(
-                            "inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-[7px] text-[11px]",
+                            "inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-[7px] text-[14px]",
                             statusClass(row.status),
                           )}
                         >
@@ -765,7 +765,7 @@ export function ManageEventsPage() {
                               <Link
                                 role="menuitem"
                                 to={`/admin/events/${row.id}/overview`}
-                                className="flex items-center gap-2 px-3 py-2 text-[12px] text-[#07145b] hover:bg-blue-50"
+                                className="flex items-center gap-2 px-3 py-2 text-[15px] text-[#07145b] hover:bg-blue-50"
                                 onClick={() => setMenuId(null)}
                               >
                                 <Eye size={14} strokeWidth={2} aria-hidden />
@@ -774,7 +774,7 @@ export function ManageEventsPage() {
                               <Link
                                 role="menuitem"
                                 to={`/admin/events/${row.id}/edit`}
-                                className="flex items-center gap-2 px-3 py-2 text-[12px] text-[#07145b] hover:bg-blue-50"
+                                className="flex items-center gap-2 px-3 py-2 text-[15px] text-[#07145b] hover:bg-blue-50"
                                 onClick={() => setMenuId(null)}
                               >
                                 <Pencil size={14} strokeWidth={2} aria-hidden />
@@ -783,7 +783,7 @@ export function ManageEventsPage() {
                               <button
                                 type="button"
                                 role="menuitem"
-                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-[#07145b] hover:bg-blue-50 disabled:opacity-50"
+                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[15px] text-[#07145b] hover:bg-blue-50 disabled:opacity-50"
                                 disabled={busy}
                                 onClick={() => void handleDuplicate(row)}
                               >
@@ -793,7 +793,7 @@ export function ManageEventsPage() {
                               <button
                                 type="button"
                                 role="menuitem"
-                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-[#07145b] hover:bg-blue-50 disabled:opacity-50"
+                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[15px] text-[#07145b] hover:bg-blue-50 disabled:opacity-50"
                                 disabled={busy}
                                 onClick={() => void handleFeature(row)}
                               >
@@ -808,7 +808,7 @@ export function ManageEventsPage() {
                               <button
                                 type="button"
                                 role="menuitem"
-                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[12px] text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[15px] text-rose-600 hover:bg-rose-50 disabled:opacity-50"
                                 disabled={busy}
                                 onClick={() => {
                                   setMenuId(null);
@@ -830,7 +830,7 @@ export function ManageEventsPage() {
           </table>
         </div>
 
-        <footer className="flex flex-wrap items-center justify-between gap-4 px-4 py-4 text-[12px] text-[#4c5a9c]">
+        <footer className="flex flex-wrap items-center justify-between gap-4 px-4 py-4 text-[15px] text-[#4c5a9c]">
           <span>
             Showing {from} to {to} of {filtered.length} events
           </span>
@@ -907,7 +907,7 @@ export function ManageEventsPage() {
             <div className="mt-5 flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded-lg border border-blue-100 bg-white px-4 py-2 text-[12px] font-semibold text-slate-600 hover:bg-slate-50"
+                className="rounded-lg border border-blue-100 bg-white px-4 py-2 text-[15px] font-semibold text-slate-600 hover:bg-slate-50"
                 disabled={Boolean(busyId)}
                 onClick={() => setPendingDelete(null)}
               >
@@ -915,7 +915,7 @@ export function ManageEventsPage() {
               </button>
               <button
                 type="button"
-                className="rounded-lg bg-rose-600 px-4 py-2 text-[12px] font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+                className="rounded-lg bg-rose-600 px-4 py-2 text-[15px] font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
                 disabled={Boolean(busyId)}
                 onClick={() => void confirmDelete()}
               >

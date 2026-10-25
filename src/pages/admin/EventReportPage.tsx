@@ -349,7 +349,7 @@ export function EventReportPage() {
               <button type="button" className={toolBtn} onClick={() => setZoom((z) => Math.max(60, z - 10))} aria-label="Zoom out">
                 <Minus size={14} />
               </button>
-              <span className="min-w-[3rem] text-center text-xs">{zoom}%</span>
+              <span className="min-w-[3rem] text-center text-sm">{zoom}%</span>
               <button type="button" className={toolBtn} onClick={() => setZoom((z) => Math.min(160, z + 10))} aria-label="Zoom in">
                 <Plus size={14} />
               </button>
@@ -380,7 +380,7 @@ export function EventReportPage() {
                     type="button"
                     onClick={() => setPage(n)}
                     className={cn(
-                      "mb-2 w-full rounded border p-2 text-left text-[10px] text-white/80",
+                      "mb-2 w-full rounded border p-2 text-left text-[13px] text-white/80",
                       page === n ? "border-blue-400 bg-white/10" : "border-white/10",
                     )}
                   >
@@ -405,14 +405,14 @@ export function EventReportPage() {
                 ) : (
                   <>
                     <header className="mb-5 border-b border-slate-200 pb-4">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                      <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
                         Anti-Counterfeit Authority · Live report
                       </p>
                       <h2 className="mt-1 text-2xl font-extrabold leading-tight">{report.name}</h2>
                       <p className="mt-1 text-sm text-slate-600">
                         {report.dateRange} · {report.venue}
                       </p>
-                      <p className="mt-1 text-xs font-semibold text-emerald-700">Status: {report.status}</p>
+                      <p className="mt-1 text-sm font-semibold text-emerald-700">Status: {report.status}</p>
                     </header>
 
                     {showOverview ? (
@@ -422,7 +422,7 @@ export function EventReportPage() {
                           {report.kpis.slice(0, 8).map((k) => (
                             <article key={k.label} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                               <div className="text-lg font-extrabold text-blue-700">{k.value}</div>
-                              <div className="text-[11px] text-slate-600">{k.label}</div>
+                              <div className="text-[14px] text-slate-600">{k.label}</div>
                             </article>
                           ))}
                         </div>
@@ -445,7 +445,7 @@ export function EventReportPage() {
                         {report.ticketBreakdown.length === 0 ? (
                           <p className="text-sm text-slate-500">No ticket types on this event.</p>
                         ) : (
-                          <table className="w-full text-left text-xs">
+                          <table className="w-full text-left text-sm">
                             <thead className="bg-slate-100">
                               <tr>
                                 <th className="p-2">Ticket</th>
@@ -470,14 +470,14 @@ export function EventReportPage() {
                             style={{ background: donutGradient }}
                             aria-hidden
                           />
-                          <div className="text-xs text-slate-600">
+                          <div className="text-sm text-slate-600">
                             <p>
                               Est. inventory value: <b>{kpi("Est. ticket inventory value")}</b>
                             </p>
                             <p>
                               Sponsorship packages: <b>{kpi("Sponsorship package value")}</b>
                             </p>
-                            <p className="mt-1 text-[11px] text-slate-400">
+                            <p className="mt-1 text-[14px] text-slate-400">
                               Sold counts are 0 until payments/registrations are connected.
                             </p>
                           </div>
@@ -498,7 +498,7 @@ export function EventReportPage() {
                     <section className="mt-4 grid gap-3 sm:grid-cols-2">
                       <div>
                         <h3 className="mb-1 text-sm font-bold">Speakers ({report.speakers})</h3>
-                        <ul className="space-y-0.5 text-xs text-slate-600">
+                        <ul className="space-y-0.5 text-sm text-slate-600">
                           {report.speakerNames.length
                             ? report.speakerNames.slice(0, 8).map((n) => <li key={n}>{n}</li>)
                             : <li>None saved</li>}
@@ -506,7 +506,7 @@ export function EventReportPage() {
                       </div>
                       <div>
                         <h3 className="mb-1 text-sm font-bold">Programme ({report.sessions})</h3>
-                        <ul className="space-y-0.5 text-xs text-slate-600">
+                        <ul className="space-y-0.5 text-sm text-slate-600">
                           {report.programmeTitles.length
                             ? report.programmeTitles.slice(0, 8).map((n) => <li key={n}>{n}</li>)
                             : <li>None saved</li>}
