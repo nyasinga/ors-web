@@ -339,7 +339,7 @@ export function AdminLoginPage() {
                 ) : null}
               </div>
 
-              <div className="flex items-center justify-between gap-3 pt-0.5 text-[13px] text-[#52668d] max-[600px]:text-[12px]">
+              <div className="flex items-center justify-between gap-3 pt-5 pb-5 text-[13px] text-[#52668d] max-[600px]:text-[12px]">
                 <label className="flex cursor-pointer items-center gap-2">
                   <input
                     className="m-0 h-4 w-4 accent-[#075fe5]"
@@ -367,20 +367,6 @@ export function AdminLoginPage() {
                 {submitting ? "Signing in…" : "Sign In"}
               </button>
             </form>
-
-            <div className="my-4 flex items-center gap-3 text-[12px] text-[#61708e] before:h-px before:flex-1 before:bg-[#dce4ef] before:content-[''] after:h-px after:flex-1 after:bg-[#dce4ef] after:content-['']">
-              or
-            </div>
-
-            <button
-              className="flex h-11 w-full cursor-pointer items-center justify-center gap-2.5 rounded-lg border border-[#9dafc9] bg-white text-[14px] font-semibold text-[#101a40] hover:bg-[#f7faff] max-[600px]:text-[13px]"
-              type="button"
-            >
-              <span className="text-[18px] font-black leading-none" aria-hidden>
-                G
-              </span>
-              Continue with Google
-            </button>
 
             <div className="mt-5 flex items-center justify-between gap-4 rounded-lg bg-[#edf6ff] px-4 py-3.5 max-[600px]:flex-col max-[600px]:items-start max-[600px]:gap-2.5">
               <div className="min-w-0">
