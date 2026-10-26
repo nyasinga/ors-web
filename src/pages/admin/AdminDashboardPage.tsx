@@ -14,9 +14,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useAuthUser } from "../../hooks/useAuthUser";
 import { useEventCopy } from "../../i18n/useEventCopy";
-import { displayName } from "../../lib/auth";
 import { cn } from "../../lib/cn";
 import {
   buildDashboardSnapshot,
@@ -134,9 +132,6 @@ function statusTone(status: string) {
 /** Admin dashboard — live engagement aggregates from the API */
 export function AdminDashboardPage() {
   const event = useEventCopy();
-  const user = useAuthUser();
-  const welcome =
-    displayName(user, "there").split(/\s+/).filter(Boolean)[0] ?? "there";
 
   const [engagements, setEngagements] = useState<Engagement[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -299,11 +294,6 @@ export function AdminDashboardPage() {
 
   const heroDates = formatHeroDates(featured, event.dates);
   const heroVenue = featured?.venue?.trim() || "Venue to be announced";
-  const heroCity =
-    [featured?.city, featured?.country === "KE" ? "Kenya" : featured?.country]
-      .filter(Boolean)
-      .join(", ") || "—";
-  const heroLogo = featured?.logo?.trim() || "";
   const heroName = featured?.engagementName?.trim() || "Active event";
 
   const methodGradient = useMemo(() => {
