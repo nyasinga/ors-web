@@ -818,73 +818,75 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                       {p.checkIn === "—" ? "–" : <span className={checkInPillClass(p.checkIn)}>{p.checkIn}</span>}
                     </td>
                     <td className="border-b border-blue-50 px-2 py-1.5 text-center">
-                      <div className="inline-flex flex-wrap items-center justify-center gap-1.5">
-                        {showPaymentToggle(p) && !isWaived(p) ? (
-                          <label
-                            className="inline-flex items-center gap-1.5"
-                            title={
-                              !(p.ticketID || p.id)
-                                ? "No ticket ID on this registration"
-                                : toggleFailedId === p.id
-                                  ? "Confirm failed — still pending"
-                                  : isPaymentPaid(p)
-                                    ? "Payment confirmed"
-                                    : "Toggle on to confirm payment"
-                            }
-                          >
-                            <span
-                              className={cn(
-                                "text-[12px] font-semibold",
-                                toggleFailedId === p.id
-                                  ? "text-red-600"
-                                  : isPaymentPaid(p)
-                                    ? "text-emerald-700"
-                                    : "text-amber-700",
-                              )}
-                            >
-                              Paid
-                            </span>
-                            <button
-                              type="button"
-                              role="switch"
-                              aria-checked={isPaymentPaid(p) || confirmingId === p.id}
-                              aria-label={`Toggle payment for ${p.name}`}
-                              disabled={
-                                confirmingId === p.id || !(p.ticketID || (p.id && !p.id.startsWith("p-")))
+                      <div className="inline-grid grid-cols-[5.5rem_auto_4.25rem_auto_auto] items-center justify-items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 justify-self-start">
+                          {showPaymentToggle(p) && !isWaived(p) ? (
+                            <label
+                              className="inline-flex items-center gap-1.5"
+                              title={
+                                !(p.ticketID || p.id)
+                                  ? "No ticket ID on this registration"
+                                  : toggleFailedId === p.id
+                                    ? "Confirm failed — still pending"
+                                    : isPaymentPaid(p)
+                                      ? "Payment confirmed"
+                                      : "Toggle on to confirm payment"
                               }
-                              onClick={() => {
-                                void handleTogglePayment(p);
-                              }}
-                              className={cn(
-                                "relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                                toggleFailedId === p.id
-                                  ? "bg-red-300"
-                                  : isPaymentPaid(p) || confirmingId === p.id
-                                    ? "bg-emerald-500"
-                                    : "bg-slate-300",
-                                confirmingId === p.id && "opacity-70",
-                              )}
                             >
                               <span
                                 className={cn(
-                                  "absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform",
-                                  (isPaymentPaid(p) || confirmingId === p.id) && "translate-x-4",
+                                  "text-[12px] font-semibold",
+                                  toggleFailedId === p.id
+                                    ? "text-red-600"
+                                    : isPaymentPaid(p)
+                                      ? "text-emerald-700"
+                                      : "text-amber-700",
                                 )}
-                              />
+                              >
+                                Paid
+                              </span>
+                              <button
+                                type="button"
+                                role="switch"
+                                aria-checked={isPaymentPaid(p) || confirmingId === p.id}
+                                aria-label={`Toggle payment for ${p.name}`}
+                                disabled={
+                                  confirmingId === p.id || !(p.ticketID || (p.id && !p.id.startsWith("p-")))
+                                }
+                                onClick={() => {
+                                  void handleTogglePayment(p);
+                                }}
+                                className={cn(
+                                  "relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                                  toggleFailedId === p.id
+                                    ? "bg-red-300"
+                                    : isPaymentPaid(p) || confirmingId === p.id
+                                      ? "bg-emerald-500"
+                                      : "bg-slate-300",
+                                  confirmingId === p.id && "opacity-70",
+                                )}
+                              >
+                                <span
+                                  className={cn(
+                                    "absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform",
+                                    (isPaymentPaid(p) || confirmingId === p.id) && "translate-x-4",
+                                  )}
+                                />
+                              </button>
+                            </label>
+                          ) : null}
+                          {canGrantWaiver(p) ? (
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 text-[13px] font-semibold text-sky-800 hover:bg-sky-100"
+                              aria-label={`Grant waiver for ${p.name}`}
+                              title="Grant staff / gov speaker / sponsor free-seat waiver"
+                              onClick={() => setWaiverTarget(p)}
+                            >
+                              Waiver
                             </button>
-                          </label>
-                        ) : null}
-                        {canGrantWaiver(p) ? (
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 text-[13px] font-semibold text-sky-800 hover:bg-sky-100"
-                            aria-label={`Grant waiver for ${p.name}`}
-                            title="Grant staff / gov speaker / sponsor free-seat waiver"
-                            onClick={() => setWaiverTarget(p)}
-                          >
-                            Waiver
-                          </button>
-                        ) : null}
+                          ) : null}
+                        </div>
                         <button
                           type="button"
                           disabled={
@@ -925,39 +927,43 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                           <Printer size={12} />
                           {printingId === p.id ? "…" : "Print"}
                         </button>
-                        {canReviewProof(p) && !isPaymentPaid(p) ? (
-                          <button
-                            type="button"
-                            className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[12px] font-semibold text-amber-900 hover:bg-amber-100"
-                            onClick={() => setProofTarget(p)}
-                          >
-                            Confirm
-                          </button>
-                        ) : null}
+                        <div className="w-full">
+                          {canReviewProof(p) && !isPaymentPaid(p) ? (
+                            <button
+                              type="button"
+                              className="inline-flex w-full items-center justify-center rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[12px] font-semibold text-amber-900 hover:bg-amber-100"
+                              onClick={() => setProofTarget(p)}
+                            >
+                              Confirm
+                            </button>
+                          ) : null}
+                        </div>
                         <button
                           type="button"
-                          className="inline-flex items-center rounded-md border border-blue-100 px-2 py-0.5 text-[12px] font-semibold text-blue-700 hover:bg-blue-50"
+                          className="inline-flex min-w-[3.75rem] items-center justify-center rounded-md border border-blue-100 px-2 py-0.5 text-[12px] font-semibold text-blue-700 hover:bg-blue-50"
                           onClick={() => setDetailTarget(p)}
                         >
                           Details
                         </button>
-                        {p.status !== "Cancelled" ? (
-                          <button
-                            type="button"
-                            disabled={
-                              cancelBusyId === p.id ||
-                              !(p.ticketID || (p.id && !p.id.startsWith("p-")))
-                            }
-                            className="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-[12px] font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-                            aria-label={`Cancel ticket for ${p.name}`}
-                            title="Cancel this registration"
-                            onClick={() => {
-                              void handleCancelTicket(p);
-                            }}
-                          >
-                            {cancelBusyId === p.id ? "…" : "Cancel"}
-                          </button>
-                        ) : null}
+                        <div className="min-w-[3.5rem]">
+                          {p.status !== "Cancelled" ? (
+                            <button
+                              type="button"
+                              disabled={
+                                cancelBusyId === p.id ||
+                                !(p.ticketID || (p.id && !p.id.startsWith("p-")))
+                              }
+                              className="inline-flex w-full items-center justify-center rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-[12px] font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                              aria-label={`Cancel ticket for ${p.name}`}
+                              title="Cancel this registration"
+                              onClick={() => {
+                                void handleCancelTicket(p);
+                              }}
+                            >
+                              {cancelBusyId === p.id ? "…" : "Cancel"}
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
                     </td>
                   </tr>

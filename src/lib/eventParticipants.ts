@@ -567,17 +567,12 @@ export async function toggleParticipantPayment(ticketID: string): Promise<Toggle
     );
   }
 
-  // Persist admin verification so pass/QR unlocks and list shows Confirmed.
-  const stamped = await stampTicketVerified(
-    id,
-    pickString(ticket.transactionReference),
-  );
-
+  // Confirm alone is the source of truth — do not PATCH /reference afterwards.
   const next: EngagementParticipantTicket = {
     ...ticket,
     ticketID: pickString(ticket.ticketID) || id,
     status: status || "issued",
-    transactionReference: stamped,
+    transactionReference: pickString(ticket.transactionReference),
     extraData: {
       ...(asRecord(ticket.extraData) || {}),
       paymentVerified: true,

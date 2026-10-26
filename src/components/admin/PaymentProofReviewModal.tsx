@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { getDocument, GlobalWorkerOptions, type PDFDocumentProxy } from "pdfjs-dist";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 import { TENANT_ID } from "../../lib/api";
@@ -14,12 +16,24 @@ type Props = {
   onCancelTicket: (p: AddedParticipant) => void;
 };
 
-function isPdf(url: string) {
-  return /\.pdf($|\?)/i.test(url) || /application\/pdf/i.test(url);
-}
+/** Same worker bootstrap as EventPassPreviewModal (handles bad .mjs MIME). */
+let workerReady: Promise<void> | null = null;
 
-function isImage(url: string) {
-  return /\.(png|jpe?g|gif|webp|bmp)($|\?)/i.test(url) || url.startsWith("data:image/");
+function ensurePdfWorker(): Promise<void> {
+  if (!workerReady) {
+    workerReady = (async () => {
+      try {
+        const res = await fetch(pdfWorkerUrl);
+        if (!res.ok) throw new Error(`Worker fetch failed (${res.status})`);
+        const buf = await res.arrayBuffer();
+        const blob = new Blob([buf], { type: "text/javascript" });
+        GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
+      } catch {
+        GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+      }
+    })();
+  }
+  return workerReady;
 }
 
 function authToken(): string | null {
@@ -36,44 +50,44 @@ async function sniffKind(blob: Blob): Promise<"image" | "pdf" | "other"> {
   if (type.includes("pdf")) return "pdf";
 
   const head = new Uint8Array(await blob.slice(0, 8).arrayBuffer());
-  // %PDF
   if (head[0] === 0x25 && head[1] === 0x50 && head[2] === 0x44 && head[3] === 0x46) {
     return "pdf";
   }
-  // JPEG / PNG / GIF / WEBP
   if (head[0] === 0xff && head[1] === 0xd8) return "image";
-  if (head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4e && head[3] === 0x47) return "image";
+  if (head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4e && head[3] === 0x47) {
+    return "image";
+  }
   if (head[0] === 0x47 && head[1] === 0x49 && head[2] === 0x46) return "image";
-  if (head[0] === 0x52 && head[1] === 0x49 && head[2] === 0x46 && head[3] === 0x46) return "image";
-
+  if (head[0] === 0x52 && head[1] === 0x49 && head[2] === 0x46 && head[3] === 0x46) {
+    return "image";
+  }
   return "other";
 }
 
 type PreviewState =
   | { status: "loading" }
-  | { status: "ready"; kind: "image" | "pdf"; src: string }
-  | { status: "error"; message: string };
+  | { status: "image"; src: string; openSrc: string }
+  | { status: "pdf"; openSrc: string; pageCount: number }
+  | { status: "other"; openSrc: string }
+  | { status: "error"; message: string; openSrc: string };
 
+/**
+ * Bank proof preview — images as <img>, PDFs rendered with PDF.js canvases
+ * (native PDF iframe/embed is blank in several browsers).
+ */
 function ProofPreview({ url, label }: { url: string; label: string }) {
   const [state, setState] = useState<PreviewState>({ status: "loading" });
-  const [imgFailed, setImgFailed] = useState(false);
+  const canvasHostRef = useRef<HTMLDivElement>(null);
+  const pdfRef = useRef<PDFDocumentProxy | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     let objectUrl: string | undefined;
 
     async function load() {
-      setImgFailed(false);
-
-      // Direct URLs with a clear extension can render without fetching.
-      if (isImage(url) && !/\/resources\/download\//i.test(url)) {
-        if (!cancelled) setState({ status: "ready", kind: "image", src: url });
-        return;
-      }
-      if (isPdf(url) && !/\/resources\/download\//i.test(url)) {
-        if (!cancelled) setState({ status: "ready", kind: "pdf", src: url });
-        return;
-      }
+      setState({ status: "loading" });
+      const host = canvasHostRef.current;
+      if (host) host.replaceChildren();
 
       try {
         const token = authToken();
@@ -84,34 +98,96 @@ function ProofPreview({ url, label }: { url: string; label: string }) {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         });
-        if (!res.ok) {
-          throw new Error(`Could not load proof (${res.status})`);
-        }
+        if (!res.ok) throw new Error(`Could not load proof (${res.status})`);
+
+        const headerType = (res.headers.get("content-type") || "").toLowerCase();
         const blob = await res.blob();
-        const kind = await sniffKind(blob);
-        objectUrl = URL.createObjectURL(
-          kind === "pdf" && !blob.type.includes("pdf")
-            ? new Blob([blob], { type: "application/pdf" })
-            : blob,
-        );
-        if (cancelled) {
-          URL.revokeObjectURL(objectUrl);
+        const kind =
+          headerType.includes("pdf")
+            ? "pdf"
+            : headerType.startsWith("image/")
+              ? "image"
+              : await sniffKind(blob);
+
+        if (cancelled) return;
+
+        if (kind === "image") {
+          objectUrl = URL.createObjectURL(
+            blob.type.startsWith("image/")
+              ? blob
+              : new Blob([blob], { type: "image/jpeg" }),
+          );
+          setState({ status: "image", src: objectUrl, openSrc: objectUrl });
           return;
         }
-        if (kind === "image" || kind === "pdf") {
-          setState({ status: "ready", kind, src: objectUrl });
-        } else {
-          // Unknown binary — try as image first; UI falls back to iframe on error.
-          setState({ status: "ready", kind: "image", src: objectUrl });
+
+        if (kind === "pdf") {
+          const pdfBlob = blob.type.includes("pdf")
+            ? blob
+            : new Blob([blob], { type: "application/pdf" });
+          objectUrl = URL.createObjectURL(pdfBlob);
+          const data = await pdfBlob.arrayBuffer();
+
+          await ensurePdfWorker();
+          let pdf: PDFDocumentProxy;
+          try {
+            pdf = await getDocument({ data }).promise;
+          } catch {
+            pdf = await getDocument({
+              data,
+              useWorkerFetch: false,
+              isEvalSupported: false,
+            }).promise;
+          }
+          if (cancelled) {
+            await pdf.destroy();
+            return;
+          }
+          pdfRef.current = pdf;
+
+          const maxWidth = Math.min(host?.clientWidth || 680, 720);
+          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum += 1) {
+            const page = await pdf.getPage(pageNum);
+            if (cancelled) return;
+
+            const unscaled = page.getViewport({ scale: 1 });
+            const scale = maxWidth / unscaled.width;
+            const viewport = page.getViewport({
+              scale: Math.min(Math.max(scale, 1.05), 2.2),
+            });
+
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.floor(viewport.width);
+            canvas.height = Math.floor(viewport.height);
+            canvas.className =
+              "mb-3 w-full rounded-md border border-blue-100 bg-white shadow-sm last:mb-0";
+            canvas.setAttribute("aria-label", `${label} page ${pageNum}`);
+
+            const ctx = canvas.getContext("2d");
+            if (!ctx) continue;
+            await page.render({ canvasContext: ctx, viewport }).promise;
+            if (cancelled) return;
+            host?.appendChild(canvas);
+          }
+
+          setState({
+            status: "pdf",
+            openSrc: objectUrl,
+            pageCount: pdf.numPages,
+          });
+          return;
         }
-      } catch {
-        // CORS or network — still try embedding the raw URL in an iframe/img.
+
+        objectUrl = URL.createObjectURL(blob);
+        setState({ status: "other", openSrc: objectUrl });
+      } catch (err) {
         if (cancelled) return;
-        if (isImage(url)) {
-          setState({ status: "ready", kind: "image", src: url });
-        } else {
-          setState({ status: "ready", kind: "pdf", src: url });
-        }
+        setState({
+          status: "error",
+          message:
+            err instanceof Error ? err.message : "Could not load payment proof.",
+          openSrc: url,
+        });
       }
     }
 
@@ -119,46 +195,79 @@ function ProofPreview({ url, label }: { url: string; label: string }) {
 
     return () => {
       cancelled = true;
+      pdfRef.current?.destroy().catch(() => undefined);
+      pdfRef.current = null;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [url]);
+  }, [url, label]);
 
-  if (state.status === "loading") {
-    return (
-      <div className="flex h-[320px] items-center justify-center bg-white text-[13px] text-blue-800">
-        Loading proof preview…
-      </div>
-    );
-  }
-
-  if (state.status === "error") {
-    return (
-      <div className="px-3 py-4 text-[13px] text-amber-950">
-        <p className="m-0 mb-2">{state.message}</p>
-        <a href={url} target="_blank" rel="noopener noreferrer" className="font-semibold text-blue-600 underline">
-          Open proof file
-        </a>
-      </div>
-    );
-  }
-
-  if (state.kind === "image" && !imgFailed) {
-    return (
-      <img
-        src={state.src}
-        alt={label}
-        className="max-h-[480px] w-full object-contain bg-white"
-        onError={() => setImgFailed(true)}
-      />
-    );
-  }
+  const openSrc =
+    state.status === "loading" ? url : state.openSrc;
 
   return (
-    <iframe
-      title={label}
-      src={state.src}
-      className="h-[480px] w-full border-0 bg-white"
-    />
+    <div className="overflow-hidden rounded-lg border border-blue-100 bg-slate-50">
+      {state.status === "loading" ? (
+        <div className="flex h-[280px] items-center justify-center bg-white text-[13px] text-blue-800">
+          Loading proof preview…
+        </div>
+      ) : null}
+
+      {state.status === "error" ? (
+        <div className="px-3 py-6 text-center text-[13px] text-amber-950">
+          <p className="m-0 mb-2">{state.message}</p>
+        </div>
+      ) : null}
+
+      {state.status === "image" ? (
+        <a
+          href={state.openSrc}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block bg-white p-2"
+        >
+          <img
+            src={state.src}
+            alt={label}
+            className="mx-auto max-h-[520px] w-auto max-w-full object-contain"
+          />
+        </a>
+      ) : null}
+
+      {/* PDF canvases mount here (also kept mounted while loading so width is known). */}
+      <div
+        ref={canvasHostRef}
+        className={
+          state.status === "pdf" || state.status === "loading"
+            ? "bg-slate-100 p-2"
+            : "hidden"
+        }
+      />
+
+      {state.status === "other" ? (
+        <div className="px-3 py-6 text-center text-[13px] text-blue-900">
+          <p className="m-0">This file type can’t be previewed inline.</p>
+        </div>
+      ) : null}
+
+      <div className="flex flex-wrap items-center gap-3 border-t border-blue-50 bg-white px-3 py-2 text-[12px]">
+        <a
+          href={openSrc}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-blue-600 underline"
+        >
+          Open in new tab
+        </a>
+        {state.status === "pdf" ? (
+          <>
+            <span className="text-slate-400">·</span>
+            <span className="text-slate-500">
+              PDF · {state.pageCount} page{state.pageCount === 1 ? "" : "s"}
+            </span>
+          </>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -247,22 +356,7 @@ export function PaymentProofReviewModal({
                 Bank payment proof ({proofs.length})
               </p>
               {proofs.map((url) => (
-                <div
-                  key={url}
-                  className="overflow-hidden rounded-lg border border-blue-100 bg-slate-50"
-                >
-                  <ProofPreview url={url} label={`Payment proof for ${p.name}`} />
-                  <div className="border-t border-blue-50 px-3 py-1.5 text-[12px]">
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-semibold text-blue-600 underline break-all"
-                    >
-                      Open in new tab
-                    </a>
-                  </div>
-                </div>
+                <ProofPreview key={url} url={url} label={`Payment proof for ${p.name}`} />
               ))}
             </div>
           )}
