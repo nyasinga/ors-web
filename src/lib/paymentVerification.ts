@@ -141,7 +141,7 @@ export async function stampTicketVerified(
   formData.append("transactionReference", stamped);
   formData.append("paymentVerified", "true");
 
-  await apiForm(`/ticketing/${encodeURIComponent(id)}/reference`, {
+  await apiForm(`/ticketing/${encodeURIComponent(id)}`, {
     method: "PATCH",
     formData,
     token,

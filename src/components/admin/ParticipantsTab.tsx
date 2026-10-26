@@ -320,6 +320,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
       setProofTarget((prev) => (prev?.id === p.id ? { ...prev, ...patch } : prev));
       toast.success(message || `Payment verified for ${p.name}. Pass can now be issued.`);
       void reloadParticipants();
+      setProofTarget(null);
     } catch (err) {
       // Leave row Pending — switch snaps back off; flash red briefly.
       setToggleFailedId(p.id);
@@ -930,7 +931,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                             className="inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[12px] font-semibold text-amber-900 hover:bg-amber-100"
                             onClick={() => setProofTarget(p)}
                           >
-                            Proof
+                            Confirm
                           </button>
                         ) : null}
                         <button
