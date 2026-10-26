@@ -1,11 +1,16 @@
 /**
  * Payment verification lifecycle (admin must approve before pass/QR).
  *
- * Encoded in transactionReference when the API has no dedicated verified flag:
- *   VERIFIED|<original-ref>  → admin confirmed
+ * Backend EngagementTicketStatus:
+ *   draft      — incomplete / early
+ *   registered — participant supplied info + proof; pending admin approval
+ *   issued     — confirmed (admin approved / ticket issued)
+ *   checked-in — arrived on site
+ *   cancelled  — void
+ *
+ * Also encoded in transactionReference when helpful:
+ *   VERIFIED|<original-ref>  → admin confirmed stamp
  *   WAIVER-…                 → waived / complimentary (see participantWaiver)
- *   any other ref            → proof submitted, pending verification
- *   no ref + draft/issued    → registered / awaiting payment
  */
 
 import { apiForm } from "./api";
@@ -56,7 +61,9 @@ export function resolveVerificationBucket(ticket: {
   if (waiver?.paymentMode === "complimentary") return "complimentary";
   if (waiver?.paymentMode === "waived") return "waived";
 
+  // Canonical backend statuses (source of truth for list display).
   if (status === "checked-in" || status === "checked_in") return "confirmed";
+  if (status === "issued") return "confirmed";
 
   const ref = String(ticket.transactionReference || "").trim();
   const receipt = String(ticket.paymentReceiptURL || "").trim();
@@ -69,16 +76,17 @@ export function resolveVerificationBucket(ticket: {
     String(extra?.paymentVerified || "").toLowerCase() === "true" ||
     Boolean(extra?.verifiedAt);
 
-  // Receipt / ref alone means proof submitted — admin must still approve.
+  // Admin stamp (e.g. admin-add) even if API status has not moved to issued yet.
   if (isAdminVerifiedReference(ref) || flagged) return "confirmed";
 
+  // registered = proof/info complete, awaiting admin approval.
+  if (status === "registered") return "pending_verification";
+
+  if (status === "draft") return "draft";
+
+  // Fallback when status is missing.
   if (ref || receipt) return "pending_verification";
-
-  if (status === "draft" || status === "issued") return "draft";
-
-  if (status === "registered" || !status) return "registered";
-
-  return "registered";
+  return "draft";
 }
 
 export function verificationBucketLabel(bucket: VerificationBucket): string {
@@ -95,8 +103,10 @@ export function verificationBucketLabel(bucket: VerificationBucket): string {
       return "Complimentary";
     case "cancelled":
       return "Cancelled";
-    default:
+    case "registered":
       return "Registered";
+    default:
+      return "Draft";
   }
 }
 

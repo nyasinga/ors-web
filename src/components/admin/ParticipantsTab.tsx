@@ -178,7 +178,8 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     if (isWaived(p)) return true;
     if (p.passAllowed || p.verificationBucket === "confirmed") return true;
     const raw = (p.rawStatus || "").toLowerCase();
-    if (raw === "checked-in" || raw === "checked_in") return true;
+    // Backend: issued = confirmed; checked-in = on site.
+    if (raw === "issued" || raw === "checked-in" || raw === "checked_in") return true;
     return p.status === "Confirmed";
   };
 
@@ -302,7 +303,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     setConfirmingId(p.id);
     try {
       const { ticket, message } = await toggleParticipantPayment(ticketID);
-      const nextStatus = String(ticket.status || "registered").toLowerCase();
+      const nextStatus = String(ticket.status || "issued").toLowerCase();
       const patch = {
         status: "Confirmed" as const,
         rawStatus: nextStatus,
@@ -383,13 +384,14 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
   };
 
   const canReviewProof = (p: AddedParticipant) => {
-    if (p.status === "Cancelled") return false;
+    if (p.status === "Cancelled" || isPaymentPaid(p)) return false;
     if (p.verificationBucket === "pending_verification") return true;
     if (p.status === "Pending verification" || p.status === "Draft" || p.status === "Registered") {
       return true;
     }
     const raw = (p.rawStatus || "").toLowerCase();
-    if (raw === "draft" || raw === "issued" || raw === "registered") return true;
+    // registered = pending admin; draft = incomplete. issued is confirmed — not review.
+    if (raw === "draft" || raw === "registered") return true;
     return Boolean(p.paymentReceiptURL || p.paymentProofUrls?.length || p.displayPaymentReference);
   };
 

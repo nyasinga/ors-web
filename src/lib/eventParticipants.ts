@@ -525,7 +525,7 @@ export async function createAdminParticipant(
 
 export type TogglePaymentResult = {
   ticket: EngagementParticipantTicket;
-  /** True when status is registered / checked-in after the call. */
+  /** True when status is issued / checked-in after the call. */
   paid: boolean;
   message?: string;
 };
@@ -533,6 +533,8 @@ export type TogglePaymentResult = {
 /**
  * Confirm / toggle payment for an engagement ticket.
  * GET /ticketing/{ticketID}/confirm (@authenticate('jwt')).
+ *
+ * Backend: registered = still pending approval; issued = confirmed.
  */
 export async function toggleParticipantPayment(ticketID: string): Promise<TogglePaymentResult> {
   const id = ticketID.trim();
@@ -552,10 +554,14 @@ export async function toggleParticipantPayment(ticketID: string): Promise<Toggle
 
   const ticket = (result.ticket || result) as EngagementParticipantTicket;
   const status = pickString(ticket.status).toLowerCase();
-  const message = (typeof result.message === "string" && result.message.trim())? result.message.trim() : undefined;
+  const message =
+    typeof result.message === "string" && result.message.trim()
+      ? result.message.trim()
+      : undefined;
 
   // Still pending after a successful HTTP response → treat as failed confirm.
-  if (status === "registered") {
+  // registered = proof submitted, awaiting admin; draft = not ready.
+  if (status === "registered" || status === "draft") {
     throw new Error(
       message || "Payment was not confirmed — ticket is still pending. Try again.",
     );
@@ -570,7 +576,7 @@ export async function toggleParticipantPayment(ticketID: string): Promise<Toggle
   const next: EngagementParticipantTicket = {
     ...ticket,
     ticketID: pickString(ticket.ticketID) || id,
-    status: status || "registered",
+    status: status || "issued",
     transactionReference: stamped,
     extraData: {
       ...(asRecord(ticket.extraData) || {}),

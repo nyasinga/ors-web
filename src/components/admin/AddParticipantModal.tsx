@@ -39,7 +39,10 @@ export type AddedParticipant = {
   /** Engagement ticket id — used for GET /ticketing/{ticketID}/confirm */
   ticketID?: string;
   reference?: string;
-  /** Raw API ticket status (issued | registered | checked-in | cancelled). */
+  /**
+   * Raw API EngagementTicketStatus:
+   * draft | registered (pending admin) | issued (confirmed) | checked-in | cancelled
+   */
   rawStatus?: string;
   /** payable | waived | complimentary — set when admin grants a waiver. */
   paymentMode?: "payable" | "waived" | "complimentary";
