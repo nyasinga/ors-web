@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  ArrowDownUp,
   CalendarDays,
+  CircleDot,
   Copy,
   Download,
   Eye,
+  Layers,
   ListFilter,
   MapPin,
   MoreVertical,
@@ -14,6 +15,7 @@ import {
   Search,
   Star,
   Trash2,
+  Users,
 } from "lucide-react";
 import type { EventStatus, EventType, ManagedEvent } from "../../data/adminEvents";
 import {
@@ -230,7 +232,6 @@ export function ManageEventsPage() {
   const pageCount = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
   const safePage = Math.min(page, pageCount);
   const pageRows = filtered.slice((safePage - 1) * rowsPerPage, safePage * rowsPerPage);
-  const allChecked = pageRows.length > 0 && pageRows.every((r) => selected.includes(r.id));
   const from = filtered.length === 0 ? 0 : (safePage - 1) * rowsPerPage + 1;
   const to = Math.min(safePage * rowsPerPage, filtered.length);
 
@@ -378,19 +379,19 @@ export function ManageEventsPage() {
   };
 
   return (
-    <div className="space-y-3 bg-[radial-gradient(ellipse_at_12%_10%,#e0f0ff_0,#f4faff_48%,#e4f2ff_100%)] p-3 text-ink sm:p-4">
-      <section className="flex flex-col items-start justify-between gap-4 px-2 sm:flex-row sm:items-end">
+    <div className="min-h-full space-y-4 bg-[radial-gradient(ellipse_at_12%_0%,#eaf4ff_0,#f8fbff_48%,#eef5ff_100%)] p-3 text-ink sm:space-y-5 sm:p-5 lg:p-6">
+      <section className="flex flex-col items-stretch justify-between gap-3 px-1 sm:flex-row sm:items-end sm:px-2">
         <div>
-          <h1 className="text-[36px] font-extrabold leading-tight tracking-tight text-[#07145b]">
+          <h1 className="text-2xl font-extrabold leading-tight tracking-tight text-[#07145b] sm:text-3xl lg:text-[36px]">
             Events
           </h1>
-          <p className="text-[15px] text-[#4f5e9a]">
+          <p className="mt-1 text-sm text-[#4f5e9a] sm:text-[15px]">
             Manage all events, registrations and activities.
           </p>
         </div>
         <Link
           to="/admin/events/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-[#075cff] px-5 py-3 text-[13px] font-semibold text-white shadow-sm hover:bg-blue-700"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#075cff] px-5 py-3 text-sm font-bold text-white shadow-md shadow-blue-600/15 transition hover:bg-blue-700 sm:w-auto"
         >
           <Plus size={18} strokeWidth={2.5} aria-hidden />
           Create Event
@@ -446,12 +447,12 @@ export function ManageEventsPage() {
         </div>
       ) : null}
 
-      <section className={cn(glass, "overflow-hidden")}>
-        <div className="flex flex-col gap-3 border-b border-blue-100 px-4 py-3 lg:flex-row lg:items-center">
+      <section className={cn(glass, "overflow-visible md:overflow-hidden")}>
+        <div className="flex flex-col gap-3 rounded-t-xl border-b border-blue-100 bg-white/80 p-3 sm:p-4 lg:flex-row lg:items-center">
           <ScrollableNav
             activeKey={tab}
             aria-label="Event status"
-            className="min-w-0 flex-1 self-stretch text-[13px]"
+            className="min-w-0 w-full flex-1 self-stretch text-xs sm:text-[13px]"
             trackClassName="items-center gap-4 self-stretch sm:gap-5"
           >
             {tabs.map((item) => {
@@ -481,8 +482,8 @@ export function ManageEventsPage() {
             })}
           </ScrollableNav>
 
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <label className="flex h-[42px] w-full min-w-0 items-center gap-2 rounded-lg bg-blue-50 px-3 text-slate-500 sm:w-[182px]">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+            <label className="col-span-2 flex h-11 w-full min-w-0 items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/70 px-3 text-slate-500 sm:col-span-1 sm:w-[220px]">
               <Search size={16} strokeWidth={2.25} className="shrink-0 text-ink" aria-hidden />
               <span className="sr-only">Search events</span>
               <input
@@ -558,7 +559,7 @@ export function ManageEventsPage() {
 
             <button
               type="button"
-              className="flex h-[42px] items-center gap-2 rounded-lg bg-blue-50 px-4 text-[15px] font-semibold hover:bg-blue-100"
+              className="flex h-11 min-w-0 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-blue-50/70 px-3 text-sm font-semibold hover:bg-blue-100 sm:px-4"
               onClick={handleExport}
               disabled={filtered.length === 0}
             >
@@ -568,269 +569,121 @@ export function ManageEventsPage() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] border-collapse text-left text-[15px]">
-            <thead className="bg-[#eef6ff] text-ink">
-              <tr className="h-[43px] border-b border-blue-100">
-                <th className="w-12 px-4">
-                  <input
-                    type="checkbox"
-                    className="h-[18px] w-[18px] accent-blue-600"
-                    checked={allChecked}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelected((prev) => [
-                          ...new Set([...prev, ...pageRows.map((r) => r.id)]),
-                        ]);
-                      } else {
-                        setSelected((prev) =>
-                          prev.filter((id) => !pageRows.some((r) => r.id === id)),
-                        );
-                      }
-                    }}
-                    aria-label="Select all on page"
-                  />
-                </th>
-                <th className="px-2 font-bold">
-                  <span className="inline-flex items-center gap-1">
-                    Event <ArrowDownUp size={10} strokeWidth={2.5} aria-hidden />
-                  </span>
-                </th>
-                <th className="px-2 font-bold">
-                  <span className="inline-flex items-center gap-1">
-                    Date <ArrowDownUp size={10} strokeWidth={2.5} aria-hidden />
-                  </span>
-                </th>
-                <th className="px-2 font-bold">
-                  <span className="inline-flex items-center gap-1">
-                    Venue <ArrowDownUp size={10} strokeWidth={2.5} aria-hidden />
-                  </span>
-                </th>
-                <th className="px-2 font-bold">
-                  <span className="inline-flex items-center gap-1">
-                    Type <ArrowDownUp size={10} strokeWidth={2.5} aria-hidden />
-                  </span>
-                </th>
-                <th className="px-2 font-bold">
-                  <span className="inline-flex items-center gap-1">
-                    Registrations <ArrowDownUp size={10} strokeWidth={2.5} aria-hidden />
-                  </span>
-                </th>
-                <th className="px-2 font-bold">
-                  <span className="inline-flex items-center gap-1">
-                    Status <ArrowDownUp size={10} strokeWidth={2.5} aria-hidden />
-                  </span>
-                </th>
-                <th className="px-4 text-center font-bold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-slate-500">
-                    Loading events…
-                  </td>
-                </tr>
-              ) : pageRows.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-slate-500">
-                    {error
-                      ? "Could not load events."
-                      : "No events yet. Create your first event."}
-                  </td>
-                </tr>
-              ) : (
-                pageRows.map((row) => {
-                  const pct =
-                    row.capacity > 0
-                      ? Math.min(100, Math.round((row.registered / row.capacity) * 100))
-                      : 0;
-                  const open = menuId === row.id;
-                  const busy = busyId === row.id;
-                  return (
-                    <tr
-                      key={row.id}
-                      className="h-[77px] border-b border-blue-100/80 hover:bg-blue-50/50"
-                    >
-                      <td className="px-4">
-                        <input
-                          type="checkbox"
-                          className="h-[18px] w-[18px] accent-blue-600"
-                          checked={selected.includes(row.id)}
-                          onChange={(e) => {
-                            setSelected((prev) =>
-                              e.target.checked
-                                ? [...prev, row.id]
-                                : prev.filter((id) => id !== row.id),
-                            );
-                          }}
-                          aria-label={`Select ${row.name}`}
-                        />
-                      </td>
-                      <td className="px-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Link
-                            to={`/admin/events/${row.id}/overview`}
-                            className="block text-[13px] font-bold text-[#07145b] hover:underline"
-                          >
-                            {row.name}
-                          </Link>
-                          {row.isFeatured ? (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-[3px] text-[13px] font-semibold text-amber-800">
-                              <Star size={10} strokeWidth={2.5} aria-hidden />
-                              Active
-                            </span>
-                          ) : null}
-                        </div>
-                        <span className="mt-1 block max-w-[205px] leading-[1.45] text-[#4c5a9c]">
-                          {row.subtitle}
+        <div className="grid grid-cols-1 gap-3 p-3 md:hidden">
+          {loading ? <div className={cn(glass, "px-4 py-10 text-center text-sm text-slate-500")}>Loading events…</div> : pageRows.length === 0 ? <div className={cn(glass, "px-4 py-10 text-center text-sm text-slate-500")}>{error ? "Could not load events." : "No events yet. Create your first event."}</div> : pageRows.map((row) => {
+            const pct = row.capacity > 0 ? Math.min(100, Math.round((row.registered / row.capacity) * 100)) : 0;
+            const open = menuId === row.id;
+            const busy = busyId === row.id;
+            return (
+              <article key={row.id} className="overflow-visible rounded-2xl border border-blue-100 bg-white p-4 shadow-[0_4px_16px_rgba(48,112,181,.08)]">
+                <div className="flex items-start gap-3">
+                  <input type="checkbox" className="mt-1 h-5 w-5 shrink-0 accent-blue-600" checked={selected.includes(row.id)} onChange={(e) => setSelected((prev) => e.target.checked ? [...prev, row.id] : prev.filter((id) => id !== row.id))} aria-label={`Select ${row.name}`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={cn("rounded-md px-2 py-1 text-[11px] font-bold", statusClass(row.status))}>{row.status}</span>
+                      <span className={cn("rounded-md px-2 py-1 text-[11px] font-semibold", typeClass(row.type))}>{row.type}</span>
+                      {row.isFeatured ? <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-800"><Star size={11} /> Featured</span> : null}
+                    </div>
+                    <Link to={`/admin/events/${row.id}/overview`} className="mt-2 block break-words text-base font-extrabold leading-snug text-[#07145b] hover:text-[#075cff]">{row.name}</Link>
+                    {row.subtitle ? <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-slate-500">{row.subtitle}</p> : null}
+                  </div>
+                  <div className="relative shrink-0" ref={open ? menuRef : undefined}>
+                    <button type="button" className="grid h-9 w-9 place-items-center rounded-lg border border-blue-100 text-slate-600 hover:bg-blue-50 disabled:opacity-50" aria-label={`More actions for ${row.name}`} aria-expanded={open} aria-haspopup="menu" disabled={busy} onClick={() => setMenuId(open ? null : row.id)}><MoreVertical size={18} /></button>
+                    {open ? <div className="absolute right-0 top-10 z-40 w-48 rounded-xl border border-blue-100 bg-white py-1 text-left shadow-xl" role="menu">
+                      <Link role="menuitem" to={`/admin/events/${row.id}/overview`} className="flex items-center gap-2 px-3 py-2.5 text-sm text-[#07145b] hover:bg-blue-50" onClick={() => setMenuId(null)}><Eye size={15} /> View</Link>
+                      <Link role="menuitem" to={`/admin/events/${row.id}/edit`} className="flex items-center gap-2 px-3 py-2.5 text-sm text-[#07145b] hover:bg-blue-50" onClick={() => setMenuId(null)}><Pencil size={15} /> Edit</Link>
+                      <button type="button" role="menuitem" className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-[#07145b] hover:bg-blue-50 disabled:opacity-50" disabled={busy} onClick={() => void handleDuplicate(row)}><Copy size={15} /> Duplicate</button>
+                      <button type="button" role="menuitem" className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-[#07145b] hover:bg-blue-50 disabled:opacity-50" disabled={busy} onClick={() => void handleFeature(row)}><Star size={15} className={row.isFeatured ? "fill-amber-400 text-amber-500" : undefined} />{row.isFeatured ? "Deactivate event" : "Activate event"}</button>
+                      <button type="button" role="menuitem" className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-rose-600 hover:bg-rose-50 disabled:opacity-50" disabled={busy} onClick={() => { setMenuId(null); setPendingDelete(row); }}><Trash2 size={15} /> Delete</button>
+                    </div> : null}
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-1 gap-3 border-t border-blue-50 pt-3 sm:grid-cols-2">
+                  <div className="flex min-w-0 items-start gap-2 text-sm text-slate-600"><CalendarDays size={16} className="mt-0.5 shrink-0 text-[#075cff]" /><div className="min-w-0"><p className="font-semibold text-slate-800">{row.dateLabel}</p><p className="text-xs text-slate-500">{row.daysLabel}</p></div></div>
+                  <div className="flex min-w-0 items-start gap-2 text-sm text-slate-600"><MapPin size={16} className="mt-0.5 shrink-0 text-[#075cff]" /><span className="break-words">{row.venue || "Venue not specified"}</span></div>
+                </div>
+                <div className="mt-4 rounded-xl bg-blue-50/70 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-3 text-xs"><span className="font-semibold text-slate-700">Registrations</span><span className="font-bold text-[#07145b]">{row.registered} / {row.capacity > 0 ? row.capacity : "—"} <span className="font-medium text-slate-500">({pct}%)</span></span></div>
+                  <div className="h-2 overflow-hidden rounded-full bg-blue-100"><div className={cn("h-full rounded-full transition-all", barClass(row.barTone))} style={{ width: `${pct}%` }} /></div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+        <div className="hidden md:block">
+          {loading ? <div className="px-5 py-12 text-center text-sm text-slate-500">Loading events…</div> : pageRows.length === 0 ? <div className="px-5 py-12 text-center text-sm text-slate-500">{error ? "Could not load events." : "No events yet. Create your first event."}</div> : <div className="divide-y divide-blue-100/90">
+            {pageRows.map((row) => {
+              const pct = row.capacity > 0 ? Math.min(100, Math.round((row.registered / row.capacity) * 100)) : 0;
+              const open = menuId === row.id;
+              const busy = busyId === row.id;
+              return <article key={row.id} className="group px-5 py-3.5 transition-colors hover:bg-blue-50/40">
+                <div className="flex min-w-0 items-start gap-3">
+                  <input type="checkbox" className="mt-1 h-[18px] w-[18px] shrink-0 accent-blue-600" checked={selected.includes(row.id)} onChange={(e) => setSelected((prev) => e.target.checked ? [...prev, row.id] : prev.filter((id) => id !== row.id))} aria-label={`Select ${row.name}`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Link to={`/admin/events/${row.id}/overview`} title={row.name} className="min-w-0 flex-1 truncate text-[16px] font-extrabold leading-6 tracking-[-.02em] text-[#10245b] hover:text-[#075cff]">{row.name}</Link>
+                      {row.isFeatured ? <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800"><Star size={12} /> Active</span> : null}
+                    </div>
+                    {row.subtitle ? <p className="mt-0.5 line-clamp-1 text-[12px] leading-4 text-[#596ba6]" title={row.subtitle}>{row.subtitle}</p> : null}
+                    <div className="mt-3 grid grid-cols-[minmax(155px,.85fr)_minmax(240px,1.45fr)_minmax(105px,.65fr)_minmax(145px,.9fr)_minmax(105px,.7fr)_52px] items-center gap-4">
+                      <div className="min-w-0"><div className="flex items-center gap-1.5 whitespace-nowrap text-[13px] font-bold text-[#18264b]"><CalendarDays size={12} className="shrink-0 text-[#52658f]" />{row.dateLabel}</div><p className="mt-0.5 pl-[18px] text-[11px] text-slate-500">{row.daysLabel}</p></div>
+                      <div className="flex min-w-0 items-center gap-1.5 text-[13px] text-[#202e50]" title={row.venue}><MapPin size={12} className="shrink-0 text-[#52658f]" /><span className="truncate">{row.venue || "Venue not specified"}</span></div>
+                      <div className="flex flex-col items-start gap-1.5">
+                        <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-slate-400">
+                          <Layers size={11} strokeWidth={1.8} />
+                          Type
                         </span>
-                      </td>
-                      <td className="whitespace-nowrap px-2">
-                        <b className="inline-flex items-center gap-1.5">
-                          <CalendarDays size={12} strokeWidth={2} aria-hidden />
-                          {row.dateLabel}
-                        </b>
-                        <span className="mt-1 block pl-5 text-slate-500">{row.daysLabel}</span>
-                      </td>
-                      <td className="whitespace-nowrap px-2">
-                        <span className="inline-flex items-center gap-1.5">
-                          <MapPin size={12} strokeWidth={2} aria-hidden />
-                          {row.venue}
-                        </span>
-                      </td>
-                      <td className="px-2">
-                        <span
-                          className={cn(
-                            "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-[7px] text-[14px]",
-                            typeClass(row.type),
-                          )}
-                        >
+                        <span className={cn("inline-flex whitespace-nowrap rounded-md px-2.5 py-1.5 text-[12px] font-medium", typeClass(row.type))}>
                           {row.type}
                         </span>
-                      </td>
-                      <td className="px-2">
-                        <b className="block text-[13px]">
-                          {row.registered} / {row.capacity > 0 ? row.capacity : "—"}
-                        </b>
-                        <div className="mt-1 flex items-center gap-2">
-                          <span className="inline-block h-[9px] w-[100px] overflow-hidden rounded-full bg-[#e3edf9] align-middle">
-                            <span
-                              className={cn("block h-full rounded-full", barClass(row.barTone))}
-                              style={{ width: `${pct}%` }}
-                            />
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="mb-1.5 flex items-center justify-between gap-2">
+                          <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-slate-400">
+                            <Users size={11} strokeWidth={1.8} />
+                            Registrations
                           </span>
-                          <span className="text-slate-500">{pct}%</span>
+                          <span className="text-[11px] font-medium tabular-nums text-slate-400">
+                            {pct}%
+                          </span>
                         </div>
-                      </td>
-                      <td className="px-2">
-                        <span
-                          className={cn(
-                            "inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-[7px] text-[14px]",
-                            statusClass(row.status),
-                          )}
-                        >
+                        <div className="flex items-baseline justify-between gap-2 text-[13px] font-semibold tabular-nums text-[#18264b]">
+                          <span>{row.registered} <span className="font-normal text-slate-400">/ {row.capacity > 0 ? row.capacity : "—"}</span></span>
+                        </div>
+                        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                          <div className={cn("h-full rounded-full transition-all", barClass(row.barTone))} style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-start gap-1.5">
+                        <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.07em] text-slate-400">
+                          <CircleDot size={11} strokeWidth={1.8} />
+                          Status
+                        </span>
+                        <span className={cn("inline-flex whitespace-nowrap rounded-md px-2.5 py-1.5 text-[12px] font-medium", statusClass(row.status))}>
                           {row.status}
                         </span>
-                      </td>
-                      <td className="px-4 text-center">
-                        <div
-                          className="relative inline-flex items-center justify-center gap-0.5"
-                          ref={open ? menuRef : undefined}
-                        >
-                          <Link
-                            to={`/admin/events/${row.id}/edit`}
-                            className="inline-grid h-8 w-8 place-items-center rounded-md text-[#075cff] hover:bg-blue-50"
-                            aria-label={`Edit ${row.name}`}
-                            title="Edit"
-                          >
-                            <Pencil size={15} strokeWidth={2.25} aria-hidden />
-                          </Link>
-                          <button
-                            type="button"
-                            className="inline-grid h-8 w-8 place-items-center rounded-md text-[#075cff] hover:bg-blue-50 disabled:opacity-50"
-                            aria-label={`More actions for ${row.name}`}
-                            aria-expanded={open}
-                            aria-haspopup="menu"
-                            disabled={busy}
-                            onClick={() => setMenuId(open ? null : row.id)}
-                          >
-                            <MoreVertical size={18} strokeWidth={2} aria-hidden />
-                          </button>
-                          {open ? (
-                            <div
-                              className="absolute right-0 top-9 z-40 w-[200px] rounded-lg border border-blue-100 bg-white py-1 text-left shadow-lg"
-                              role="menu"
-                            >
-                              <Link
-                                role="menuitem"
-                                to={`/admin/events/${row.id}/overview`}
-                                className="flex items-center gap-2 px-3 py-2 text-[15px] text-[#07145b] hover:bg-blue-50"
-                                onClick={() => setMenuId(null)}
-                              >
-                                <Eye size={14} strokeWidth={2} aria-hidden />
-                                View
-                              </Link>
-                              <Link
-                                role="menuitem"
-                                to={`/admin/events/${row.id}/edit`}
-                                className="flex items-center gap-2 px-3 py-2 text-[15px] text-[#07145b] hover:bg-blue-50"
-                                onClick={() => setMenuId(null)}
-                              >
-                                <Pencil size={14} strokeWidth={2} aria-hidden />
-                                Edit
-                              </Link>
-                              <button
-                                type="button"
-                                role="menuitem"
-                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[15px] text-[#07145b] hover:bg-blue-50 disabled:opacity-50"
-                                disabled={busy}
-                                onClick={() => void handleDuplicate(row)}
-                              >
-                                <Copy size={14} strokeWidth={2} aria-hidden />
-                                Duplicate
-                              </button>
-                              <button
-                                type="button"
-                                role="menuitem"
-                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[15px] text-[#07145b] hover:bg-blue-50 disabled:opacity-50"
-                                disabled={busy}
-                                onClick={() => void handleFeature(row)}
-                              >
-                                <Star
-                                  size={14}
-                                  strokeWidth={2}
-                                  aria-hidden
-                                  className={row.isFeatured ? "fill-amber-400 text-amber-500" : undefined}
-                                />
-                                {row.isFeatured ? "Deactivate event" : "Activate event"}
-                              </button>
-                              <button
-                                type="button"
-                                role="menuitem"
-                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[15px] text-rose-600 hover:bg-rose-50 disabled:opacity-50"
-                                disabled={busy}
-                                onClick={() => {
-                                  setMenuId(null);
-                                  setPendingDelete(row);
-                                }}
-                              >
-                                <Trash2 size={14} strokeWidth={2} aria-hidden />
-                                Delete
-                              </button>
-                            </div>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                      </div>
+                      <div className="relative flex items-center justify-end gap-1" ref={open ? menuRef : undefined}>
+                        <Link to={`/admin/events/${row.id}/edit`} className="grid h-9 w-9 place-items-center rounded-lg text-[#075cff] hover:bg-blue-100" aria-label={`Edit ${row.name}`} title="Edit"><Pencil size={17} /></Link>
+                        <button type="button" className="grid h-9 w-8 place-items-center rounded-lg text-[#075cff] hover:bg-blue-100 disabled:opacity-50" aria-label={`More actions for ${row.name}`} aria-expanded={open} aria-haspopup="menu" disabled={busy} onClick={() => setMenuId(open ? null : row.id)}><MoreVertical size={19} /></button>
+                        {open ? <div className="absolute right-0 top-10 z-40 w-52 rounded-xl border border-blue-100 bg-white py-1 text-left shadow-xl" role="menu">
+                          <Link role="menuitem" to={`/admin/events/${row.id}/overview`} className="flex items-center gap-2 px-3 py-2.5 text-sm text-[#07145b] hover:bg-blue-50" onClick={() => setMenuId(null)}><Eye size={15} />View</Link>
+                          <Link role="menuitem" to={`/admin/events/${row.id}/edit`} className="flex items-center gap-2 px-3 py-2.5 text-sm text-[#07145b] hover:bg-blue-50" onClick={() => setMenuId(null)}><Pencil size={15} />Edit</Link>
+                          <button type="button" role="menuitem" className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-[#07145b] hover:bg-blue-50 disabled:opacity-50" disabled={busy} onClick={() => void handleDuplicate(row)}><Copy size={15} />Duplicate</button>
+                          <button type="button" role="menuitem" className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-[#07145b] hover:bg-blue-50 disabled:opacity-50" disabled={busy} onClick={() => void handleFeature(row)}><Star size={15} className={row.isFeatured ? "fill-amber-400 text-amber-500" : undefined} />{row.isFeatured ? "Deactivate event" : "Activate event"}</button>
+                          <button type="button" role="menuitem" className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-rose-600 hover:bg-rose-50 disabled:opacity-50" disabled={busy} onClick={() => {setMenuId(null);setPendingDelete(row);}}><Trash2 size={15} />Delete</button>
+                        </div> : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </article>;
+            })}
+          </div>}
         </div>
-
-        <footer className="flex flex-wrap items-center justify-between gap-4 px-4 py-4 text-[15px] text-[#4c5a9c]">
+        <footer className="flex flex-col items-stretch justify-between gap-3 border-t border-blue-100 px-3 py-4 text-sm text-[#4c5a9c] sm:flex-row sm:flex-wrap sm:items-center sm:px-4">
           <span>
             Showing {from} to {to} of {filtered.length} events
           </span>

@@ -370,40 +370,21 @@ export function AdminDashboardPage() {
               "polygon(0 80%, 12% 40%, 25% 72%, 40% 22%, 56% 75%, 68% 38%, 81% 68%, 100% 18%, 100% 100%, 0 100%)",
           }}
         />
-        <div className="relative z-[1] flex h-full min-h-[170px] flex-col items-start gap-4 px-5 py-5 sm:flex-row sm:items-center sm:gap-6 sm:px-7">
+        <div className="relative z-[1] flex min-h-[170px] items-center px-5 py-5 sm:px-7">
           <div className="min-w-0 flex-1 text-white">
-            <div className="text-[14px]">Welcome back,</div>
-            <h1 className="mt-0.5 text-4xl font-extrabold leading-none tracking-tight sm:text-[44px]">
-              {welcome}
+            <h1 className="text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl">
+              {heroName}
             </h1>
-            <p className="mt-2 text-[15px] text-blue-50">
-              Live event activity from your engagements database.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-4 border-white/70 text-white sm:border-l sm:pl-6">
-            <CalendarDays size={28} strokeWidth={1.8} className="shrink-0 opacity-95" aria-hidden />
-            <div className="text-[15px] leading-[1.6]">
-              <b className="text-[13px]">{heroDates}</b>
-              <br />
-              {heroVenue}
-              <br />
-              {heroCity}
+            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-blue-50 sm:text-base">
+              <span className="flex items-center gap-2">
+                <CalendarDays size={18} className="shrink-0" aria-hidden />
+                {heroDates}
+              </span>
+              <span className="flex items-center gap-2">
+                <Building2 size={18} className="shrink-0" aria-hidden />
+                {heroVenue}
+              </span>
             </div>
-          </div>
-
-          <div className="absolute right-3 top-3 rounded-lg bg-white/10 px-3 py-2 sm:static sm:self-start">
-            {heroLogo ? (
-              <img
-                src={heroLogo}
-                alt={heroName}
-                className="h-14 w-auto object-contain drop-shadow-md sm:h-16"
-              />
-            ) : (
-              <div className="max-w-[140px] text-right text-[14px] font-bold leading-snug text-white/95 sm:text-sm">
-                {heroName}
-              </div>
-            )}
           </div>
         </div>
       </section>
@@ -417,34 +398,52 @@ export function AdminDashboardPage() {
         </div>
       ) : null}
 
+      <section className={cn(glass, "min-w-0 p-3 shadow-card")}>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-[13px] font-extrabold">
+            <Users size={14} strokeWidth={2} className="text-blue-600" aria-hidden />
+            Pending Approvals
+          </h2>
+        </div>
+        <ParticipantsTab eventId={featured?.engagementID!} fromApi={true} loading={eventsLoading} />
+      </section>
+
       {/* KPI cards */}
-      <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
         {kpis.map((kpi, i) => {
           const meta = kpiMeta[i];
           const Icon = meta.Icon;
           return (
             <article
               key={kpi.label}
-              className={cn(glass, "relative min-w-0 overflow-hidden p-3 shadow-card")}
+              className={cn(glass, "relative min-w-0 overflow-hidden p-2.5 sm:p-3 shadow-card")}
             >
-              <div className="flex gap-3">
+              <div className="flex min-w-0 items-start gap-2">
                 <div
                   className={cn(
-                    "grid h-14 w-14 shrink-0 place-items-center rounded-xl",
+                    "grid h-8 w-8 shrink-0 place-items-center rounded-lg sm:h-11 sm:w-11 lg:h-14 lg:w-14 lg:rounded-xl",
                     meta.iconWrap,
                   )}
                 >
-                  <Icon size={26} strokeWidth={1.8} aria-hidden />
+                  <Icon size={19} strokeWidth={1.8} className="sm:hidden" aria-hidden />
+                  <Icon size={24} strokeWidth={1.8} className="hidden sm:block" aria-hidden />
                 </div>
-                <div>
-                  <div className="text-[21px] font-extrabold">{kpi.value}</div>
-                  <div className="text-[14px] text-slate-600">{kpi.label}</div>
-                  <div className="mt-1 text-[15px] font-bold text-green-600">{kpi.trend}</div>
+                <div className="min-w-0 flex-1 pb-9 sm:pb-10">
+                  <div className="break-words text-base font-extrabold leading-tight sm:text-xl">
+                    {kpi.value}
+                  </div>
+                  <div className="break-words text-[11px] leading-tight text-slate-600 sm:text-sm">
+                    {kpi.label}
+                  </div>
+                  <div className="mt-1 break-words text-[10px] font-bold leading-tight text-green-600 sm:text-sm">
+                    {kpi.trend}
+                  </div>
                 </div>
               </div>
               <svg
-                className="absolute bottom-1 right-2 block h-[34px] w-[70%]"
+                className="absolute bottom-1 right-1 h-8 w-[42%] sm:right-2 sm:h-9 sm:w-[48%]"
                 viewBox="0 0 180 35"
+                preserveAspectRatio="none"
                 aria-hidden
               >
                 <path
@@ -453,6 +452,7 @@ export function AdminDashboardPage() {
                   stroke={meta.stroke}
                   strokeWidth={2}
                   strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
               </svg>
             </article>
@@ -583,16 +583,6 @@ export function AdminDashboardPage() {
           </div>
         </article>
       </section>
-
-      <section className={cn(glass, "min-w-0 p-3 shadow-card")}>
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-[13px] font-extrabold">
-          <Users size={14} strokeWidth={2} className="text-blue-600" aria-hidden />
-          Pending Approvals
-        </h2>
-      </div>
-      <ParticipantsTab eventId={featured?.engagementID!} fromApi={true} loading={eventsLoading} />
-    </section>
 
       {/* Bottom panels */}
       <section className="grid grid-cols-1 gap-2.5 lg:grid-cols-[1.2fr_1.2fr_.8fr]">
