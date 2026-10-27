@@ -197,6 +197,7 @@ export function CreateEventPage() {
   const [eventType, setEventType] = useState("Conference");
   const [title, setTitle] = useState("");
   const [engagementCode, setEngagementCode] = useState("");
+  const [overallTheme, setOverallTheme] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("legal");
   const [audience, setAudience] = useState("government");
@@ -479,6 +480,7 @@ export function CreateEventPage() {
     eventType,
     title,
     engagementCode,
+    overallTheme,
     description,
     category,
     audience,
@@ -532,7 +534,26 @@ export function CreateEventPage() {
     }
     return true;
   };
-
+  const parseRecursive = (value: any): any => {
+    if (typeof value === "string") {
+      try {
+        const parsed = JSON.parse(value);
+        if (parsed !== null && typeof parsed === "object") return parseRecursive(parsed);
+        return value;
+      } catch {
+        return value;
+      }
+    }
+    if (Array.isArray(value)) return value.map(parseRecursive);
+    if (value !== null && typeof value === "object") {
+      Object.keys(value).forEach(key => {
+        value[key] = parseRecursive(value[key]);
+      });
+    }
+    return value;
+  };
+  
+  
   useEffect(() => {
     if (!editId) {
       setLoadingEdit(false);
@@ -543,12 +564,13 @@ export function CreateEventPage() {
       setLoadingEdit(true);
       setLoadError(null);
       try {
-        const engagement = await getEngagement(editId);
+        const engagement = await getEngagement(editId); 
         if (cancelled) return;
         const state = engagementToWizardState(engagement);
         setEventType(state.eventType);
         setTitle(state.title);
         setEngagementCode(state.engagementCode);
+        setOverallTheme(state.overallTheme)
         setDescription(state.description);
         setCategory(state.category);
         setAudience(state.audience);
@@ -775,6 +797,7 @@ export function CreateEventPage() {
         eventType,
         title,
         engagementCode,
+        overallTheme,
         description,
         category,
         audience,
@@ -1034,6 +1057,16 @@ export function CreateEventPage() {
                 onChange={(e) => {
                   setEngagementCode(e.target.value.trimStart());
                   clearFieldError("engagementCode");
+                }}
+              />
+              <Input
+                label="Main Theme"
+                required
+                value={overallTheme}
+                error={fieldErrors.overallTheme}
+                onChange={(e) => {
+                  setOverallTheme(e.target.value);
+                  clearFieldError("overallTheme");
                 }}
               />
               <div>

@@ -156,6 +156,7 @@ export type Engagement = {
   engagementType: EngagementType;
   engagementName: string;
   engagementCode: string;
+  overallTheme?: string;
   category?: string;
   shortDescription?: string;
   description?: string;

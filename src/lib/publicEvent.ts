@@ -351,6 +351,7 @@ export type PublicHomeContent = {
   brandYear: string;
   showBrandLogo: boolean;
   subtitle: string;
+  overallTheme?: string;
   datesLabel: string;
   cityLine: string;
   venueLine: string;
@@ -412,7 +413,7 @@ export function engagementToHomeContent(engagement: Engagement | null): PublicHo
   const cityLine = [about.venueCity, about.venueCountry].filter(Boolean).join(", ");
   const shortName = about.name.split(/[—–-]/)[0]?.trim() || about.name;
   const shortDesc = engagement.description?.trim() || "";
-console.log(engagement);
+
   return {
     brandMark: brand.mark,
     brandYear: brand.year,
@@ -425,8 +426,8 @@ console.log(engagement);
     tagline: shortDesc,
     earlyBirdNote,
     aboutTitle: shortName ? `About ${shortName}` : "About",
-    aboutBody:
-      engagement.description?.trim() || about.overviewParagraphs.join(" ") || "",
+    aboutBody: engagement.description?.trim() || about.overviewParagraphs.join(" ") || "",
+    overallTheme: engagement.overallTheme,
     themes,
     stats: {
       participants: capacity ? `${Number(capacity).toLocaleString("en-KE")}+` : "",

@@ -2,6 +2,7 @@ export type EventWizardValues = {
   eventType: string;
   title: string;
   engagementCode: string;
+  overallTheme: string;
   description: string;
   category: string;
   audience: string;

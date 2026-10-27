@@ -245,9 +245,8 @@ export function HomePage() {
                   "m-0 w-full text-[clamp(0.90rem,1.10vw,1.10rem)] font-normal leading-[1.3] text-[#0b1016] [overflow-wrap:anywhere] [text-wrap:pretty]",
                   "max-[960px]:text-[clamp(1rem,4.2vw,1.2rem)]",
                   "max-[640px]:text-[clamp(1.05rem,4.5vw,1.2rem)]",
-                )}
-              >
-                <span>{home.themes?.map((t:any) => t).join('.') || 'No themes'}</span>
+                )}>
+                <span>{home.overallTheme || home.subtitle}</span>
               </h2>
             </div>
 
@@ -285,25 +284,50 @@ export function HomePage() {
                     </div>
                     <strong
                       className={cn(
-                        "block text-[10px] font-bold leading-[1.2] text-[#0b1016] [overflow-wrap:anywhere]",
+                        "mx-auto block w-fit max-w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-center",
+                        "shadow-[0_1px_3px_rgba(0,0,0,0.08)] max-[640px]:border-transparent max-[640px]:bg-transparent max-[640px]:px-0 max-[640px]:py-0 max-[640px]:shadow-none",
+                        "text-[10px] font-bold leading-[1.2] text-[#0b1016] [overflow-wrap:anywhere]",
                         "max-[960px]:text-[clamp(0.62rem,2.5vw,0.72rem)]",
                         "max-[640px]:text-[clamp(0.65rem,2.8vw,0.75rem)]",
-                      )}
-                    >
+                      )}>
                       {item.label}
                     </strong>
                   </div>
                 ))}
               </div>
-              <p
-                className={cn(
-                  "mt-10 w-full max-w-[390px] text-[13px] leading-[1.4] [overflow-wrap:anywhere]",
-                  "max-[960px]:mt-2.5 max-[960px]:max-w-none max-[960px]:text-[12px]",
-                  "max-[640px]:mt-6 min-[960px]:ml-[150px]",
-                )}
-              >
-                {home.earlyBirdNote}
-              </p>
+              <Link
+                to="/register"
+                className="block no-underline">
+                <div
+                  className={cn(
+                    "relative mt-10 w-full max-w-[390px] overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 via-white to-gray-50 p-4",
+                    "shadow-[0_0_0_1px_rgba(107,114,128,0.04),0_4px_16px_rgba(0,0,0,0.06)]",
+                    "transition-all duration-300 hover:shadow-[0_0_20px_rgba(107,114,128,0.14)]",
+                    "max-[960px]:mt-2.5 max-[960px]:max-w-none max-[640px]:mt-6 min-[961px]:ml-[150px]",
+                    "min-[961px]:border-[#ed1c24e6]/30 min-[961px]:bg-gradient-to-br min-[961px]:from-red-50 min-[961px]:via-white min-[961px]:to-red-50",
+                    "min-[961px]:shadow-[0_0_0_1px_rgba(237,28,36,0.04),0_4px_16px_rgba(237,28,36,0.10)]",
+                    "min-[961px]:hover:shadow-[0_0_20px_rgba(237,28,36,0.18)]",
+                    "cursor-pointer",
+                  )}
+                >
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="rounded-full border border-gray-200 bg-gray-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-red-700 min-[961px]:border-[#ed1c24e6]/30 min-[961px]:bg-[#ed1c24e6] min-[961px]:text-white">
+                      Early Bird Offer
+                    </span>
+                    <span className="animate-pulse text-[10px] font-bold uppercase tracking-wide text-red-600 min-[961px]:text-[#ed1c24e6]">
+                      Limited Time
+                    </span>
+                  </div>
+
+                  <p className="text-[14px] font-extrabold leading-snug text-black max-[640px]:text-[13px]">
+                    Register Early. Save More.
+                  </p>
+
+                  <p className="mt-1 text-[12px] leading-relaxed text-black/75 max-[640px]:text-[11px]">
+                    {home.earlyBirdNote}
+                  </p>
+                </div>
+              </Link>
             </div>
           </aside>
         </div>

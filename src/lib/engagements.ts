@@ -1061,6 +1061,7 @@ export type WizardEngagementInput = {
   title: string;
   /** Short public/API code for the engagement (e.g. ISIPPE-2026). */
   engagementCode: string;
+  overallTheme?: string;
   description: string;
   shortDescription?: string;
   category: string;
@@ -1220,6 +1221,7 @@ export function buildEngagementPayload(input: WizardEngagementInput): NewEngagem
     engagementType: toEngagementType(input.eventType),
     engagementName: input.title.trim(),
     engagementCode: input.engagementCode.trim(),
+    overallTheme: input.overallTheme,
     category: input.category || undefined,
     shortDescription: (input.shortDescription || input.description).trim() || undefined,
     description: input.description.trim() || undefined,
@@ -1344,6 +1346,7 @@ export function engagementToWizardState(engagement: Engagement) {
     eventType: toUiEventType(engagement.engagementType),
     title: engagement.engagementName || "",
     engagementCode: engagement.engagementCode || "",
+    overallTheme: engagement.overallTheme || "",
     description: engagement.description || engagement.shortDescription || "",
     category: engagement.category || "legal",
     audience: engagement.audience || "government",
