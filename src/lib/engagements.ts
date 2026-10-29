@@ -1126,6 +1126,10 @@ export type WizardEngagementInput = {
   requireApproval: boolean;
   waitlist: boolean;
   deadlineOn: boolean;
+  /** Registration deadline date (YYYY-MM-DD) when deadlineOn. */
+  deadlineDate?: string;
+  /** Registration deadline time (HH:mm) when deadlineOn. */
+  deadlineTime?: string;
   limitOn: boolean;
   payMpesa: boolean;
   payCard: boolean;
@@ -1142,6 +1146,13 @@ export type WizardEngagementInput = {
   contactPhone?: string;
   /** Preserved on edit when the wizard does not manage objectives. */
   objectives?: Array<string | Record<string, unknown>>;
+  /**
+   * Full sponsors array from the API (edit). Merged with wizard packages so
+   * CRM fields (category / contact / status / tier) are not wiped.
+   */
+  existingSponsors?: EngagementSponsor[];
+  /** When true, do not overwrite contactName with the logged-in admin. */
+  isEdit?: boolean;
 };
 
 export function buildEngagementPayload(input: WizardEngagementInput): NewEngagement {
@@ -1185,17 +1196,39 @@ export function buildEngagementPayload(input: WizardEngagementInput): NewEngagem
     bio: s.bio,
   }));
 
-  const sponsors: EngagementSponsor[] = input.packages.map((p) => ({
-    id: p.id,
-    name: p.name,
-    subtitle: p.subtitle,
-    price: p.price,
-    availability: p.availability,
-    benefits: p.benefits,
-    active: p.active,
-    tone: p.tone,
-    tier: p.name,
-  }));
+  const existingSponsors = input.existingSponsors || [];
+  const existingById = new Map(
+    existingSponsors.filter((s) => s.id).map((s) => [String(s.id), s] as const),
+  );
+  const usedSponsorIds = new Set<string>();
+  const sponsors: EngagementSponsor[] = input.packages.map((p) => {
+    const prev = p.id ? existingById.get(p.id) : undefined;
+    if (p.id) usedSponsorIds.add(p.id);
+    return {
+      ...(prev || {}),
+      id: p.id,
+      name: p.name,
+      subtitle: p.subtitle || prev?.subtitle,
+      price: p.price,
+      availability: p.availability || prev?.availability,
+      benefits: p.benefits?.length ? p.benefits : prev?.benefits,
+      active: p.active,
+      tone: p.tone || prev?.tone,
+      // Keep CRM tier from Details tab; never overwrite with package name.
+      tier: prev?.tier,
+      category: prev?.category,
+      contact: prev?.contact,
+      status: prev?.status,
+    };
+  });
+  // Keep CRM-only rows (Details tab) that are not in wizard packages.
+  // Do not resurrect deleted marketing packages.
+  for (const s of existingSponsors) {
+    if (!s.id || usedSponsorIds.has(String(s.id))) continue;
+    const isCrm =
+      Boolean(s.category || s.contact || s.status) && !(s.benefits && s.benefits.length > 0);
+    if (isCrm) sponsors.push(s);
+  }
 
   const tickets: EngagementTicket[] = input.tickets.map((t) => ({
     id: t.id,
@@ -1216,6 +1249,9 @@ export function buildEngagementPayload(input: WizardEngagementInput): NewEngagem
   const tone = toneMap[input.tone] ?? "professional";
   const language = (input.language || "en") as Engagement["language"];
   const tags = input.tags.map((t) => t.trim()).filter(Boolean);
+
+  const deadlineDate = (input.deadlineDate || input.startDate || "").trim();
+  const deadlineTime = (input.deadlineTime || "23:59").trim() || "23:59";
 
   return {
     engagementType: toEngagementType(input.eventType),
@@ -1246,7 +1282,7 @@ export function buildEngagementPayload(input: WizardEngagementInput): NewEngagem
     publishedAt: isDraft ? undefined : new Date().toISOString(),
     registrationEnabled: true,
     registrationEndDate: input.deadlineOn
-      ? combineDateTime(input.startDate, "00:00", true)
+      ? combineDateTime(deadlineDate, deadlineTime, false)
       : undefined,
     approvalRequired: input.requireApproval,
     waitlistEnabled: input.waitlist,
@@ -1265,7 +1301,8 @@ export function buildEngagementPayload(input: WizardEngagementInput): NewEngagem
     twitterUrl: input.twitterUrl?.trim() || undefined,
     linkedinUrl: input.linkedinUrl?.trim() || undefined,
     contactEmail: input.contactEmail?.trim() || undefined,
-    contactName: user?.fullName,
+    // Create only — edit must not overwrite Contacts-tab / existing contactName.
+    contactName: input.isEdit ? undefined : user?.fullName,
     contactPhone: input.contactPhone?.trim() || undefined,
     createdBy: user?.id || user?.email,
     ownerID: user?.id,
@@ -1426,6 +1463,12 @@ export function engagementToWizardState(engagement: Engagement) {
     requireApproval: Boolean(engagement.approvalRequired),
     waitlist: Boolean(engagement.waitlistEnabled),
     deadlineOn: Boolean(engagement.registrationEndDate),
+    deadlineDate: engagement.registrationEndDate
+      ? toDateInput(engagement.registrationEndDate)
+      : "",
+    deadlineTime: engagement.registrationEndDate
+      ? toTimeInput(engagement.registrationEndDate)
+      : "23:59",
     limitOn: Boolean(engagement.registrationLimit),
     payMpesa: methods.size === 0 ? true : methods.has("mpesa"),
     payCard: methods.size === 0 ? true : methods.has("card"),
@@ -1439,6 +1482,7 @@ export function engagementToWizardState(engagement: Engagement) {
     linkedinUrl: engagement.linkedinUrl || "",
     contactEmail: engagement.contactEmail || "",
     contactPhone: engagement.contactPhone || "",
+    existingSponsors: sponsors,
   };
 }
 

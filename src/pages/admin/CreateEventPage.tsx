@@ -28,7 +28,6 @@ import {
   Sparkles,
   Store,
   Trash2,
-  Upload,
   Users,
   Video,
   X,
@@ -66,7 +65,9 @@ import {
   EVENT_TONE_OPTIONS,
   getEngagement,
   saveEngagementLikeRegistration,
+  updateEngagement,
 } from "../../lib/engagements";
+import type { EngagementSponsor } from "../../types/engagement";
 import {
   firstErrorMessage,
   firstErrorStep,
@@ -264,10 +265,11 @@ export function CreateEventPage() {
   >([]);
   const [requireApproval, setRequireApproval] = useState(false);
   const [deadlineOn, setDeadlineOn] = useState(true);
+  const [deadlineDate, setDeadlineDate] = useState("");
+  const [deadlineTime, setDeadlineTime] = useState("23:59");
   const [limitOn, setLimitOn] = useState(true);
   const [waitlist, setWaitlist] = useState(false);
-  const [confirmEmail, setConfirmEmail] = useState(true);
-  const [collectExtra, setCollectExtra] = useState(true);
+  const [existingSponsors, setExistingSponsors] = useState<EngagementSponsor[]>([]);
   const [payMpesa, setPayMpesa] = useState(true);
   const [payCard, setPayCard] = useState(true);
   const [payBank, setPayBank] = useState(true);
@@ -604,8 +606,11 @@ export function CreateEventPage() {
         if (state.speakers.length) setSpeakers(state.speakers);
         if (state.packages.length) setPackages(state.packages);
         if (state.tickets.length) setTickets(state.tickets);
+        setExistingSponsors(state.existingSponsors || []);
         setRequireApproval(state.requireApproval);
         setDeadlineOn(state.deadlineOn);
+        setDeadlineDate(state.deadlineDate || state.startDate || "");
+        setDeadlineTime(state.deadlineTime || "23:59");
         setLimitOn(state.limitOn);
         setWaitlist(state.waitlist);
         setPayMpesa(state.payMpesa);
@@ -760,7 +765,7 @@ export function CreateEventPage() {
         "Keep the description concise.",
         "Set support email and phone for Need Assistance.",
         "Choose tags that improve discovery.",
-        "Upload a high-resolution logo.",
+        "Fill support contact email and phone.",
       ];
     }
     if (step === 3) {
@@ -774,16 +779,15 @@ export function CreateEventPage() {
     if (step === 5) {
       return [
         "Offer early bird tickets.",
-        "Set clear registration deadlines.",
+        "Set a real registration deadline date and time.",
         "Enable waitlist when capacity is tight.",
         "Confirm payment channels before publish.",
       ];
     }
     return [
-      "Use a wide banner (1920×600).",
-      "Keep gallery images consistent.",
-      "Match brand colours to ACA guidelines.",
+      "Add social links for the public event page.",
       "Review visibility before publishing.",
+      "Save as draft to preview without going live.",
     ];
   }, [step]);
 
@@ -824,6 +828,8 @@ export function CreateEventPage() {
         requireApproval,
         waitlist,
         deadlineOn,
+        deadlineDate: deadlineDate || startDate,
+        deadlineTime,
         limitOn,
         payMpesa,
         payCard,
@@ -837,6 +843,8 @@ export function CreateEventPage() {
         linkedinUrl,
         contactEmail,
         contactPhone,
+        existingSponsors,
+        isEdit,
       });
       console.log("[engagement submit] speakers + pending photos", {
         speakers: payload.speakers,
@@ -855,6 +863,14 @@ export function CreateEventPage() {
           ? String(saved.engagementID || "")
           : "");
       if (!id) throw new Error("Event saved but no engagementID was returned.");
+
+      // Multipart omits undefined — clear deadline/limit via JSON PATCH when toggled off.
+      if (isEdit && (!deadlineOn || !limitOn)) {
+        await updateEngagement(id, {
+          ...(!deadlineOn ? { registrationEndDate: null as unknown as string } : {}),
+          ...(!limitOn ? { registrationLimit: null as unknown as number } : {}),
+        });
+      }
 
       if (!asDraft) {
         await activateEngagement(id);
@@ -1069,23 +1085,6 @@ export function CreateEventPage() {
                   clearFieldError("overallTheme");
                 }}
               />
-              <div>
-                <p className="mb-1.5 text-sm font-medium text-ink">Event Logo</p>
-                <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 sm:flex-row">
-                  <img
-                    src="/assets/logo-aca.png"
-                    alt="Event logo placeholder"
-                    className="h-16 w-auto object-contain opacity-80"
-                  />
-                  <div className="text-center sm:text-left">
-                    <p className="text-sm font-medium text-ink">Upload event logo</p>
-                    <p className="text-sm text-mute">Recommended 800×400px</p>
-                    <Button variant="outline" size="sm" className="mt-2">
-                      <Upload size={14} /> Choose File
-                    </Button>
-                  </div>
-                </div>
-              </div>
               <label className="grid gap-1.5 text-sm">
                 <span className="font-medium text-ink">
                   Short Description <span className="text-red">*</span>
@@ -1912,8 +1911,18 @@ export function CreateEventPage() {
                   <Toggle checked={deadlineOn} onChange={setDeadlineOn} label="Set registration deadline" />
                   {deadlineOn ? (
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <Input label="Deadline date" type="date" defaultValue="2026-11-14" />
-                      <Input label="Deadline time" type="time" defaultValue="23:59" />
+                      <Input
+                        label="Deadline date"
+                        type="date"
+                        value={deadlineDate || startDate}
+                        onChange={(e) => setDeadlineDate(e.target.value)}
+                      />
+                      <Input
+                        label="Deadline time"
+                        type="time"
+                        value={deadlineTime}
+                        onChange={(e) => setDeadlineTime(e.target.value)}
+                      />
                     </div>
                   ) : null}
                   <Toggle checked={limitOn} onChange={setLimitOn} label="Limit total registrations" />
@@ -1931,13 +1940,6 @@ export function CreateEventPage() {
                     />
                   ) : null}
                   <Toggle checked={waitlist} onChange={setWaitlist} label="Enable waitlist when full" />
-                  <Toggle checked={confirmEmail} onChange={setConfirmEmail} label="Send confirmation email" />
-                  <Toggle
-                    checked={collectExtra}
-                    onChange={setCollectExtra}
-                    label="Collect additional information"
-                    description="Configure fields"
-                  />
                 </div>
               </Card>
               <Card>
@@ -1969,11 +1971,6 @@ export function CreateEventPage() {
                         />
                         {p.label}
                       </label>
-                      {p.label !== "Free Registration" ? (
-                        <button type="button" className="text-sm font-semibold text-blue">
-                          Configure
-                        </button>
-                      ) : null}
                     </li>
                   ))}
                 </ul>
@@ -2016,83 +2013,11 @@ export function CreateEventPage() {
               </Button>
             </div>
             <section>
-              <h3 className="mb-2 font-semibold text-ink">Event Banner</h3>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-                  <Upload size={24} className="text-mute" />
-                  <p className="text-sm text-mute">Recommended 1920 × 600</p>
-                  <Button variant="outline" size="sm">
-                    Upload Image
-                  </Button>
-                </div>
-                <div className="relative overflow-hidden rounded-lg">
-                  <img src="/assets/admin-banner.jpg" alt="Selected banner" className="h-40 w-full object-cover" />
-                  <button
-                    type="button"
-                    className="absolute top-2 right-2 grid h-8 w-8 place-items-center rounded-lg bg-white/90 text-red"
-                    aria-label="Remove banner"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                  <Button variant="outline" size="sm" className="absolute right-2 bottom-2 bg-white">
-                    <Pencil size={14} /> Change Image
-                  </Button>
-                </div>
-              </div>
-            </section>
-            <section>
-              <h3 className="mb-2 font-semibold text-ink">Gallery Images (Optional)</h3>
-              <div className="flex flex-wrap gap-3">
-                {["/placeholders/venue.jpg", "/assets/about-hero.png", "/assets/hero-nairobi.jpg"].map((src) => (
-                  <div key={src} className="relative h-20 w-28 overflow-hidden rounded-lg">
-                    <img src={src} alt="" className="h-full w-full object-cover" />
-                    <button
-                      type="button"
-                      className="absolute top-1 right-1 grid h-5 w-5 place-items-center rounded-full bg-white/90 text-mute"
-                      aria-label="Remove image"
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  className="grid h-20 w-28 place-items-center rounded-lg border border-dashed border-slate-300 text-mute"
-                  aria-label="Add gallery image"
-                >
-                  <Plus size={20} />
-                </button>
-              </div>
-            </section>
-            <section>
-              <h3 className="mb-2 font-semibold text-ink">Event Branding</h3>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Select
-                  label="Primary Color"
-                  defaultValue="green"
-                  options={[
-                    { value: "green", label: "#096a2e" },
-                    { value: "blue", label: "#0B45E0" },
-                    { value: "navy", label: "#0A2A7A" },
-                  ]}
-                />
-                <Select
-                  label="Secondary Color"
-                  defaultValue="sky"
-                  options={[
-                    { value: "sky", label: "#0ea5e9" },
-                    { value: "soft", label: "#EEF3FF" },
-                  ]}
-                />
-                <Select
-                  label="Font"
-                  defaultValue="inter"
-                  options={[
-                    { value: "inter", label: "Inter" },
-                    { value: "system", label: "System" },
-                  ]}
-                />
-              </div>
+              <h3 className="mb-2 font-semibold text-ink">Event Media</h3>
+              <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-mute">
+                Logo, banner, gallery, and brand colour uploads are not wired to the API yet — they
+                are not saved with this form. Use social links below for the public page.
+              </p>
             </section>
             <section>
               <h3 className="mb-2 font-semibold text-ink">Social Media & Links</h3>
