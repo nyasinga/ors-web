@@ -746,13 +746,14 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                 <th className="border-b border-blue-100 px-2 py-1.5">Status</th>
                 <th className="border-b border-blue-100 px-2 py-1.5">Registered</th>
                 <th className="border-b border-blue-100 px-2 py-1.5">Check-in</th>
+                <th className="border-b border-blue-100 px-2 py-1.5 text-center">Paid</th>
                 <th className="border-b border-blue-100 px-2 py-1.5 text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
               {visible.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-2 py-8 text-center text-slate-400">
+                  <td colSpan={11} className="px-2 py-8 text-center text-slate-400">
                     {listBusy
                       ? "Loading participants…"
                       : listError
@@ -812,81 +813,85 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                     </td>
                     <td className="border-b border-blue-50 px-2 py-1.5 whitespace-nowrap">
                       {p.date}
-                      {p.time ? ` · ${p.time}` : ""}
+                      {p.time ? ` - ${p.time}` : ""}
                     </td>
                     <td className="border-b border-blue-50 px-2 py-1.5">
                       {p.checkIn === "—" ? "–" : <span className={checkInPillClass(p.checkIn)}>{p.checkIn}</span>}
                     </td>
                     <td className="border-b border-blue-50 px-2 py-1.5 text-center">
-                      <div className="inline-grid grid-cols-[5.5rem_auto_4.25rem_auto_auto] items-center justify-items-center gap-1.5">
-                        <div className="flex items-center gap-1.5 justify-self-start">
-                          {showPaymentToggle(p) && !isWaived(p) ? (
-                            <label
-                              className="inline-flex items-center gap-1.5"
-                              title={
-                                !(p.ticketID || p.id)
-                                  ? "No ticket ID on this registration"
-                                  : toggleFailedId === p.id
-                                    ? "Confirm failed — still pending"
-                                    : isPaymentPaid(p)
-                                      ? "Payment confirmed"
-                                      : "Toggle on to confirm payment"
+                      <div className="inline-flex items-center justify-center gap-1.5">
+                        {showPaymentToggle(p) && !isWaived(p) ? (
+                          <label
+                            className="inline-flex items-center gap-1.5"
+                            title={
+                              !(p.ticketID || p.id)
+                                ? "No ticket ID on this registration"
+                                : toggleFailedId === p.id
+                                  ? "Confirm failed — still pending"
+                                  : isPaymentPaid(p)
+                                    ? "Payment confirmed"
+                                    : "Toggle on to confirm payment"
+                            }
+                          >
+                            <span
+                              className={cn(
+                                "text-[12px] font-semibold",
+                                toggleFailedId === p.id
+                                  ? "text-red-600"
+                                  : isPaymentPaid(p)
+                                    ? "text-emerald-700"
+                                    : "text-amber-700",
+                              )}
+                            >
+                              Paid
+                            </span>
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={isPaymentPaid(p) || confirmingId === p.id}
+                              aria-label={`Toggle payment for ${p.name}`}
+                              disabled={
+                                confirmingId === p.id || !(p.ticketID || (p.id && !p.id.startsWith("p-")))
                               }
+                              onClick={() => {
+                                void handleTogglePayment(p);
+                              }}
+                              className={cn(
+                                "relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                                toggleFailedId === p.id
+                                  ? "bg-red-300"
+                                  : isPaymentPaid(p) || confirmingId === p.id
+                                    ? "bg-emerald-500"
+                                    : "bg-slate-300",
+                                confirmingId === p.id && "opacity-70",
+                              )}
                             >
                               <span
                                 className={cn(
-                                  "text-[12px] font-semibold",
-                                  toggleFailedId === p.id
-                                    ? "text-red-600"
-                                    : isPaymentPaid(p)
-                                      ? "text-emerald-700"
-                                      : "text-amber-700",
+                                  "absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform",
+                                  (isPaymentPaid(p) || confirmingId === p.id) && "translate-x-4",
                                 )}
-                              >
-                                Paid
-                              </span>
-                              <button
-                                type="button"
-                                role="switch"
-                                aria-checked={isPaymentPaid(p) || confirmingId === p.id}
-                                aria-label={`Toggle payment for ${p.name}`}
-                                disabled={
-                                  confirmingId === p.id || !(p.ticketID || (p.id && !p.id.startsWith("p-")))
-                                }
-                                onClick={() => {
-                                  void handleTogglePayment(p);
-                                }}
-                                className={cn(
-                                  "relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                                  toggleFailedId === p.id
-                                    ? "bg-red-300"
-                                    : isPaymentPaid(p) || confirmingId === p.id
-                                      ? "bg-emerald-500"
-                                      : "bg-slate-300",
-                                  confirmingId === p.id && "opacity-70",
-                                )}
-                              >
-                                <span
-                                  className={cn(
-                                    "absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform",
-                                    (isPaymentPaid(p) || confirmingId === p.id) && "translate-x-4",
-                                  )}
-                                />
-                              </button>
-                            </label>
-                          ) : null}
-                          {canGrantWaiver(p) ? (
-                            <button
-                              type="button"
-                              className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 text-[13px] font-semibold text-sky-800 hover:bg-sky-100"
-                              aria-label={`Grant waiver for ${p.name}`}
-                              title="Grant staff / gov speaker / sponsor free-seat waiver"
-                              onClick={() => setWaiverTarget(p)}
-                            >
-                              Waiver
+                              />
                             </button>
-                          ) : null}
-                        </div>
+                          </label>
+                        ) : (
+                          <span className="text-[12px] text-slate-400">—</span>
+                        )}
+                        {canGrantWaiver(p) ? (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 text-[13px] font-semibold text-sky-800 hover:bg-sky-100"
+                            aria-label={`Grant waiver for ${p.name}`}
+                            title="Grant staff / gov speaker / sponsor free-seat waiver"
+                            onClick={() => setWaiverTarget(p)}
+                          >
+                            Waiver
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="border-b border-blue-50 px-2 py-1.5 text-center">
+                      <div className="inline-grid grid-cols-[auto_4.5rem_auto_auto] items-center justify-items-center gap-1.5">
                         <button
                           type="button"
                           disabled={
@@ -931,7 +936,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                           {canReviewProof(p) && !isPaymentPaid(p) ? (
                             <button
                               type="button"
-                              className="inline-flex w-full items-center justify-center rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-[12px] font-semibold text-amber-900 hover:bg-amber-100"
+                              className="inline-flex w-full items-center justify-center rounded-md border border-amber-400 bg-amber-400 px-2 py-0.5 text-[12px] font-semibold text-white hover:bg-amber-500"
                               onClick={() => setProofTarget(p)}
                             >
                               Confirm
@@ -940,7 +945,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                         </div>
                         <button
                           type="button"
-                          className="inline-flex min-w-[3.75rem] items-center justify-center rounded-md border border-blue-100 px-2 py-0.5 text-[12px] font-semibold text-blue-700 hover:bg-blue-50"
+                          className="inline-flex min-w-[3.75rem] items-center justify-center rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-[12px] font-semibold text-blue-700 hover:bg-blue-100"
                           onClick={() => setDetailTarget(p)}
                         >
                           Details

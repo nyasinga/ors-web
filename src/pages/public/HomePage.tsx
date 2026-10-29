@@ -13,6 +13,7 @@ import {
   Shield,
   Users,
 } from "lucide-react";
+import { EventCountdown } from "../../components/EventCountdown";
 import { PublicEventGate } from "../../components/public/PublicEventGate";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { cn } from "../../lib/cn";
@@ -182,6 +183,9 @@ export function HomePage() {
                 </div>
               </div>
             </div>
+
+            <EventCountdown targetIso={engagement?.startDate} />
+
             <p
               className={cn(
                 "mb-[13px] mt-5 w-full min-w-0 max-w-[500px] line-clamp-3 overflow-hidden text-[13.5px] leading-[1.38] text-[#676b71]",

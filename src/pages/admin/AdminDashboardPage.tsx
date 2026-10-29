@@ -23,12 +23,20 @@ import {
   toUiListStatus,
   type DashboardUpcomingItem,
 } from "../../lib/engagements";
-import { sumEngagementParticipantCounts } from "../../lib/eventParticipants";
+import {
+  listEventParticipants,
+  sumEngagementParticipantCounts,
+} from "../../lib/eventParticipants";
 import type { Engagement } from "../../types/engagement";
 import { ParticipantsTab } from "../../components/admin/ParticipantsTab";
+import { StatisticsTrendsPanel } from "../../components/admin/StatisticsTrendsPanel";
+import type { AddedParticipant } from "../../components/admin/AddParticipantModal";
 
 const glass =
   "rounded-xl border border-[rgba(215,231,248,.95)] bg-[rgba(255,255,255,.86)] shadow-[0_5px_22px_rgba(56,126,190,.09)]";
+
+/** Legacy KPI / capacity / upcoming-recent/countries block — hidden in favour of Statistics Trends. */
+const SHOW_LEGACY_DASHBOARD_OVERVIEW = false;
 
 const kpiMeta = [
   {
@@ -141,6 +149,8 @@ export function AdminDashboardPage() {
     pendingVerification: number;
     loading: boolean;
   }>({ total: 0, pendingVerification: 0, loading: false });
+  const [statsParticipants, setStatsParticipants] = useState<AddedParticipant[]>([]);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -292,9 +302,40 @@ export function AdminDashboardPage() {
     return active ?? null;
   }, [engagements]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const id = String(featured?.engagementID || "").trim();
+    if (!id) {
+      setStatsParticipants([]);
+      setStatsLoading(false);
+      return;
+    }
+    (async () => {
+      setStatsLoading(true);
+      try {
+        const rows = await listEventParticipants(id);
+        if (!cancelled) setStatsParticipants(rows);
+      } catch {
+        if (!cancelled) setStatsParticipants([]);
+      } finally {
+        if (!cancelled) setStatsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [featured?.engagementID]);
+
   const heroDates = formatHeroDates(featured, event.dates);
   const heroVenue = featured?.venue?.trim() || "Venue to be announced";
-  const heroName = featured?.engagementName?.trim() || "Active event";
+  const heroName = useMemo(() => {
+    const name = featured?.engagementName?.trim() || "Active event";
+    const code = featured?.engagementCode?.trim();
+    if (code && !name.toLowerCase().startsWith(code.toLowerCase())) {
+      return `${code} — ${name}`;
+    }
+    return name;
+  }, [featured]);
 
   const methodGradient = useMemo(() => {
     if (snapshot.paymentMethods.length === 0) {
@@ -360,24 +401,30 @@ export function AdminDashboardPage() {
               "polygon(0 80%, 12% 40%, 25% 72%, 40% 22%, 56% 75%, 68% 38%, 81% 68%, 100% 18%, 100% 100%, 0 100%)",
           }}
         />
-        <div className="relative z-[1] flex min-h-[170px] items-center px-5 py-5 sm:px-7">
+        <div className="relative z-[1] flex min-h-[150px] items-center px-5 py-5 sm:min-h-[170px] sm:px-7">
           <div className="min-w-0 flex-1 text-white">
-            <h1 className="text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl">
+            <h1 className="text-[1.35rem] font-extrabold leading-snug tracking-tight sm:text-2xl lg:text-[1.75rem]">
               {heroName}
             </h1>
-            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-blue-50 sm:text-base">
+            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/90 sm:text-[15px]">
               <span className="flex items-center gap-2">
-                <CalendarDays size={18} className="shrink-0" aria-hidden />
+                <CalendarDays size={16} className="shrink-0 opacity-90" aria-hidden />
                 {heroDates}
               </span>
               <span className="flex items-center gap-2">
-                <Building2 size={18} className="shrink-0" aria-hidden />
+                <Building2 size={16} className="shrink-0 opacity-90" aria-hidden />
                 {heroVenue}
               </span>
             </div>
           </div>
         </div>
       </section>
+
+      <StatisticsTrendsPanel
+        participants={statsParticipants}
+        loading={statsLoading || eventsLoading}
+        eventName={heroName}
+      />
 
       {loadError ? (
         <div
@@ -398,7 +445,9 @@ export function AdminDashboardPage() {
         <ParticipantsTab eventId={featured?.engagementID!} fromApi={true} loading={eventsLoading} />
       </section>
 
-      {/* KPI cards */}
+      {/* KPI cards + capacity/payments + upcoming/recent/countries */}
+      {SHOW_LEGACY_DASHBOARD_OVERVIEW ? (
+      <>
       <section className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
         {kpis.map((kpi, i) => {
           const meta = kpiMeta[i];
@@ -727,6 +776,8 @@ export function AdminDashboardPage() {
           </div>
         </article>
       </section>
+      </>
+      ) : null}
 
       {/* Quick actions */}
       <section className="grid grid-cols-2 gap-2 rounded-xl border border-blue-100 bg-white/80 p-2 shadow-card sm:grid-cols-[130px_repeat(4,minmax(0,1fr))]">

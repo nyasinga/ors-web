@@ -23,6 +23,8 @@ export type AddedParticipant = {
   status: string;
   date: string;
   time: string;
+  /** ISO timestamp used for analytics / daily trends (registeredAt || createdAt). */
+  registeredAtIso?: string;
   checkIn: string;
   initials: string;
   avatarTone: string;

@@ -267,6 +267,7 @@ function toAddedParticipant(ticket: EngagementParticipantTicket): AddedParticipa
     time: validWhen
       ? validWhen.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
       : "",
+    registeredAtIso: validWhen ? validWhen.toISOString() : undefined,
     checkIn: uiCheckIn(ticket),
     initials: initialsFromName(name),
     avatarTone: typeTone[typeKey] || "blue",

@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CalendarDays, MapPin } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { EventCountdown } from "../EventCountdown";
 import { useEventCopy } from "../../i18n/useEventCopy";
+import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { cn } from "../../lib/cn";
 import { pageContainer } from "../../lib/pageContainer";
 import {
@@ -57,6 +59,7 @@ export function RegisterHero({
 }: HeroProps) {
   const { t } = useTranslation("common");
   const event = useEventCopy();
+  const { engagement } = usePublicEngagement();
   const heroTitle = title || `Register for ${event.name}`;
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -210,6 +213,12 @@ export function RegisterHero({
               </strong>
             </div>
           </div>
+
+          <EventCountdown
+            targetIso={engagement?.startDate}
+            variant="register"
+            className="mb-5 max-[760px]:mb-4"
+          />
         </div>
 
         {/* Mobile visual */}

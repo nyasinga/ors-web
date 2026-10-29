@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Download, ExternalLink, FileText } from "lucide-react";
 import { SHOW_ECITIZEN_IFRAME } from "../../components/registration/PaymentModal";
+import { BankPaymentDetailsCard } from "../../components/registration/BankPaymentDetailsCard";
 import {
   ProofOfPaymentModal,
   type ProofOfPaymentSubmit,
@@ -18,16 +19,6 @@ import { submitTicketPaymentReference } from "../../lib/pesaflow";
 import { engagementToPublicSponsors } from "../../lib/publicEvent";
 import { parseKesPrice } from "../../lib/ticketAnalytics";
 import * as r from "../../components/registration/registerStyles";
-
-const BANK_DETAILS = [
-  { label: "Account Name:", value: "ANTI COUNTERFEIT AGENCY" },
-  { label: "Bank:", value: "KENYA COMMERCIAL BANK" },
-  { label: "Branch:", value: "Kipande House" },
-  { label: "Account No.:", value: "1119056322" },
-  { label: "Bank code:", value: "01" },
-  { label: "Branch code:", value: "101" },
-  { label: "Swift code:", value: "KCBLKENX005" },
-] as const;
 
 /**
  * Registration step 3:
@@ -295,66 +286,35 @@ export function RegisterPaymentPage() {
                     alt="Anti Counterfeit Authority"
                   />
                   <div>
-                    <strong className={r.paymentMethodTitle}>Bank transfer (KCB)</strong>
+                    <strong className={r.paymentMethodTitle}>Bank transfer or M-Pesa</strong>
                     <p className={r.paymentMethodText}>
-                      Transfer the registration fee to the Anti Counterfeit Agency KCB account using
-                      your invoice reference as the narration.
+                      Pay by bank transfer to the ACA KCB account, or via M-Pesa Paybill using your
+                      invoice reference as the account number.
                     </p>
                   </div>
                 </div>
 
-                {/* Existing bank details block (same content as previous payment modal) */}
-                <div className="relative mt-4 overflow-hidden rounded-lg border border-[#e8eef5] bg-white">
-                  <div
-                    className="pointer-events-none absolute -right-6 -top-10 h-28 w-40 rotate-[28deg]"
-                    aria-hidden
-                  >
-                    <div className="absolute inset-x-0 top-0 h-[10px] bg-[#1a9b4a]" />
-                    <div className="absolute inset-x-0 top-[12px] h-[10px] bg-[#c8102e]" />
-                    <div className="absolute inset-x-0 top-[24px] h-[10px] bg-[#0056a4]" />
-                  </div>
-                  <div className="relative px-5 pb-6 pt-5 sm:px-7 sm:pt-6">
-                    <div className="mb-6 flex items-center gap-3">
-                      <img
-                        src="/assets/aca-logo.png"
-                        alt="Anti Counterfeit Authority"
-                        className="h-14 w-auto object-contain sm:h-16"
-                      />
-                    </div>
-                    <h5 className="m-0 mb-4 text-sm font-extrabold uppercase tracking-wide text-[#111827] sm:text-[15px]">
-                      Make all payments to:
-                    </h5>
-                    <dl className="m-0 grid gap-2.5 text-[13px] leading-snug text-[#111827] sm:text-sm">
-                      {BANK_DETAILS.map((row) => (
-                        <div
-                          key={row.label}
-                          className="grid grid-cols-[7.5rem_1fr] gap-x-2 sm:grid-cols-[9rem_1fr]"
-                        >
-                          <dt className="text-[#374151]">{row.label}</dt>
-                          <dd className="m-0 font-bold tracking-wide text-[#0f172a]">{row.value}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                    {displayKes > 0 ? (
-                      <p className="mt-5 mb-0 rounded-md bg-[#f0f6ff] px-3 py-2.5 text-sm text-[#1e3a8a]">
-                        Amount due:{" "}
-                        <strong className="tabular-nums">{formatMoney(displayKes, "KES")}</strong>
-                      </p>
-                    ) : null}
-                    <p className="mt-3 mb-0 text-xs text-[#64748b]">
-                      Use invoice ref <strong className="text-[#334155]">{invoiceRef}</strong> as the
-                      payment narration.
-                    </p>
-                  </div>
-                </div>
+                <BankPaymentDetailsCard
+                  className="mt-4"
+                  paymentReference={invoiceRef}
+                  amountKes={displayKes}
+                  footerNote={
+                    <>
+                      Bank narration or M-Pesa account number:{" "}
+                      <strong className="text-[#334155]">{invoiceRef || "—"}</strong>
+                    </>
+                  }
+                />
 
                 <div className={r.notice}>
                   <strong className={r.noticeStrong}>ⓘ &nbsp; Important Information</strong>
                   <br />
-                  • Transfer the exact amount to the ACA KCB account above.
+                  • Transfer the exact amount via bank or M-Pesa Paybill 522522.
                   <br />
-                  • Use your invoice reference as the payment narration.
-                  <br />• After transferring, click below and attach your proof of payment.
+                  • For M-Pesa, use your invoice reference as the account number.
+                  <br />
+                  • For bank transfer, use your invoice reference as the narration.
+                  <br />• After paying, click below and attach your proof of payment.
                 </div>
 
                 <div className={r.actions}>

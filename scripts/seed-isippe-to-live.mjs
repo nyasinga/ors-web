@@ -11,6 +11,8 @@
  *   SEED_ENGAGEMENT_ID=<existing id to PATCH>
  */
 
+import { isippeFaqs as faqs } from "./isippe-faqs.mjs";
+
 const BASE = (process.env.SEED_API_BASE || "https://ciprop.mustsacco.co.ke").replace(/\/$/, "");
 const TENANT = process.env.SEED_TENANT_ID || "ACA";
 const EMAIL = process.env.SEED_EMAIL || "";
@@ -89,41 +91,6 @@ const sponsors = [
 const tickets = [
   { id: "early-bird", name: "Early Bird Registration", price: "KES 60,000 / USD 470", capacity: 800, period: "Up to 31 October 2026", tone: "green" },
   { id: "late", name: "Late Registration", price: "KES 70,000 / USD 510", capacity: 400, period: "1 to 18 November 2026", tone: "blue" },
-];
-
-const faqs = [
-  {
-    id: "general",
-    label: "General Information",
-    icon: "FileText",
-    intro: "Learn more about ISIPPE-3, its objectives and key details.",
-    items: [
-      { id: "g1", q: "What is ISIPPE-3?", a: "The 3rd International Symposium on Intellectual Property Protection and Enforcement, hosted by the Anti-Counterfeit Authority." },
-      { id: "g2", q: "When and where will it take place?", a: "16–18 November 2026 at PrideInn Flamingo Beach Resort & Spa, Mombasa, Kenya." },
-      { id: "g3", q: "Who is organising the event?", a: "The event is organised by the Anti-Counterfeit Authority and its partners." },
-      { id: "g4", q: "Who can attend?", a: "Government representatives, IP professionals, industry leaders, policy makers, researchers, innovators and other interested stakeholders." },
-    ],
-  },
-  {
-    id: "registration",
-    label: "Registration",
-    icon: "User",
-    intro: "Everything you need to know about registering for the event.",
-    items: [
-      { id: "r1", q: "How do I register?", a: "Use the Register Now button to start the registration process and complete payment via eCitizen." },
-      { id: "r2", q: "Will I receive a confirmation?", a: "A confirmation and electronic ticket are provided after successful registration and payment." },
-    ],
-  },
-  {
-    id: "payments",
-    label: "Payments",
-    icon: "CreditCard",
-    intro: "Information about registration fees and payment options.",
-    items: [
-      { id: "p1", q: "What are the registration fees?", a: "Early Bird is KES 60,000 (up to 31 October 2026). Late registration is KES 70,000." },
-      { id: "p2", q: "What payment methods are available?", a: "Pay securely via the eCitizen / Pesaflow gateway during registration." },
-    ],
-  },
 ];
 
 const venueHighlights = [

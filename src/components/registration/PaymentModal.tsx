@@ -4,21 +4,11 @@ import { submitCheckoutToFrame } from "../../lib/pesaflow";
 import { SHOW_ECITIZEN_IFRAME } from "../../lib/paymentMode";
 import type { ECitizenCheckoutSession } from "../../types/registration";
 import { cn } from "../../lib/cn";
-import { formatMoney } from "../../i18n/format";
+import { BankPaymentDetailsCard } from "./BankPaymentDetailsCard";
 
 export { SHOW_ECITIZEN_IFRAME };
 
 const FRAME_NAME = "paymentFrame";
-
-const BANK_DETAILS = [
-  { label: "Account Name:", value: "ANTI COUNTERFEIT AGENCY" },
-  { label: "Bank:", value: "KENYA COMMERCIAL BANK" },
-  { label: "Branch:", value: "Kipande House" },
-  { label: "Account No.:", value: "1119056322" },
-  { label: "Bank code:", value: "01" },
-  { label: "Branch code:", value: "101" },
-  { label: "Swift code:", value: "KCBLKENX005" },
-] as const;
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -175,47 +165,7 @@ export default function PaymentModal({
         {/* Bank transfer UI (active while eCitizen iframe is hidden) */}
         {!SHOW_ECITIZEN_IFRAME ? (
           <div className="min-h-0 flex-1 overflow-y-auto bg-white px-5 py-5 sm:px-8 sm:py-6">
-            <div className="relative overflow-hidden rounded-lg border border-[#e8eef5] bg-white">
-              {/* Decorative corner stripes */}
-              <div
-                className="pointer-events-none absolute -right-6 -top-10 h-28 w-40 rotate-[28deg]"
-                aria-hidden
-              >
-                <div className="absolute inset-x-0 top-0 h-[10px] bg-[#1a9b4a]" />
-                <div className="absolute inset-x-0 top-[12px] h-[10px] bg-[#c8102e]" />
-                <div className="absolute inset-x-0 top-[24px] h-[10px] bg-[#0056a4]" />
-              </div>
-
-              <div className="relative px-5 pb-6 pt-5 sm:px-7 sm:pt-6">
-                <div className="mb-6 flex items-center gap-3">
-                  <img
-                    src="/assets/aca-logo.png"
-                    alt="Anti Counterfeit Authority"
-                    className="h-14 w-auto object-contain sm:h-16"
-                  />
-                </div>
-
-                <h5 className="m-0 mb-4 text-sm font-extrabold uppercase tracking-wide text-[#111827] sm:text-[15px]">
-                  Make all payments to:
-                </h5>
-
-                <dl className="m-0 grid gap-2.5 text-[13px] leading-snug text-[#111827] sm:text-sm">
-                  {BANK_DETAILS.map((row) => (
-                    <div key={row.label} className="grid grid-cols-[7.5rem_1fr] gap-x-2 sm:grid-cols-[9rem_1fr]">
-                      <dt className="text-[#374151]">{row.label}</dt>
-                      <dd className="m-0 font-bold tracking-wide text-[#0f172a]">{row.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-
-                {amountKes > 0 ? (
-                  <p className="mt-5 mb-0 rounded-md bg-[#f0f6ff] px-3 py-2.5 text-sm text-[#1e3a8a]">
-                    Amount due:{" "}
-                    <strong className="tabular-nums">{formatMoney(amountKes, "KES")}</strong>
-                  </p>
-                ) : null}
-              </div>
-            </div>
+            <BankPaymentDetailsCard paymentReference={invoiceRef} amountKes={amountKes} />
 
             <label className="mt-5 block">
               <span className="mb-1.5 block text-sm font-semibold text-[#10216d]">
@@ -231,8 +181,8 @@ export default function PaymentModal({
                 autoComplete="off"
               />
               <span className="mt-1.5 block text-xs text-[#64748b]">
-                Use your registration ref ({invoiceRef || "—"}) as the payment narration when
-                transferring.
+                For bank transfer, use ref ({invoiceRef || "—"}) as narration. For M-Pesa, use the
+                same ref as the Paybill account number.
               </span>
             </label>
           </div>
