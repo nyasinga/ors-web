@@ -1257,6 +1257,60 @@ function OverviewTab({
   const toast = useToast();
   const [classifyOpen, setClassifyOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
+  const [regPage, setRegPage] = useState(1);
+  const REG_PAGE_SIZE = 5;
+  const [liveParticipants, setLiveParticipants] = useState<
+    Array<{
+      id: string;
+      name: string;
+      type: string;
+      org: string;
+      status: string;
+      date: string;
+      participationType: string;
+      registeredAtIso?: string;
+    }>
+  >([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!fromApi || !id.trim()) {
+      setLiveParticipants([]);
+      setParticipantsLoading(false);
+      return;
+    }
+    (async () => {
+      setParticipantsLoading(true);
+      try {
+        const rows = await listEventParticipants(id);
+        if (cancelled) return;
+        setLiveParticipants(
+          rows
+            .filter((p) => p.status !== "Cancelled")
+            .map((p) => ({
+              id: p.id,
+              name: p.name,
+              type: p.type,
+              org: p.org,
+              status: p.status,
+              date: p.date,
+              participationType: p.participationType,
+              registeredAtIso: p.registeredAtIso,
+            })),
+        );
+        setRegPage(1);
+      } catch {
+        if (!cancelled) setLiveParticipants([]);
+      } finally {
+        if (!cancelled) setParticipantsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fromApi, id]);
+
   const schedule = detail.programme.map((s, i) => {
     const stamp = scheduleStamp(detail.startDate, i, s.day);
     return {
@@ -1269,14 +1323,32 @@ function OverviewTab({
     };
   });
 
-  const registrations: Array<{
-    id?: string;
-    name: string;
-    type: string;
-    org: string;
-    status: string;
-    date: string;
-  }> = [];
+  const registrationsSorted = useMemo(() => {
+    return [...liveParticipants]
+      .sort((a, b) => {
+        const aT = a.registeredAtIso ? new Date(a.registeredAtIso).getTime() : 0;
+        const bT = b.registeredAtIso ? new Date(b.registeredAtIso).getTime() : 0;
+        return bT - aT;
+      })
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        type: p.type,
+        org: p.org,
+        status: p.status,
+        date: p.date,
+      }));
+  }, [liveParticipants]);
+
+  const regTotalPages = Math.max(1, Math.ceil(registrationsSorted.length / REG_PAGE_SIZE));
+  const regPageSafe = Math.min(regPage, regTotalPages);
+  const registrations = useMemo(() => {
+    const start = (regPageSafe - 1) * REG_PAGE_SIZE;
+    return registrationsSorted.slice(start, start + REG_PAGE_SIZE);
+  }, [registrationsSorted, regPageSafe]);
+  const regShowingFrom =
+    registrationsSorted.length === 0 ? 0 : (regPageSafe - 1) * REG_PAGE_SIZE + 1;
+  const regShowingTo = Math.min(regPageSafe * REG_PAGE_SIZE, registrationsSorted.length);
 
   const socialLinks = [
     { label: "Event Website", url: detail.website, icon: "◎" },
@@ -1285,14 +1357,36 @@ function OverviewTab({
     { label: "LinkedIn", url: detail.linkedin, icon: "in" },
   ];
 
-  const participantSlices = [
-    { label: "Delegates", count: 0, value: 0, color: "#0964ea" },
-    { label: "Speakers", count: 0, value: 0, color: "#08a268" },
-    { label: "Exhibitors", count: 0, value: 0, color: "#ffae00" },
-    { label: "Sponsors", count: 0, value: 0, color: "#a21ee5" },
-  ];
-
-  const participantTotal = 0;
+  const { participantSlices, participantTotal } = useMemo(() => {
+    let delegates = 0;
+    let speakers = 0;
+    let exhibitors = 0;
+    let sponsors = 0;
+    for (const p of liveParticipants) {
+      const type = String(p.type || "").toLowerCase();
+      const pt = String(p.participationType || "").toLowerCase();
+      if (pt === "speaker" || type.includes("speaker")) {
+        speakers += 1;
+      } else if (type.includes("exhibitor")) {
+        exhibitors += 1;
+      } else if (pt === "sponsor" || type.includes("sponsor")) {
+        sponsors += 1;
+      } else {
+        delegates += 1;
+      }
+    }
+    const total = delegates + speakers + exhibitors + sponsors;
+    const pct = (n: number) => (total > 0 ? Math.round((n / total) * 1000) / 10 : 0);
+    return {
+      participantTotal: total,
+      participantSlices: [
+        { label: "Delegates", count: delegates, value: pct(delegates), color: "#0964ea" },
+        { label: "Speakers", count: speakers, value: pct(speakers), color: "#08a268" },
+        { label: "Exhibitors", count: exhibitors, value: pct(exhibitors), color: "#ffae00" },
+        { label: "Sponsors", count: sponsors, value: pct(sponsors), color: "#a21ee5" },
+      ],
+    };
+  }, [liveParticipants]);
 
   const edSocialItem =
     "group grid grid-cols-[32px_1fr_12px] items-center gap-2 text-[12px] text-inherit no-underline";
@@ -1621,7 +1715,13 @@ function OverviewTab({
               </tr>
             </thead>
             <tbody>
-              {registrations.length === 0 ? (
+              {participantsLoading ? (
+                <tr>
+                  <td colSpan={6} className="px-2 py-[18px] text-center font-medium text-[#8a9bb8]">
+                    Loading registrations…
+                  </td>
+                </tr>
+              ) : registrations.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-2 py-[18px] text-center font-medium text-[#8a9bb8]">
                     No registrations yet — new sign-ups will appear here.
@@ -1677,6 +1777,33 @@ function OverviewTab({
               )}
             </tbody>
           </table>
+          {!participantsLoading && registrationsSorted.length > 0 ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-[#e2ebf4] pt-2 text-[11px] text-[#51689d]">
+              <span>
+                Showing {regShowingFrom}–{regShowingTo} of {registrationsSorted.length}
+              </span>
+              <span className="flex-1" />
+              <button
+                type="button"
+                disabled={regPageSafe <= 1}
+                className="rounded-md border border-[#d7e5f5] px-2 py-0.5 font-semibold text-[#0764e8] hover:bg-[#edf6ff] disabled:cursor-not-allowed disabled:opacity-40"
+                onClick={() => setRegPage((p) => Math.max(1, p - 1))}
+              >
+                Prev
+              </button>
+              <span className="tabular-nums font-semibold">
+                {regPageSafe} / {regTotalPages}
+              </span>
+              <button
+                type="button"
+                disabled={regPageSafe >= regTotalPages}
+                className="rounded-md border border-[#d7e5f5] px-2 py-0.5 font-semibold text-[#0764e8] hover:bg-[#edf6ff] disabled:cursor-not-allowed disabled:opacity-40"
+                onClick={() => setRegPage((p) => Math.min(regTotalPages, p + 1))}
+              >
+                Next
+              </button>
+            </div>
+          ) : null}
         </article>
 
         <article className={edCard}>
@@ -1741,7 +1868,7 @@ function OverviewTab({
               style={{ background: donutBackground }}
             >
               <div className="absolute inset-0 z-[1] grid place-items-center text-center text-sm font-extrabold leading-[1.2] text-[#09165f] [&_small]:block [&_small]:text-[12px] [&_small]:font-semibold [&_small]:text-[#63749b]">
-                {participantTotal.toLocaleString()}
+                {participantsLoading ? "…" : participantTotal.toLocaleString()}
                 <small>Participants</small>
               </div>
             </div>

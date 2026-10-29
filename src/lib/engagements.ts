@@ -163,13 +163,13 @@ function logEngagementMultipartRequest(
   });
 }
 
-/** JSON PATCH — used by tabs that only touch scalar/array fields (tickets, FAQs, etc.). */
+/**
+ * Partial engagement PATCH.
+ * Live API rejects JSON body (415) — always send multipart FormData
+ * (scalars as strings, objects/arrays as JSON strings).
+ */
 export async function updateEngagement(id: string, body: Partial<Engagement>) {
-  return apiRequest<void>(`/engagements/${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    token: authToken(),
-    body,
-  });
+  return updateEngagementMultipart(id, body);
 }
 
 /** Multipart PATCH — same FormData shape as registration `signupAfterPayment`. */
