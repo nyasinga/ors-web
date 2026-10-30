@@ -267,6 +267,7 @@ type DetailView = {
   tone: string;
   language: string;
   tags: string[];
+  themes: string[];
   categoryValue: string;
   audienceValue: string;
   toneValue: string;
@@ -311,6 +312,7 @@ function toDetailView(engagement: Engagement | null): DetailView {
       tone: "—",
       language: "—",
       tags: [],
+      themes: [],
       categoryValue: "",
       audienceValue: "",
       toneValue: "",
@@ -349,9 +351,10 @@ function toDetailView(engagement: Engagement | null): DetailView {
   const tags =
     Array.isArray(engagement.tags) && engagement.tags.length
       ? engagement.tags.map(String).filter(Boolean)
-      : themes;
+      : [];
 
   const theme =
+    engagement.overallTheme?.trim() ||
     engagement.shortDescription?.trim() ||
     themes[0] ||
     "";
@@ -367,6 +370,7 @@ function toDetailView(engagement: Engagement | null): DetailView {
     tone: classificationLabel(EVENT_TONE_OPTIONS, engagement.tone),
     language: classificationLabel(EVENT_LANGUAGE_OPTIONS, engagement.language),
     tags,
+    themes,
     categoryValue: engagement.category || "legal",
     audienceValue: engagement.audience || "government",
     toneValue: engagement.tone || "professional",
@@ -906,7 +910,9 @@ function ClassificationEditModal({
   const [tone, setTone] = useState(detail.toneValue);
   const [language, setLanguage] = useState(detail.languageValue);
   const [tags, setTags] = useState<string[]>(detail.tags);
+  const [themes, setThemes] = useState<string[]>(detail.themes);
   const [tagDraft, setTagDraft] = useState("");
+  const [themeDraft, setThemeDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const toast = useToast();
 
@@ -917,12 +923,15 @@ function ClassificationEditModal({
     setTone(detail.toneValue);
     setLanguage(detail.languageValue);
     setTags(detail.tags);
+    setThemes(detail.themes);
     setTagDraft("");
+    setThemeDraft("");
   }, [open, detail]);
 
   const save = async () => {
     setSaving(true);
     const nextTags = tags.map((t) => t.trim()).filter(Boolean);
+    const nextThemes = themes.map((t) => t.trim()).filter(Boolean);
     try {
       await updateEngagement(eventId, {
         category,
@@ -930,7 +939,7 @@ function ClassificationEditModal({
         tone: tone as EngagementTone,
         language: language as EngagementLanguage,
         tags: nextTags,
-        themes: nextTags.map((name) => ({ name })),
+        themes: nextThemes.map((name) => ({ name })),
       });
       toast.success("Classification updated");
       await onSaved();
@@ -983,6 +992,38 @@ function ClassificationEditModal({
           onChange={(e) => setLanguage(e.target.value)}
           options={[...EVENT_LANGUAGE_OPTIONS]}
         />
+      </div>
+      <div className="mt-3">
+        <p className="mb-1.5 text-sm font-medium text-ink">Key Topics</p>
+        <div className="flex flex-wrap gap-2 rounded-lg border border-slate-200 p-3">
+          {themes.map((theme) => (
+            <button
+              key={theme}
+              type="button"
+              onClick={() => setThemes((prev) => prev.filter((t) => t !== theme))}
+              className="inline-flex items-center gap-1 rounded-full bg-soft px-2.5 py-1 text-sm font-semibold text-blue"
+            >
+              {theme} <X size={12} />
+            </button>
+          ))}
+          <input
+            value={themeDraft}
+            onChange={(e) => setThemeDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && themeDraft.trim()) {
+                e.preventDefault();
+                const next = themeDraft.trim();
+                setThemes((prev) => (prev.includes(next) ? prev : [...prev, next]));
+                setThemeDraft("");
+              }
+            }}
+            placeholder="Add topic…"
+            className="min-w-[100px] flex-1 bg-transparent text-sm outline-none"
+          />
+        </div>
+        <p className="mt-1 text-sm text-mute">
+          Press Enter to add. Shown as Key Topics cards on the About page.
+        </p>
       </div>
       <div className="mt-3">
         <p className="mb-1.5 text-sm font-medium text-ink">Event Tags</p>
@@ -1082,6 +1123,7 @@ function EventClassificationSettings({
           ["Target Audience", detail.audience],
           ["Tone", detail.tone],
           ["Language", detail.language],
+          ["Key Topics", detail.themes.length ? detail.themes.join(", ") : "—"],
           ["Event Tags", detail.tags.length ? detail.tags.join(", ") : "—"],
           ["Organizer", detail.organizer],
         ].map(([k, v]) => (
@@ -1460,6 +1502,10 @@ function OverviewTab({
             <div className={edRow}>
               <b>Language</b>
               <span>{detail.language}</span>
+            </div>
+            <div className={edRow}>
+              <b>Key Topics</b>
+              <span>{detail.themes.length ? detail.themes.join(", ") : "—"}</span>
             </div>
             <div className={edRow}>
               <b>Event Tags</b>

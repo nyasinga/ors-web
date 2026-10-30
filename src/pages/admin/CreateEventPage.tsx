@@ -208,8 +208,10 @@ export function CreateEventPage() {
   const [tone, setTone] = useState("professional");
   const [language, setLanguage] = useState("en");
   const [tags, setTags] = useState<string[]>([]);
+  const [themes, setThemes] = useState<string[]>([]);
   const [objectives, setObjectives] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
+  const [themeDraft, setThemeDraft] = useState("");
   const audienceLabel = EVENT_AUDIENCE_OPTIONS.find((o) => o.value === audience)?.label || audience;
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -586,6 +588,7 @@ export function CreateEventPage() {
         setTone(state.tone);
         setLanguage(state.language);
         setTags(state.tags.length ? state.tags : []);
+        setThemes(state.themes.length ? state.themes : []);
         setObjectives(state.objectives.length ? state.objectives : []);
         setStartDate(state.startDate);
         setEndDate(state.endDate);
@@ -815,6 +818,7 @@ export function CreateEventPage() {
         tone,
         language,
         tags,
+        themes,
         objectives,
         startDate,
         endDate,
@@ -1183,6 +1187,38 @@ export function CreateEventPage() {
                 </label>
               </div>
               <div>
+                <p className="mb-1.5 text-sm font-medium text-ink">Key Topics</p>
+                <div className="flex flex-wrap gap-2 rounded-lg border border-slate-200 p-3">
+                  {themes.map((theme) => (
+                    <button
+                      key={theme}
+                      type="button"
+                      onClick={() => setThemes((prev) => prev.filter((t) => t !== theme))}
+                      className="create-wizard-chip-in inline-flex items-center gap-1 rounded-full bg-soft px-2.5 py-1 text-sm font-semibold text-blue transition hover:bg-blue/10"
+                    >
+                      {theme} <X size={12} />
+                    </button>
+                  ))}
+                  <input
+                    value={themeDraft}
+                    onChange={(e) => setThemeDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && themeDraft.trim()) {
+                        e.preventDefault();
+                        const next = themeDraft.trim();
+                        setThemes((prev) => (prev.includes(next) ? prev : [...prev, next]));
+                        setThemeDraft("");
+                      }
+                    }}
+                    placeholder="Add topic…"
+                    className="min-w-[100px] flex-1 bg-transparent text-sm outline-none"
+                  />
+                </div>
+                <p className="mt-1 text-sm text-mute">
+                  Press Enter to add. Shown as Key Topics cards on the About page.
+                </p>
+              </div>
+              <div>
                 <p className="mb-1.5 text-sm font-medium text-ink">Event Tags</p>
                 <div className="flex flex-wrap gap-2 rounded-lg border border-slate-200 p-3">
                   {tags.map((tag) => (
@@ -1210,7 +1246,9 @@ export function CreateEventPage() {
                     className="min-w-[100px] flex-1 bg-transparent text-sm outline-none"
                   />
                 </div>
-                <p className="mt-1 text-sm text-mute">Press Enter to add. Tags are saved with the event.</p>
+                <p className="mt-1 text-sm text-mute">
+                  Press Enter to add. Used for discovery and Who Should Attend.
+                </p>
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4">
                 <p className="text-sm font-semibold text-ink">Event support contacts</p>

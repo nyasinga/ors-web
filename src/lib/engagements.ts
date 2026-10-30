@@ -1072,6 +1072,8 @@ export type WizardEngagementInput = {
   tone: string;
   language: string;
   tags: string[];
+  /** About “Key Topics” cards — separate from discovery tags. */
+  themes?: string[];
   startDate: string;
   endDate: string;
   allDay: boolean;
@@ -1293,7 +1295,7 @@ export function buildEngagementPayload(input: WizardEngagementInput): NewEngagem
     paymentEnabled: paymentMethods.some((m) => m !== "free"),
     paymentMethods,
     currency: "KES",
-    themes: toNamedItems(tags),
+    themes: toNamedItems((input.themes || []).map((t) => t.trim()).filter(Boolean)),
     objectives: toNamedItems(input.objectives || []),
     programme,
     speakers,
@@ -1375,11 +1377,10 @@ export function engagementToWizardState(engagement: Engagement) {
   const sponsors = asSponsors(engagement.sponsors);
   const tickets = asTickets(engagement.tickets);
   const methods = new Set((engagement.paymentMethods || []).map(String));
-  const tagsFromRecord = Array.isArray(engagement.tags)
+  const tags = Array.isArray(engagement.tags)
     ? engagement.tags.map(String).filter(Boolean)
     : [];
-  const tags =
-    tagsFromRecord.length > 0 ? tagsFromRecord : asStringList(engagement.themes);
+  const themes = asStringList(engagement.themes);
   const objectives = asStringList(engagement.objectives);
 
   return {
@@ -1393,6 +1394,7 @@ export function engagementToWizardState(engagement: Engagement) {
     tone: engagement.tone || "professional",
     language: engagement.language || "en",
     tags,
+    themes,
     objectives,
     startDate: toDateInput(engagement.startDate),
     endDate: toDateInput(engagement.endDate),

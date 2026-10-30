@@ -108,7 +108,13 @@ const venueSpaces = [
 ];
 
 function buildPayload(user) {
-  const themeNames = ["Intellectual Property", "Enforcement", "Policy", "Innovation", "Regional Collaboration"];
+  const themeNames = [
+    "AUTOMOTIVE SPARE PARTS",
+    "AGRICULTURE",
+    "ENERGY, ELECTRICALS AND ELECTRONIC",
+    "PHARMACEUTICALS AND MEDICAL EQUIPMENT",
+    "ALCOHOL AND TOBACCO",
+  ];
   return {
     engagementType: "symposium",
     engagementName: "ISIPPE-3 — 3rd International Symposium on Intellectual Property Protection and Enforcement",
@@ -120,7 +126,7 @@ function buildPayload(user) {
     audience: "mixed",
     tone: "professional",
     language: "en",
-    tags: [...themeNames, "ISIPPE-3", "ACA"],
+    tags: ["ISIPPE-3", "ACA"],
     startDate: "2026-11-16T06:00:00.000Z",
     endDate: "2026-11-18T15:00:00.000Z",
     allDay: false,

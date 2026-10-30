@@ -19,7 +19,7 @@ const tabs = [
   { id: "overview", label: "Overview", target: "overview" },
   { id: "objectives", label: "Objectives", target: "objectives" },
   { id: "attend", label: "Who Should Attend", target: "attend" },
-  { id: "themes", label: "Key Themes", target: "themes" },
+  { id: "themes", label: "Key Topics", target: "themes" },
   { id: "venue", label: "Venue", target: "venue" },
 ] as const;
 
@@ -63,7 +63,14 @@ const detailRow =
   "my-[9px] flex gap-2.5 text-[11px] leading-[1.35] text-[#10236f] [&_svg]:h-[23px] [&_svg]:w-[23px] [&_svg]:flex-[0_0_23px] [&_svg]:text-[#075fd8]";
 
 const objectiveTone = ["bg-[#075fd8]", "bg-[#08713f]", "bg-[#ed1c24]", "bg-[#075fd8]", "bg-[#08713f]", "bg-[#075fd8]"] as const;
-//const themeTone = ["bg-[#e8f1ff] text-[#075fd8]", "bg-[#e8f8ef] text-[#08713f]", "bg-[#ffe8ea] text-[#ed1c24]", "bg-[#eef0ff] text-[#4b3fd6]", "bg-[#fff4e5] text-[#c87000]", "bg-[#e8f1ff] text-[#075fd8]"] as const;
+const themeTone = [
+  "border-[#c5daf8] bg-[#e8f1ff] text-[#075fd8]",
+  "border-[#b7e4c7] bg-[#e8f8ef] text-[#08713f]",
+  "border-[#f5c0c5] bg-[#ffe8ea] text-[#ed1c24]",
+  "border-[#c8ccf5] bg-[#eef0ff] text-[#4b3fd6]",
+  "border-[#f0d2a8] bg-[#fff4e5] text-[#c87000]",
+  "border-[#c5daf8] bg-[#e8f1ff] text-[#075fd8]",
+] as const;
 
 function splitObjective(text: string) {
   const trimmed = text.trim();
@@ -274,11 +281,36 @@ export function AboutPage() {
 
             <section className="mt-[28px] scroll-mt-16 max-[760px]:mt-[22px]" id="themes">
               <h2 className="mb-2 text-[28px] font-black text-[#10236f] max-[760px]:text-[24px]">
-                Key Theme
+                Key Topics
               </h2>
               <p className="mb-4 max-w-3xl text-[13px] leading-[1.5] text-[#52617c] max-[760px]:text-[11.5px]">
-                {about.overallTheme}
+                {about.overallTheme?.trim() ||
+                  (about.name
+                    ? `Programme conversations and sessions are organised around the core topics of ${about.name}.`
+                    : "Programme conversations and sessions are organised around the core topics of this event.")}
               </p>
+              {about.themes.length ? (
+                <div className="grid grid-cols-3 gap-3 max-[900px]:grid-cols-2 max-[560px]:grid-cols-1">
+                  {about.themes.map((theme, i) => (
+                    <article
+                      key={`${theme}-${i}`}
+                      className={cn(
+                        "rounded-[8px] border px-3.5 py-3",
+                        themeTone[i % themeTone.length],
+                      )}
+                    >
+                      <p className="text-[10px] font-bold uppercase tracking-wide opacity-80">
+                        Topic {i + 1}
+                      </p>
+                      <h3 className="mt-1 text-[14px] font-extrabold leading-snug">{theme}</h3>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-[7px] border border-dashed border-[#d5e0eb] bg-[#f8fbff] px-3.5 py-4 text-[13px] text-[#52617c]">
+                  Key topics have not been published for this event yet.
+                </p>
+              )}
             </section>
 
             <section className="mt-[28px] scroll-mt-16 max-[760px]:mt-[22px]" id="venue">
