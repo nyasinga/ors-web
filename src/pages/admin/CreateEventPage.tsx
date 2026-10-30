@@ -327,6 +327,7 @@ export function CreateEventPage() {
   const [pkgDesc, setPkgDesc] = useState("");
   const [pkgAvail, setPkgAvail] = useState("1");
   const [pkgBenefits, setPkgBenefits] = useState(["Logo on main stage backdrop"]);
+  const [benefitDraft, setBenefitDraft] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<EventFieldErrors>({});
   const toast = useToast();
@@ -1936,6 +1937,174 @@ export function CreateEventPage() {
                     </li>
                   ))}
                 </ul>
+
+                {packages.length > 0 ? (
+                  <div className="mt-6 rounded-lg border border-slate-200 p-4">
+                    <h4 className="font-bold text-ink">Benefits Mapping</h4>
+                    <p className="mt-1 text-sm text-mute">
+                      Tick which benefits each package includes. This drives the Package Comparison
+                      table on the public Sponsorship page.
+                    </p>
+                    {(() => {
+                      const benefitRows = [
+                        ...new Set(
+                          packages.flatMap((p) =>
+                            p.benefits.map((b) => b.trim()).filter(Boolean),
+                          ),
+                        ),
+                      ];
+                      const toggleBenefit = (pkgId: string, benefit: string, on: boolean) => {
+                        setPackages((prev) =>
+                          prev.map((p) => {
+                            if (p.id !== pkgId) return p;
+                            const has = p.benefits.some(
+                              (b) => b.toLowerCase() === benefit.toLowerCase(),
+                            );
+                            if (on && !has) return { ...p, benefits: [...p.benefits, benefit] };
+                            if (!on && has) {
+                              return {
+                                ...p,
+                                benefits: p.benefits.filter(
+                                  (b) => b.toLowerCase() !== benefit.toLowerCase(),
+                                ),
+                              };
+                            }
+                            return p;
+                          }),
+                        );
+                      };
+                      const addBenefitRow = () => {
+                        const next = benefitDraft.trim();
+                        if (!next) return;
+                        const exists = packages.some((p) =>
+                          p.benefits.some((b) => b.toLowerCase() === next.toLowerCase()),
+                        );
+                        if (!exists) {
+                          // Attach to first package so the row appears; admin can tick others.
+                          setPackages((prev) =>
+                            prev.map((p, i) =>
+                              i === 0 ? { ...p, benefits: [...p.benefits, next] } : p,
+                            ),
+                          );
+                        }
+                        setBenefitDraft("");
+                      };
+                      const removeBenefitRow = (benefit: string) => {
+                        setPackages((prev) =>
+                          prev.map((p) => ({
+                            ...p,
+                            benefits: p.benefits.filter(
+                              (b) => b.toLowerCase() !== benefit.toLowerCase(),
+                            ),
+                          })),
+                        );
+                      };
+                      return (
+                        <>
+                          <div className="mt-3 overflow-x-auto">
+                            <table className="w-full min-w-[560px] border-collapse text-sm">
+                              <thead>
+                                <tr>
+                                  <th className="border border-slate-200 bg-green-700 px-2 py-2 text-left text-[12px] font-extrabold text-white">
+                                    Benefits
+                                  </th>
+                                  {packages.map((pkg) => (
+                                    <th
+                                      key={pkg.id}
+                                      className="border border-slate-200 bg-blue px-2 py-2 text-center text-[12px] font-extrabold text-white"
+                                    >
+                                      {pkg.name}
+                                      <div className="font-semibold opacity-90">
+                                        KES {pkg.price.toLocaleString()}
+                                      </div>
+                                    </th>
+                                  ))}
+                                  <th className="border border-slate-200 bg-slate-100 px-2 py-2 text-[12px] font-semibold text-mute">
+                                   {" "}
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {benefitRows.length === 0 ? (
+                                  <tr>
+                                    <td
+                                      colSpan={packages.length + 2}
+                                      className="border border-slate-200 px-3 py-4 text-center text-mute"
+                                    >
+                                      No benefits yet. Add a benefit below, then tick packages.
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  benefitRows.map((benefit) => (
+                                    <tr key={benefit}>
+                                      <td className="border border-slate-200 px-2 py-2 text-left font-medium text-ink">
+                                        {benefit}
+                                      </td>
+                                      {packages.map((pkg) => {
+                                        const checked = pkg.benefits.some(
+                                          (b) => b.toLowerCase() === benefit.toLowerCase(),
+                                        );
+                                        return (
+                                          <td
+                                            key={pkg.id}
+                                            className="border border-slate-200 px-2 py-2 text-center"
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              checked={checked}
+                                              aria-label={`${benefit} for ${pkg.name}`}
+                                              onChange={(e) =>
+                                                toggleBenefit(pkg.id, benefit, e.target.checked)
+                                              }
+                                              className="h-4 w-4 accent-blue"
+                                            />
+                                          </td>
+                                        );
+                                      })}
+                                      <td className="border border-slate-200 px-2 py-2 text-center">
+                                        <button
+                                          type="button"
+                                          className="text-red hover:underline"
+                                          aria-label={`Remove ${benefit}`}
+                                          onClick={() => removeBenefitRow(benefit)}
+                                        >
+                                          <Trash2 size={14} />
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <input
+                              value={benefitDraft}
+                              onChange={(e) => setBenefitDraft(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  addBenefitRow();
+                                }
+                              }}
+                              placeholder="New benefit (e.g. Prime exhibition space)"
+                              className="min-w-[220px] flex-1 rounded-md border border-slate-200 px-2.5 py-1.5 text-sm outline-none focus:border-blue"
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={!benefitDraft.trim()}
+                              onClick={addBenefitRow}
+                            >
+                              <Plus size={14} /> Add benefit
+                            </Button>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                ) : null}
               </div>
             )}
           </Card>

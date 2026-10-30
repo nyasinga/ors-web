@@ -2861,18 +2861,31 @@ function mapApiSponsors(list: EngagementSponsor[]): SponsorRow[] {
   });
 }
 
-function sponsorRowsToApi(rows: SponsorRow[]): EngagementSponsor[] {
-  return rows.map((s) => ({
-    id: s.id,
-    name: s.name,
-    subtitle: s.category,
-    category: s.category,
-    tier: s.type,
-    price: s.value,
-    contact: s.contact,
-    status: s.status,
-    active: s.status === "Confirmed",
-  }));
+function sponsorRowsToApi(
+  rows: SponsorRow[],
+  previous: EngagementSponsor[] = [],
+): EngagementSponsor[] {
+  const byId = new Map(
+    previous.filter((s) => s.id).map((s) => [String(s.id), s] as const),
+  );
+  return rows.map((s) => {
+    const prev = byId.get(s.id);
+    return {
+      id: s.id,
+      name: s.name,
+      subtitle: prev?.subtitle || s.category,
+      category: s.category,
+      tier: s.type,
+      price: s.value,
+      contact: s.contact,
+      status: s.status,
+      active: s.status === "Confirmed",
+      // Preserve marketing package benefits — CRM edits must not wipe them.
+      benefits: prev?.benefits?.length ? [...prev.benefits] : prev?.benefits,
+      availability: prev?.availability,
+      tone: prev?.tone,
+    };
+  });
 }
 
 function sponsorStatusClass(status: SponsorRowStatus) {
@@ -3006,7 +3019,7 @@ function SponsorsTab({
     }
     setSaving(true);
     try {
-      await updateEngagement(eventId, { sponsors: sponsorRowsToApi(rows) });
+      await updateEngagement(eventId, { sponsors: sponsorRowsToApi(rows, sponsors) });
       await onChanged();
       setModalOpen(false);
       setEditing(null);
