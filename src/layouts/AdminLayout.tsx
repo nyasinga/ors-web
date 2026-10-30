@@ -23,6 +23,7 @@ import {
   roleLabel,
 } from "../lib/auth";
 import { cn } from "../lib/cn";
+import LanguageButton from "../components/i18n/LanguageButton";
 
 const links = [
   { to: "/admin", label: "Dashboard", icon: Home, end: true },
@@ -133,6 +134,7 @@ export function AdminLayout() {
         ))}
       </nav>
       <nav className="mt-auto flex flex-col gap-2 pt-[18px]">
+        <LanguageButton showLabel={true} />
         <NavLink
           to="/admin/settings/general"
           className={navLinkClass}
@@ -180,6 +182,8 @@ export function AdminLayout() {
             >
               {mobileNav ? <X size={18} /> : <Menu size={18} />}
             </button>
+
+            <LanguageButton  className="min-[961px]:hidden gap-1"/>
 
             <label className="flex h-10 min-w-0 max-w-[min(720px,58%)] flex-1 items-center gap-3 rounded-[10px] bg-[#eaf4ff] px-3.5 text-[14px] text-[#657596]">
               <Search size={18} strokeWidth={2.25} className="shrink-0 text-[#07164d]" aria-hidden />

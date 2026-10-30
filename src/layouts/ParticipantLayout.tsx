@@ -12,6 +12,7 @@ import {
   participantDisplayName,
   participantInitials,
 } from "../lib/participantAuth";
+import LanguageButton from "../components/i18n/LanguageButton";
 
 const sideLinks = [
   { to: "/me", label: "Dashboard", icon: Home, end: true },
@@ -137,23 +138,30 @@ export function ParticipantLayout() {
                 Sign out
               </button>
             </div>
-            <button
-              type="button"
-              className="ml-auto hidden h-[42px] w-[42px] cursor-pointer bg-transparent p-0 [font-family:inherit] max-[850px]:block"
-              aria-label="Open menu"
-              aria-expanded={mobileNav}
-              onClick={() => setMobileNav((v) => !v)}
-            >
-              <span className="relative m-auto block h-[18px] w-[25px] border-y-[3px] border-[#111] after:absolute after:inset-x-0 after:top-[5px] after:border-t-[3px] after:border-[#111] after:content-['']" />
-            </button>
+
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <LanguageButton className="min-[961px]:hidden"/>
+
+              <button
+                type="button"
+                className="hidden h-[42px] w-[42px] cursor-pointer bg-transparent p-0 [font-family:inherit] max-[850px]:block"
+                aria-label="Open menu"
+                aria-expanded={mobileNav}
+                onClick={() => setMobileNav((v) => !v)}
+              >
+                <span className="relative m-auto block h-[18px] w-[25px] border-y-[3px] border-[#111] after:absolute after:inset-x-0 after:top-[5px] after:border-t-[3px] after:border-[#111] after:content-['']" />
+              </button>
+            </div>
+
           </div>
           <nav
             className={cn(
               "absolute inset-x-0 top-[93px] bg-white shadow-[0_10px_25px_#0002] max-[850px]:top-[75px]",
               mobileNav ? "block" : "hidden",
             )}
-            aria-label="Mobile"
-          >
+            aria-label="Mobile">
+
+            <LanguageButton showLabel={true} className="gap-1" />
             {topLinks.map((l) => (
               <Link key={l.to} to={l.to} className={mobileLink} onClick={() => setMobileNav(false)}>
                 {l.label}
@@ -170,8 +178,7 @@ export function ParticipantLayout() {
               onClick={() => {
                 setMobileNav(false);
                 signOut();
-              }}
-            >
+              }}>
               Sign out
             </button>
           </nav>

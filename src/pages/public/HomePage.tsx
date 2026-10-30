@@ -188,9 +188,9 @@ export function HomePage() {
 
             <p
               className={cn(
-                "mb-[13px] mt-5 w-full min-w-0 max-w-[500px] line-clamp-3 overflow-hidden text-[13.5px] leading-[1.38] text-[#676b71]",
+                "mb-[13px] mt-5 w-full min-w-0 max-w-[500px] line-clamp-6 overflow-hidden text-[13.5px] leading-[1.38] text-[#676b71]",
                 "max-[960px]:max-w-none",
-                "max-[640px]:mb-4 max-[640px]:mt-3.5 max-[640px]:line-clamp-5 max-[640px]:text-[12px] max-[640px]:leading-[1.45]",
+                "max-[640px]:mb-4 max-[640px]:mt-3.5 max-[640px]:line-clamp-8 max-[640px]:text-[12px] max-[640px]:leading-[1.45]",
               )}
             >
                           {home.intro}

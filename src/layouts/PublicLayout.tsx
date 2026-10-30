@@ -3,11 +3,11 @@ import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Menu, X } from "lucide-react";
 import { navLinks } from "../data/event";
-import { LanguageSwitcher } from "../components/i18n/LanguageSwitcher";
 import { PublicEngagementProvider } from "../contexts/PublicEngagementContext";
 import { useEventCopy } from "../i18n/useEventCopy";
 import { cn } from "../lib/cn";
 import { pageContainer } from "../lib/pageContainer";
+import LanguageButton from "../components/i18n/LanguageButton";
 
 /** Public chrome — Tailwind (no home.css) */
 export function PublicLayout() {
@@ -81,8 +81,10 @@ function PublicLayoutShell() {
 
           <nav
             className="ml-auto hidden h-full shrink-0 items-center gap-7 max-[1400px]:gap-[18px] min-[961px]:flex"
-            aria-label={t("nav.main")}
-          >
+            aria-label={t("nav.main")}>
+
+            <LanguageButton />
+
             {navLinks.map((item) => (
               <NavLink
                 key={item.to}
@@ -113,20 +115,24 @@ function PublicLayoutShell() {
             </Link>
           ) : null}
 
-          <button
-            type="button"
-            className={cn(
-              "ml-auto grid h-11 w-11 min-w-11 place-items-center rounded-lg bg-[#f3f6f9] text-[#0b1016] hover:bg-[#e8eef5] min-[961px]:hidden",
-              "max-[640px]:h-[42px] max-[640px]:w-[42px] max-[640px]:min-w-[42px]",
-              open && "bg-[#e8eef5]",
-            )}
-            aria-label={open ? t("actions.closeMenu") : t("actions.openMenu")}
-            aria-expanded={open}
-            aria-controls="home-mobile-nav"
-            onClick={() => setOpen((v) => !v)}
-          >
-            {open ? <X size={22} strokeWidth={2.25} /> : <Menu size={22} strokeWidth={2.25} />}
-          </button>
+
+          <div className="ml-auto flex shrink-0 items-center gap-2 min-[961px]:hidden">
+            <LanguageButton className="min-[961px]:hidden" />
+            <button
+              type="button"
+              className={cn(
+                "grid h-11 w-11 min-w-11 place-items-center rounded-lg bg-[#f3f6f9] text-[#0b1016] hover:bg-[#e8eef5]",
+                "max-[640px]:h-[42px] max-[640px]:w-[42px] max-[640px]:min-w-[42px]",
+                open && "bg-[#e8eef5]",
+              )}
+              aria-label={open ? t("actions.closeMenu") : t("actions.openMenu")}
+              aria-expanded={open}
+              aria-controls="home-mobile-nav"
+              onClick={() => setOpen((v) => !v)}>
+              {open ? <X size={22} strokeWidth={2.25} /> : <Menu size={22} strokeWidth={2.25} />}
+            </button>
+          </div>
+
         </div>
 
         <button
@@ -150,9 +156,6 @@ function PublicLayoutShell() {
           hidden={!open}
         >
           <div className={pageContainer}>
-            <div className="flex justify-end py-2 pb-3">
-              <LanguageSwitcher />
-            </div>
             {navLinks.map((item) => (
               <NavLink
                 key={item.to}

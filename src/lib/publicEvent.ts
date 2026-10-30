@@ -256,6 +256,8 @@ export type PublicAboutContent = {
   name: string;
   shortDescription: string;
   overviewParagraphs: string[];
+  overallTheme?: string;
+  venueAddress?: string;
   objectives: string[];
   audienceLabel: string;
   attendIntro: string;
@@ -313,6 +315,7 @@ export function engagementToAboutContent(engagement: Engagement | null): PublicA
 
   // Venue must come from this engagement — never inject another event's location.
   const venueTitle = engagement.venue?.trim() || "";
+  const venueAddress = engagement.venueAddress?.trim() || "";
   const venueCity = engagement.city?.trim() || "";
   const venueCountry = countryLabel(engagement.country) || "";
   const venueLine = [venueTitle, venueCity, venueCountry].filter(Boolean).join(", ");
@@ -324,6 +327,7 @@ export function engagementToAboutContent(engagement: Engagement | null): PublicA
 
   return {
     name,
+    overallTheme: engagement.overallTheme,
     shortDescription: engagement.shortDescription?.trim() || overview[0] || "",
     overviewParagraphs: overview,
     objectives,
@@ -336,6 +340,7 @@ export function engagementToAboutContent(engagement: Engagement | null): PublicA
     attendGroups,
     themes,
     venueTitle,
+    venueAddress,
     venueCity,
     venueCountry,
     venueLine,

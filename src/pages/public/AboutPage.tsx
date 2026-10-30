@@ -274,28 +274,11 @@ export function AboutPage() {
 
             <section className="mt-[28px] scroll-mt-16 max-[760px]:mt-[22px]" id="themes">
               <h2 className="mb-2 text-[28px] font-black text-[#10236f] max-[760px]:text-[24px]">
-                Key Themes
+                Key Theme
               </h2>
               <p className="mb-4 max-w-3xl text-[13px] leading-[1.5] text-[#52617c] max-[760px]:text-[11.5px]">
-                Programme conversations and sessions are organised around the core themes of{" "}
-                {about.name}.
+                {about.overallTheme}
               </p>
-              <div className="grid grid-cols-3 gap-3 max-[900px]:grid-cols-2 max-[560px]:grid-cols-1">
-                {about.themes.map((theme, i) => (
-                  <article
-                    key={theme}
-                    className={cn(
-                      "rounded-[7px] border border-[#e0e8f2] p-4",
-                      themeTone[i % themeTone.length],
-                    )}
-                  >
-                    <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.06em] opacity-70">
-                      Theme {i + 1}
-                    </div>
-                    <h3 className="text-[15px] font-extrabold leading-snug">{theme}</h3>
-                  </article>
-                ))}
-              </div>
             </section>
 
             <section className="mt-[28px] scroll-mt-16 max-[760px]:mt-[22px]" id="venue">
@@ -306,10 +289,8 @@ export function AboutPage() {
                 <div className="rounded-[7px] border border-[#e0e8f2] bg-[linear-gradient(160deg,#f3f9ff,#fff)] p-4">
                   <h3 className="text-[16px] font-extrabold text-[#10236f]">{about.venueTitle}</h3>
                   <p className="mt-2 flex items-start gap-2 text-[12px] leading-[1.45] text-[#52617c]">
-                    <MapPin size={16} className="mt-0.5 shrink-0 text-[#f2f2f2]" />
                     <span>
-                      {about.venueCity}
-                      {about.venueCountry ? `, ${about.venueCountry}` : ""}
+                      { `Along ${about.venueAddress}` }
                     </span>
                   </p>
                   <p className="mt-3 text-[12px] text-[#52617c]">
@@ -379,17 +360,14 @@ export function AboutPage() {
               <h3 className={sideTitle}>In Collaboration With</h3>
               <div className="grid grid-cols-2 items-center gap-2.5 text-center text-[11px] font-semibold text-[#10236f]">
                 <div>
-                  🇰🇪
                   <small className="mt-1 block text-[9px] font-bold tracking-[0.02em]">
                     REPUBLIC OF KENYA
                   </small>
                 </div>
                 <div>
-                  🌐
                   <small className="mt-1 block text-[9px] font-bold tracking-[0.02em]">WIPO</small>
                 </div>
                 <div className="col-span-full">
-                  🇰🇪
                   <small className="mt-1 block text-[9px] font-bold tracking-[0.02em]">
                     KENYA VISION 2030
                   </small>
