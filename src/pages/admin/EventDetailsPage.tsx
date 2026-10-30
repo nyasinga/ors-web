@@ -995,34 +995,64 @@ function ClassificationEditModal({
       </div>
       <div className="mt-3">
         <p className="mb-1.5 text-sm font-medium text-ink">Key Topics</p>
-        <div className="flex flex-wrap gap-2 rounded-lg border border-slate-200 p-3">
-          {themes.map((theme) => (
-            <button
-              key={theme}
+        <div className="rounded-lg border border-slate-200 p-3">
+          {themes.length ? (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {themes.map((theme) => (
+                <button
+                  key={theme}
+                  type="button"
+                  onClick={() => setThemes((prev) => prev.filter((t) => t !== theme))}
+                  className="inline-flex items-center gap-1 rounded-full bg-soft px-2.5 py-1 text-sm font-semibold text-blue"
+                >
+                  {theme} <X size={12} />
+                </button>
+              ))}
+            </div>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              value={themeDraft}
+              onChange={(e) => setThemeDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const next = themeDraft.trim();
+                  if (!next) return;
+                  setThemes((prev) =>
+                    prev.some((t) => t.toLowerCase() === next.toLowerCase())
+                      ? prev
+                      : [...prev, next],
+                  );
+                  setThemeDraft("");
+                }
+              }}
+              placeholder="Type a topic…"
+              className="min-w-[160px] flex-1 rounded-md border border-slate-200 px-2.5 py-1.5 text-sm outline-none focus:border-blue"
+            />
+            <Button
               type="button"
-              onClick={() => setThemes((prev) => prev.filter((t) => t !== theme))}
-              className="inline-flex items-center gap-1 rounded-full bg-soft px-2.5 py-1 text-sm font-semibold text-blue"
-            >
-              {theme} <X size={12} />
-            </button>
-          ))}
-          <input
-            value={themeDraft}
-            onChange={(e) => setThemeDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && themeDraft.trim()) {
-                e.preventDefault();
+              variant="outline"
+              size="sm"
+              disabled={!themeDraft.trim()}
+              onClick={() => {
                 const next = themeDraft.trim();
-                setThemes((prev) => (prev.includes(next) ? prev : [...prev, next]));
+                if (!next) return;
+                setThemes((prev) =>
+                  prev.some((t) => t.toLowerCase() === next.toLowerCase())
+                    ? prev
+                    : [...prev, next],
+                );
                 setThemeDraft("");
-              }
-            }}
-            placeholder="Add topic…"
-            className="min-w-[100px] flex-1 bg-transparent text-sm outline-none"
-          />
+              }}
+            >
+              Add topic
+            </Button>
+          </div>
         </div>
         <p className="mt-1 text-sm text-mute">
-          Press Enter to add. Shown as Key Topics cards on the About page.
+          Add with the button or Enter. Shown as Key Topics cards on the About page.
         </p>
       </div>
       <div className="mt-3">
