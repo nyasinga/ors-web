@@ -416,6 +416,7 @@ export function EventDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
+  const [participantStats, setParticipantStats] = useState({ total: 0, confirmed: 0 });
 
   useEffect(() => {
     let cancelled = false;
@@ -469,24 +470,47 @@ export function EventDetailsPage() {
   }, [engagement, loading]);
   const fromApi = Boolean(engagement);
 
+  // KPIs must use the same participant list as the Participants tab.
+  // engagement.registered on the API is often stale/zero and does not match tickets.
+  useEffect(() => {
+    let cancelled = false;
+    if (!fromApi || !id.trim()) {
+      setParticipantStats({ total: 0, confirmed: 0 });
+      return;
+    }
+    (async () => {
+      try {
+        const rows = await listEventParticipants(id);
+        if (cancelled) return;
+        const active = rows.filter((p) => p.status !== "Cancelled");
+        setParticipantStats({
+          total: active.length,
+          confirmed: active.filter((p) => p.status === "Confirmed").length,
+        });
+      } catch {
+        if (!cancelled) setParticipantStats({ total: 0, confirmed: 0 });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fromApi, id, validTab]);
+
   const speakers = useMemo(() => asSpeakers(engagement?.speakers), [engagement]);
   const sponsors = useMemo(() => asSponsors(engagement?.sponsors), [engagement]);
   const tickets = useMemo(() => asTickets(engagement?.tickets), [engagement]);
 
   const kpis = useMemo(() => {
-    // Live engagements: only show real/zero stats — never design mock numbers.
-    const registered = Number(engagement?.registered ?? 0);
-
     return [
       {
         label: "Total Registrations",
-        value: registered.toLocaleString(),
+        value: participantStats.total.toLocaleString(),
         trend: "—",
         tone: "blue" as const,
       },
       {
         label: "Confirmed Participants",
-        value: registered.toLocaleString(),
+        value: participantStats.confirmed.toLocaleString(),
         trend: "—",
         tone: "green" as const,
       },
@@ -509,7 +533,7 @@ export function EventDetailsPage() {
         tone: "red" as const,
       },
     ];
-  }, [engagement, speakers.length, sponsors.length]);
+  }, [participantStats, speakers.length, sponsors.length]);
 
   if (tab === "reports") {
     return <Navigate to={`/admin/events/${id}/reports`} replace />;
