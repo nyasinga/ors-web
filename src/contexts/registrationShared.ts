@@ -23,6 +23,8 @@ export type RegistrationDetails = {
   jobTitle: string;
   country: string;
   city: string;
+  language: string;
+  otherLanguage: string;
   dietary: string;
   accessibility: string;
   googleCalendarURL?: string;

@@ -60,8 +60,8 @@ import {
   buildEngagementPayload,
   engagementToWizardState,
   EVENT_AUDIENCE_OPTIONS,
+  EVENT_BG_PHOTO_KEY,
   EVENT_CATEGORY_OPTIONS,
-  EVENT_LANGUAGE_OPTIONS,
   EVENT_TONE_OPTIONS,
   getEngagement,
   saveEngagementLikeRegistration,
@@ -76,6 +76,8 @@ import {
   type EventWizardValues,
 } from "../../lib/eventValidation";
 import { cn } from "../../lib/cn";
+import { languages } from "../../components/i18n/LanguageButton";
+import { GoogleMapPickerModal, type VenueLocation } from "../../components/ui/maps";
 
 const typeIcons = {
   Conference: Users,
@@ -190,6 +192,7 @@ export function CreateEventPage() {
   const editId = routeId && routeId !== "new" ? routeId : null;
   const isEdit = Boolean(editId);
 
+  const [mapPickerOpen, setMapPickerOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [stepAnim, setStepAnim] = useState<"forward" | "back">("forward");
   const [previewPulse, setPreviewPulse] = useState(0);
@@ -207,8 +210,7 @@ export function CreateEventPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [objectives, setObjectives] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
-  const audienceLabel =
-    EVENT_AUDIENCE_OPTIONS.find((o) => o.value === audience)?.label || audience;
+  const audienceLabel = EVENT_AUDIENCE_OPTIONS.find((o) => o.value === audience)?.label || audience;
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [allDay, setAllDay] = useState(false);
@@ -219,8 +221,11 @@ export function CreateEventPage() {
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("KE");
+  const [venueLocation, setVenueLocation] = useState<VenueLocation | null>(null);
   const [capacity, setCapacity] = useState("");
   const [virtualLink, setVirtualLink] = useState("");
+  const [eventBackgroundFile, setEventBackgroundFile] = useState<File | null>(null);
+  const [eventBackgroundPreview, setEventBackgroundPreview] = useState("");
   const [programTab, setProgramTab] = useState("schedule");
   const [day, setDay] = useState("1");
   const [extraProgramDays, setExtraProgramDays] = useState(0);
@@ -263,6 +268,7 @@ export function CreateEventPage() {
       tone: "green" | "blue" | "orange";
     }>
   >([]);
+
   const [requireApproval, setRequireApproval] = useState(false);
   const [deadlineOn, setDeadlineOn] = useState(true);
   const [deadlineDate, setDeadlineDate] = useState("");
@@ -1149,17 +1155,31 @@ export function CreateEventPage() {
                   }}
                   options={[...EVENT_TONE_OPTIONS]}
                 />
-                <Select
-                  label="Language"
-                  required
-                  value={language}
-                  error={fieldErrors.language}
-                  onChange={(e) => {
-                    setLanguage(e.target.value);
-                    clearFieldError("language");
-                  }}
-                  options={[...EVENT_LANGUAGE_OPTIONS]}
-                />
+                <label className="grid gap-1.5 text-sm">
+                  <span className="font-medium text-ink">
+                    Language <span className="text-red">*</span>
+                  </span>
+                  <SearchableSelect
+                    value={language}
+                    onChange={(value) => {
+                      setLanguage(value);
+                      clearFieldError("language");
+                    }}
+                    options={languages.map((item) => ({
+                      value: item.code,
+                      label: `${item.flag} ${item.label}`,
+                    }))}
+                    placeholder="Select language"
+                    searchPlaceholder="Search languages..."
+                    aria-label="Event Language"
+                  />
+
+                  {fieldErrors.language && (
+                    <span className="text-sm text-red" role="alert">
+                      {fieldErrors.language}
+                    </span>
+                  )}
+                </label>
               </div>
               <div>
                 <p className="mb-1.5 text-sm font-medium text-ink">Event Tags</p>
@@ -1366,13 +1386,26 @@ export function CreateEventPage() {
               </div>
             </section>
             <section>
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h2 className="flex items-center gap-2 font-bold text-ink">
-                  <Building2 size={18} className="text-blue" /> Venue Details
+                  <Building2 size={18} className="text-blue" />
+                  Venue Details
                 </h2>
-                <Button variant="outline" size="sm">
-                  <MapPin size={14} /> Find venue on map
-                </Button>
+
+                {venueMode !== "virtual" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMapPickerOpen(true)}
+                  >
+                    <MapPin size={14} />
+
+                    {venueLocation
+                      ? "Change map location"
+                      : "Find venue on map"}
+                  </Button>
+                )}
               </div>
               <div className="grid gap-3">
                 <Input
@@ -1386,6 +1419,56 @@ export function CreateEventPage() {
                   }}
                 />
                 <Input label="Address" value={address} onChange={(e) => setAddress(e.target.value)} />
+                {venueLocation && venueMode !== "virtual" && (
+                  <div className="rounded-xl border border-green-200 bg-green-50/50 p-3">
+                    <div className="flex items-start gap-3">
+
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green">
+                        <MapPin size={18} />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-ink">
+                          Map location selected
+                        </p>
+
+                        <p className="mt-1 text-sm text-mute">
+                          {venueLocation.name}
+                        </p>
+
+                        <p className="mt-0.5 text-xs text-mute">
+                          {venueLocation.address}
+                        </p>
+
+                        <p className="mt-1 text-[11px] text-mute">
+                          Coordinates:{" "}
+                          {venueLocation.latitude.toFixed(6)},{" "}
+                          {venueLocation.longitude.toFixed(6)}
+                        </p>
+
+                        {venueLocation.googleMapsUrl && (
+                          <a
+                            href={venueLocation.googleMapsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue hover:underline"
+                          >
+                            View on Google Maps
+                          </a>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setMapPickerOpen(true)}
+                        className="text-xs font-semibold text-blue hover:underline"
+                      >
+                        Edit
+                      </button>
+
+                    </div>
+                  </div>
+                )}
                 <div className="grid gap-3 sm:grid-cols-3">
                   <Input
                     label="City"
@@ -2012,13 +2095,48 @@ export function CreateEventPage() {
                 <Sparkles size={14} /> Generate with AI
               </Button>
             </div>
+            
             <section>
-              <h3 className="mb-2 font-semibold text-ink">Event Media</h3>
-              <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-mute">
-                Logo, banner, gallery, and brand colour uploads are not wired to the API yet — they
-                are not saved with this form. Use social links below for the public page.
+              <h3 className="mb-2 font-semibold text-ink">
+                Event Background Image
+              </h3>
+
+              <p className="mb-3 text-sm text-mute">
+                Upload a high-quality background image for your event page.
+                Choose and crop an image to fit the event banner.
+              </p>
+
+              <ImagePicker
+                imageKey={EVENT_BG_PHOTO_KEY}
+                value={eventBackgroundPreview}
+                onChange={(file) => {
+                  if (!file) {
+                    setEventBackgroundFile(null);
+                    setEventBackgroundPreview("");
+                    return;
+                  }
+
+                  const renamedFile = new File(
+                    [file],
+                    EVENT_BG_PHOTO_KEY,
+                    {
+                      type: file.type || "image/jpeg",
+                      lastModified: file.lastModified,
+                    }
+                  );
+
+                  setEventBackgroundFile(renamedFile);
+                  setEventBackgroundPreview(
+                    URL.createObjectURL(renamedFile)
+                  );
+                }}
+              />
+
+              <p className="mt-2 text-xs text-mute">
+                Recommended: landscape image, 16:9 ratio.
               </p>
             </section>
+
             <section>
               <h3 className="mb-2 font-semibold text-ink">Social Media & Links</h3>
               <p className="mb-3 text-sm text-mute">Shown on the event details page.</p>
@@ -2628,6 +2746,18 @@ export function CreateEventPage() {
           </div>
         </div>
       </Modal>
+      <GoogleMapPickerModal
+        open={mapPickerOpen}
+        initialLocation={venueLocation!}
+        onClose={() => setMapPickerOpen(false)}
+        onSelect={(selected: any) => {
+          setVenueLocation(selected);
+          setVenueName(selected.name || "");
+          setAddress(selected.address || "");
+          setCity(selected.city || "");
+          setMapPickerOpen(false);
+        }}
+      />
     </div>
   );
 }

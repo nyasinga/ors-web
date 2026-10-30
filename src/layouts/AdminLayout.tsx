@@ -171,7 +171,7 @@ export function AdminLayout() {
           <div className="relative z-[1] flex min-h-0 flex-1 flex-col">{brand}{nav}</div>
         </aside>
 
-        <div className="flex min-w-0 flex-col bg-white">
+        <div className="flex min-w-0 flex-col bg-white pl-3">
           <header className="flex h-[71px] shrink-0 items-center gap-3 border-b border-[#edf2f8] px-3 sm:gap-3 sm:px-5">
             <button
               type="button"

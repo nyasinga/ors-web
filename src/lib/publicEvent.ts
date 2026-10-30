@@ -842,9 +842,7 @@ export function engagementToPublicVenue(engagement: Engagement | null): PublicVe
   const country = about.venueCountry;
   const shortName = name.split(/[,(]/)[0]?.trim() || name;
   const mapsQuery = encodeURIComponent([name, city, country].filter(Boolean).join(", "));
-  const mapsUrl =
-    engagement?.mapUrl?.trim() ||
-    (mapsQuery ? `https://maps.google.com/?q=${mapsQuery}` : "");
+  const mapsUrl = engagement?.venueLocation?.googleMapsUrl?.trim() || (mapsQuery ? `https://maps.google.com/?q=${mapsQuery}` : "");
   const highlights = asVenueHighlights(engagement?.venueHighlights);
   const spaces = asVenueSpaces(engagement?.venueSpaces);
 

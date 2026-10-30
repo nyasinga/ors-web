@@ -1,5 +1,7 @@
 /** LoopBack Engagement model — /engagements */
 
+import type { VenueLocation } from "../components/ui/maps";
+
 export type EngagementType =
   | "conference"
   | "workshop"
@@ -175,7 +177,7 @@ export type Engagement = {
   country?: string;
   capacity?: number;
   virtualLink?: string;
-  mapUrl?: string;
+  venueLocation?: VenueLocation;
   logo?: string;
   bannerImage?: string;
   galleryImages?: string[];

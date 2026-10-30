@@ -34,7 +34,7 @@ declare global {
   }
 }
 
-const languages: Language[] = [
+export const languages: Language[] = [
   { code: "en", label: "English", flag: "🇬🇧" },
   { code: "ar", label: "العربية", flag: "🇸🇦" },
   { code: "zh-CN", label: "简体中文", flag: "🇨🇳" },
@@ -200,7 +200,7 @@ function checkGTranslate() {
   return result;
 }
 
-export default function LanguageButton({ className }: LanguageButtonProps) {
+export default function LanguageButton({ className, showLabel=false }: LanguageButtonProps) {
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState(DEFAULT_LANGUAGE);
   useEffect(() => {
@@ -478,6 +478,8 @@ export default function LanguageButton({ className }: LanguageButtonProps) {
             aria-hidden="true"
           />
         </span>
+
+        {showLabel && <span className="min-w-0 truncate">{selectedLanguage.label}</span>}
       </button>
 
       {open && (

@@ -15,6 +15,7 @@ import { engagementToPublicSponsors } from "../../lib/publicEvent";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import * as r from "../../components/registration/registerStyles";
 import ImagePicker from "../../components/ui/ImagePicker";
+import { languages } from "../../components/i18n/LanguageButton";
 
 const defaultInclusions = [
   "Access to all plenary and parallel sessions",
@@ -126,6 +127,8 @@ export function RegisterDetailsPage() {
           city: details.city.trim(),
           userType: isSponsor ? "sponsor" : participationType,
           extraData: {
+            language: details.language,
+            otherLanguage: details.otherLanguage,
             dietary: details.dietary,
             accessibility: details.accessibility,
             jobTitle: details.jobTitle.trim(),
@@ -315,6 +318,38 @@ export function RegisterDetailsPage() {
                     placeholder="Enter your city"
                   />
                   {errors.city ? <span className={r.fieldError}>{errors.city}</span> : null}
+                </div>
+                <div>
+                  <label className={r.fieldLabel}>
+                    Preferred Language
+                  </label>
+                  <SearchableSelect
+                    compact
+                    aria-label="Preferred Language"
+                    value={details.language || ""}
+                    onChange={(language) => {
+                      setDetails({
+                        language,
+                        ...(language !== "other" ? { otherLanguage: "" } : {}),
+                      });
+                    }}
+                    placeholder="Select preferred language"
+                    searchPlaceholder="Search languages..."
+                    options={languages.map((language) => ({
+                      value: language.code,
+                      label: `${language.flag} ${language.label}`,
+                    }))}
+                  />
+                  {details.language === "other" && (
+                    <input
+                      className={`${r.fieldControl} mt-2`}
+                      value={details.otherLanguage || ""}
+                      onChange={(e) =>
+                        setDetails({ otherLanguage: e.target.value })
+                      }
+                      placeholder="Specify your preferred language"
+                    />
+                  )}
                 </div>
               </div>
               <div className="mt-4 pt-4">

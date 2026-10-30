@@ -23,6 +23,9 @@ import { apiForm, apiRequest } from "./api";
 import { getAuthUser, getValidAuthToken } from "./auth";
 import { parseKesPrice } from "./ticketAnalytics";
 
+""
+export const EVENT_BG_PHOTO_KEY = "event-background.jpg";
+
 function authToken() {
   return getValidAuthToken();
 }

@@ -69,7 +69,7 @@ export function HomePage() {
         )}
       >
         <div
-          className="pointer-events-none absolute inset-y-0 left-[min(44%,520px)] right-0 z-0 hidden bg-[url('/assets/hero-home-visual.png')] bg-[length:auto_100%] bg-[-140px_center] bg-no-repeat min-[961px]:block min-[1400px]:left-[min(46%,580px)] min-[1400px]:bg-[-100px_center]"
+          className="pointer-events-none absolute inset-y-0 left-[min(44%,520px)] right-0 z-0 hidden bg-[url('/assets/hero-home-visual.png')] bg-[length:auto_100%] bg-[-140px_center] bg-no-repeat min-[961px]:block min-[1400px]:left-[min(26%,580px)] min-[1400px]:bg-[-100px_center]"
           aria-hidden
         />
 
@@ -154,7 +154,7 @@ export function HomePage() {
 
             <div
               className={cn(
-                "mt-2.5 max-w-[450px] text-[25px] font-extrabold leading-[1.17] tracking-[-0.7px] text-[#0b1016]",
+                "mt-2.5 max-w-[450px] text-[20px] font-extrabold leading-[1.17] tracking-[-0.7px] text-[#0b1016]",
                 "max-[1200px]:text-[21px]",
                 "max-[960px]:max-w-[36rem] max-[960px]:text-[clamp(1.1rem,2.8vw,1.35rem)]",
                 "max-[640px]:max-w-none max-[640px]:text-[clamp(1rem,4.2vw,1.15rem)] max-[640px]:leading-[1.2]",
@@ -193,7 +193,7 @@ export function HomePage() {
                 "max-[640px]:mb-4 max-[640px]:mt-3.5 max-[640px]:line-clamp-8 max-[640px]:text-[12px] max-[640px]:leading-[1.45]",
               )}
             >
-                          {home.intro}
+                {home.intro}
             </p>
             <div
               className={cn(
@@ -245,13 +245,28 @@ export function HomePage() {
               <div className="mb-2.5 h-1 w-10 bg-[#ed1c24] max-[960px]:mb-2" aria-hidden />
 
               <h2
-                className={cn(
-                  "m-0 w-full text-[clamp(0.90rem,1.10vw,1.10rem)] font-normal leading-[1.3] text-[#0b1016] [overflow-wrap:anywhere] [text-wrap:pretty]",
-                  "max-[960px]:text-[clamp(1rem,4.2vw,1.2rem)]",
-                  "max-[640px]:text-[clamp(1.05rem,4.5vw,1.2rem)]",
-                )}>
-                <span>{home.overallTheme || home.subtitle}</span>
-              </h2>
+              className={cn(
+                "m-0 w-full text-[#0b1016] font-semibold",
+                "text-[clamp(0.78rem,0.85vw,0.88rem)] leading-[1.4]",
+                "[overflow-wrap:anywhere] [text-wrap:pretty]",
+
+                // Desktop: subtle glass-like finish
+                "lg:rounded-lg lg:border lg:border-white/30",
+                "lg:bg-white/20 lg:px-3 lg:py-2",
+                "lg:backdrop-blur-[2px]",
+                "lg:shadow-[0_1px_8px_rgba(0,0,0,0.06)]",
+
+                // Tablet
+                "max-[960px]:border-0 max-[960px]:bg-transparent",
+                "max-[960px]:px-0 max-[960px]:py-0",
+                "max-[960px]:text-[clamp(0.85rem,3.2vw,0.95rem)]",
+
+                // Mobile
+                "max-[640px]:text-[clamp(0.82rem,3.5vw,0.9rem)]",
+              )}
+            >
+              <span>{home.overallTheme || home.subtitle}</span>
+            </h2>
             </div>
 
             <div
@@ -286,16 +301,16 @@ export function HomePage() {
                     >
                       <item.icon size={22} strokeWidth={1.6} />
                     </div>
-                    <strong
+                    <span
                       className={cn(
                         "mx-auto block w-fit max-w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-center",
                         "shadow-[0_1px_3px_rgba(0,0,0,0.08)] max-[640px]:border-transparent max-[640px]:bg-transparent max-[640px]:px-0 max-[640px]:py-0 max-[640px]:shadow-none",
-                        "text-[10px] font-bold leading-[1.2] text-[#0b1016] [overflow-wrap:anywhere]",
+                        "text-[10px] font-normal leading-[1.2] text-[#0b1016] [overflow-wrap:anywhere]",
                         "max-[960px]:text-[clamp(0.62rem,2.5vw,0.72rem)]",
                         "max-[640px]:text-[clamp(0.65rem,2.8vw,0.75rem)]",
                       )}>
                       {item.label}
-                    </strong>
+                    </span>
                   </div>
                 ))}
               </div>

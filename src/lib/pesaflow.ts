@@ -403,6 +403,8 @@ export type SignupIsippeInput = Record<string, unknown> & {
   country: string;
   city: string;
   extraData: {
+    language: any;
+    otherLanguage: any;
     dietary: any; 
     accessibility: any;
     jobTitle: string;
