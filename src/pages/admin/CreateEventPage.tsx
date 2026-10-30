@@ -225,6 +225,7 @@ export function CreateEventPage() {
   const [capacity, setCapacity] = useState("");
   const [virtualLink, setVirtualLink] = useState("");
   const [eventBackgroundFile, setEventBackgroundFile] = useState<File | null>(null);
+  console.log(eventBackgroundFile);
   const [eventBackgroundPreview, setEventBackgroundPreview] = useState("");
   const [programTab, setProgramTab] = useState("schedule");
   const [day, setDay] = useState("1");

@@ -63,7 +63,7 @@ const detailRow =
   "my-[9px] flex gap-2.5 text-[11px] leading-[1.35] text-[#10236f] [&_svg]:h-[23px] [&_svg]:w-[23px] [&_svg]:flex-[0_0_23px] [&_svg]:text-[#075fd8]";
 
 const objectiveTone = ["bg-[#075fd8]", "bg-[#08713f]", "bg-[#ed1c24]", "bg-[#075fd8]", "bg-[#08713f]", "bg-[#075fd8]"] as const;
-const themeTone = ["bg-[#e8f1ff] text-[#075fd8]", "bg-[#e8f8ef] text-[#08713f]", "bg-[#ffe8ea] text-[#ed1c24]", "bg-[#eef0ff] text-[#4b3fd6]", "bg-[#fff4e5] text-[#c87000]", "bg-[#e8f1ff] text-[#075fd8]"] as const;
+//const themeTone = ["bg-[#e8f1ff] text-[#075fd8]", "bg-[#e8f8ef] text-[#08713f]", "bg-[#ffe8ea] text-[#ed1c24]", "bg-[#eef0ff] text-[#4b3fd6]", "bg-[#fff4e5] text-[#c87000]", "bg-[#e8f1ff] text-[#075fd8]"] as const;
 
 function splitObjective(text: string) {
   const trimmed = text.trim();

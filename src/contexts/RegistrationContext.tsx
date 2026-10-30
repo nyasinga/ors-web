@@ -33,6 +33,8 @@ const defaultDetails: RegistrationDetails = {
   city: "",
   dietary: "",
   accessibility: "",
+  language: "", 
+  otherLanguage: ""
 };
 
 function parsePackageAmounts(price?: string | number) {

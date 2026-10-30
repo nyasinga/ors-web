@@ -81,6 +81,8 @@ const emptyDetails: RegistrationDetails = {
   city: "",
   dietary: "",
   accessibility: "",
+  language: "", 
+  otherLanguage: ""
 };
 
 const fieldClass =
