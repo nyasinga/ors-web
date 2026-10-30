@@ -83,7 +83,7 @@ function PublicLayoutShell() {
             className="ml-auto hidden h-full shrink-0 items-center gap-7 max-[1400px]:gap-[18px] min-[961px]:flex"
             aria-label={t("nav.main")}>
 
-            <LanguageButton />
+            <LanguageButton showLabel={true} label="Language" variant="button"/>
 
             {navLinks.map((item) => (
               <NavLink

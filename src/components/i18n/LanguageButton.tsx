@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { Globe } from "lucide-react";
+import { ChevronDown, Globe } from "lucide-react";
 import { cn } from "../../lib/cn";
 
 interface LanguageButtonProps {
   /** Kept for compatibility with existing usages. */
   showLabel?: boolean;
   className?: string;
+  label?: string;
+  variant?: "button" | "link";
 }
 
 type Language = {
@@ -200,7 +202,7 @@ function checkGTranslate() {
   return result;
 }
 
-export default function LanguageButton({ className, showLabel=false }: LanguageButtonProps) {
+export default function LanguageButton({ className, showLabel=false, label='Language', variant="link" }: LanguageButtonProps) {
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState(DEFAULT_LANGUAGE);
   useEffect(() => {
@@ -453,6 +455,7 @@ export default function LanguageButton({ className, showLabel=false }: LanguageB
 
   return (
     <div ref={rootRef} className={cn("inline-flex", className)}>
+
       <button
         ref={buttonRef}
         type="button"
@@ -463,11 +466,31 @@ export default function LanguageButton({ className, showLabel=false }: LanguageB
         title={`Language: ${selectedLanguage.label}`}
         className={cn(
           "flex h-[52px] items-center gap-3.5 rounded-xl",
-          "px-3.5 text-[15px] font-medium text-[#07164d]",
-          "transition-colors hover:bg-[#ed1c24]/10 hover:text-[#ed1c24]",
-          "focus-visible:outline-none focus-visible:ring-2",
-          "focus-visible:ring-[#ed1c24]",
-          open && "bg-[#ed1c24]/10 text-[#ed1c24]",
+          "px-3.5 text-[15px] font-medium",
+          "transition-all duration-300 ease-out",
+
+          // Link style - retain original styling
+          variant === "link" && [
+            "text-[#07164d]",
+            "transition-colors hover:bg-[#ed1c24]/10 hover:text-[#ed1c24]",
+            "focus-visible:outline-none focus-visible:ring-2",
+            "focus-visible:ring-[#ed1c24]",
+            open && "bg-[#ed1c24]/10 text-[#ed1c24]",
+          ],
+
+          // Bordered dropdown style
+          variant === "button" && [
+            "border border-[#07164d]/10",
+            "bg-white/80 text-[#07164d]",
+            "shadow-[0_2px_10px_rgba(7,22,77,0.035),0_0_12px_rgba(237,28,36,0.035)]",
+            "hover:border-[#ed1c24]/30 hover:bg-white",
+            "hover:text-[#ed1c24]",
+            "hover:shadow-[0_3px_14px_rgba(237,28,36,0.10)]",
+            "focus-visible:outline-none focus-visible:ring-2",
+            "focus-visible:ring-[#ed1c24]/30",
+            open &&
+              "border-[#ed1c24]/35 bg-white text-[#ed1c24] shadow-[0_3px_16px_rgba(237,28,36,0.12)]",
+          ],
         )}
       >
         <span className="grid w-[23px] shrink-0 place-items-center">
@@ -479,7 +502,23 @@ export default function LanguageButton({ className, showLabel=false }: LanguageB
           />
         </span>
 
-        {showLabel && <span className="min-w-0 truncate">{selectedLanguage.label}</span>}
+        {showLabel && (
+          <span className="min-w-0 truncate">
+            {selectedLanguage.label || label}
+          </span>
+        )}
+        
+        {variant === "button" && showLabel && (
+          <ChevronDown
+            size={15}
+            strokeWidth={1.8}
+            className={cn(
+              "ml-auto shrink-0 text-[#07164d]/50 transition-transform duration-300",
+              open && "rotate-180 text-[#ed1c24]"
+            )}
+            aria-hidden="true"
+          />
+        )}
       </button>
 
       {open && (
