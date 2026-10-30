@@ -159,7 +159,7 @@ export function AdminLoginPage() {
             </div>
 
             <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.22em] text-[#50638b] max-[600px]:mb-2 max-[600px]:text-[10px] max-[600px]:tracking-[0.18em]">
-              3rd International Symposium on
+              { event.fullName }
             </p>
 
             <h1
@@ -168,11 +168,11 @@ export function AdminLoginPage() {
                 "max-[600px]:max-w-none",
               )}
             >
-              Intellectual Property Protection and Enforcement
+              { event.name }
             </h1>
 
             <p className="mt-4 max-w-[32rem] text-[17px] leading-[1.45] text-[#3a4668] max-[600px]:mt-3 max-[600px]:text-[15px]">
-              Strengthening Intellectual Property Protection across Africa and Beyond
+              { event.shortDescription }
             </p>
 
             <div

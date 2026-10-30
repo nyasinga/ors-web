@@ -320,8 +320,7 @@ export function engagementToAboutContent(engagement: Engagement | null): PublicA
   const venueCountry = countryLabel(engagement.country) || "";
   const venueLine = [venueTitle, venueCity, venueCountry].filter(Boolean).join(", ");
 
-  const attendGroups =
-    tags.length >= 2 ? tags.slice(0, 6) : themes.length ? themes : [];
+  const attendGroups = tags.length >= 2 ? tags.slice(0, 6) : themes.length ? themes : [];
 
   const name = engagement.engagementName?.trim() || "";
 
@@ -447,6 +446,7 @@ export function engagementToHomeContent(engagement: Engagement | null): PublicHo
 
 export type PublicEventCopy = {
   name: string;
+  shortDescription: string;
   brandLine: string;
   fullName: string;
   edition: string;
@@ -505,6 +505,7 @@ export function engagementToEventCopy(engagement: Engagement | null): PublicEven
   if (!engagement) {
     return {
       name: "",
+      shortDescription: "",
       brandLine: "",
       fullName: "",
       edition: "",
@@ -532,6 +533,7 @@ export function engagementToEventCopy(engagement: Engagement | null): PublicEven
 
   return {
     name: shortName,
+    shortDescription: engagement.shortDescription!,
     brandLine: `${home.brandMark} ${home.brandYear}`.trim(),
     fullName: home.subtitle,
     edition: home.subtitle,
