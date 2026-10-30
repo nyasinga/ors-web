@@ -1257,7 +1257,7 @@ export function CreateEventPage() {
                   View Larger
                 </button>
               </div>
-              <img src="/assets/admin-banner.jpg" alt="" className="h-28 w-full object-cover" />
+              <img src="/assets/about-hero.png" alt="" className="h-28 w-full object-cover" />
               <div className="p-4">
                 <p className="font-semibold text-ink line-clamp-2">{title}</p>
                 <p className="mt-2 line-clamp-3 text-sm text-mute">{description}</p>
@@ -2071,7 +2071,7 @@ export function CreateEventPage() {
               key={`preview-reg-${previewPulse}`}
               className="overflow-hidden create-wizard-preview-pulse"
             >
-              <img src="/assets/admin-banner.jpg" alt="" className="h-28 w-full object-cover" />
+              <img src="/assets/about-hero.png" alt="" className="h-28 w-full object-cover" />
               <div className="p-4">
                 <p className="font-semibold text-ink line-clamp-2">{title}</p>
                 <p className="mt-2 text-sm text-mute">{previewDate}</p>
@@ -2109,6 +2109,8 @@ export function CreateEventPage() {
               <ImagePicker
                 imageKey={EVENT_BG_PHOTO_KEY}
                 value={eventBackgroundPreview}
+                cropShape="rect"
+                aspect={16 / 9}
                 onChange={(file) => {
                   if (!file) {
                     setEventBackgroundFile(null);
@@ -2236,7 +2238,7 @@ export function CreateEventPage() {
                   View Full Event Page
                 </button>
               </div>
-              <img src="/assets/admin-banner.jpg" alt="" className="h-32 w-full object-cover" />
+              <img src="/assets/about-hero.png" alt="" className="h-32 w-full object-cover" />
               <div className="p-4">
                 <Pill tone="green">{eventType}</Pill>
                 <p className="mt-2 font-semibold text-ink">{title}</p>
