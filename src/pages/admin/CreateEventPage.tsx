@@ -317,9 +317,7 @@ export function CreateEventPage() {
   const [newSpeakerPhotoPreview, setNewSpeakerPhotoPreview] = useState("");
   /** Photos chosen in the modal — uploaded only when the event is saved/published. */
   const [pendingSpeakerPhotos, setPendingSpeakerPhotos] = useState<Record<string, File>>({});
-  const [pendingSpeakerPhotoPreviews, setPendingSpeakerPhotoPreviews] = useState<Record<string, string>>(
-    {},
-  );
+  const [pendingSpeakerPhotoPreviews, setPendingSpeakerPhotoPreviews] = useState<Record<string, string>>({});
   const [speakerPhotosHydrated, setSpeakerPhotosHydrated] = useState(false);
   const speakerDraftKey = editId || "new";
   const [pkgName, setPkgName] = useState("");
@@ -864,7 +862,7 @@ export function CreateEventPage() {
       });
 
       // Exact registration pattern: one multipart FormData (fields + avatar files).
-      // No separate POST /resources/upload.
+      
       const saved = await saveEngagementLikeRegistration(payload, pendingSpeakerPhotos, {
         engagementId: isEdit ? editId : null,
       });
