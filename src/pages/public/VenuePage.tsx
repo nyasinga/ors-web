@@ -128,10 +128,10 @@ export function VenuePage() {
             ) : null}
           </div>
 
-          <div className="relative h-[178px] overflow-hidden rounded-[7px] border border-[#e3e8ee] bg-[#eef2f6] max-[960px]:h-[230px] max-[640px]:h-[205px]">
+          <div className="relative h-[378px] overflow-hidden rounded-[7px] border border-[#e3e8ee] bg-[#eef2f6] max-[960px]:h-[230px] max-[640px]:h-[205px]">
             <img
               className="block h-full w-full object-cover"
-              src="/assets/venue-map.jpg"
+              src="/assets/venue-map.png"
               alt={`Map showing ${venue.name}`}
             />
             <a

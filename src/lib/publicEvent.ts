@@ -23,7 +23,6 @@ import type {
 } from "../types/engagement";
 
 const FEATURED_CACHE_KEY = "featured-public";
-
 const engagementCache = new Map<string, Engagement>();
 const engagementInflight = new Map<string, Promise<Engagement>>();
 
@@ -373,6 +372,14 @@ export type PublicHomeContent = {
   venueName: string;
   venueCityCountry: string;
   venueImageAlt: string;
+  registrationTiers: {
+    id: string;
+    name: string;
+    kes: number;
+    usd: number;
+    period: string;
+    capacity?: number;
+  }[];
 };
 
 const EMPTY_HOME: PublicHomeContent = {
@@ -393,6 +400,7 @@ const EMPTY_HOME: PublicHomeContent = {
   venueName: "",
   venueCityCountry: "",
   venueImageAlt: "Event venue",
+  registrationTiers: [],
 };
 
 /** Map engagement record → Home page hero / about content. */
@@ -403,6 +411,23 @@ export function engagementToHomeContent(engagement: Engagement | null): PublicHo
   const brand = homeBrand(engagement);
   const speakers = asSpeakers(engagement.speakers);
   const tickets = asTickets(engagement.tickets);
+  const registrationTiers = tickets.map((ticket, index) => {
+    const amounts = parseTicketAmounts(ticket.price);
+  
+    const ticketData = ticket as typeof ticket & {
+      capacity?: number | string;
+    };
+  
+    return {
+      id: ticket.id || `ticket-${index}`,
+      name: ticket.name || `Registration ${index + 1}`,
+      kes: amounts.kes,
+      usd: amounts.usd,
+      period: ticket.period || "",
+      capacity: Number(ticketData.capacity) || undefined,
+    };
+  });
+  
   const themes = about.themes.slice(0, 5);
   const days = daySpanCount(engagement.startDate, engagement.endDate);
   const capacity = engagement.capacity || engagement.registrationLimit;
@@ -441,6 +466,7 @@ export function engagementToHomeContent(engagement: Engagement | null): PublicHo
     venueName: about.venueTitle,
     venueCityCountry: cityLine,
     venueImageAlt: [about.venueTitle, cityLine].filter(Boolean).join(", ") || "Event venue",
+    registrationTiers
   };
 }
 

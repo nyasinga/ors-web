@@ -7,4 +7,5 @@ export const navLinks = [
   { to: "/sponsorship", labelKey: "nav.sponsorship" },
   { to: "/venue", labelKey: "nav.venue" },
   { to: "/faq", labelKey: "nav.faq" },
+  { to: "/info", labelKey: "nav.info" }
 ] as const;

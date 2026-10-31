@@ -31,9 +31,7 @@ const featureFallbackKeys = [
 ] as const;
 
 const pillarIcons = [Shield, Users, Lightbulb] as const;
-
-const container =
-  "mx-auto w-[calc(100%-clamp(32px,5vw,120px))] max-w-[1440px] max-[768px]:w-[calc(100%-40px)] max-[480px]:w-[calc(100%-32px)]";
+const container = "mx-auto w-[calc(100%-clamp(32px,5vw,120px))] max-w-[1440px] max-[768px]:w-[calc(100%-40px)] max-[480px]:w-[calc(100%-32px)]";
 
 /** Home — hero and about content from the public engagement API. */
 export function HomePage() {
@@ -314,37 +312,56 @@ export function HomePage() {
                   </div>
                 ))}
               </div>
-              <Link
-                to="/register"
-                className="block no-underline">
+              <Link to="/register" className="block no-underline">
                 <div
                   className={cn(
-                    "relative mt-10 w-full max-w-[390px] overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-gray-50 via-white to-gray-50 p-4",
-                    "shadow-[0_0_0_1px_rgba(107,114,128,0.04),0_4px_16px_rgba(0,0,0,0.06)]",
-                    "transition-all duration-300 hover:shadow-[0_0_20px_rgba(107,114,128,0.14)]",
-                    "max-[960px]:mt-2.5 max-[960px]:max-w-none max-[640px]:mt-6 min-[961px]:ml-[150px]",
-                    "min-[961px]:border-[#ed1c24e6]/30 min-[961px]:bg-gradient-to-br min-[961px]:from-red-50 min-[961px]:via-white min-[961px]:to-red-50",
-                    "min-[961px]:shadow-[0_0_0_1px_rgba(237,28,36,0.04),0_4px_16px_rgba(237,28,36,0.10)]",
-                    "min-[961px]:hover:shadow-[0_0_20px_rgba(237,28,36,0.18)]",
-                    "cursor-pointer",
+                    "relative mt-10 w-full max-w-[390px] rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md",
+                    "max-[960px]:mt-2.5 max-[960px]:max-w-none max-[640px]:mt-6",
+                    "min-[961px]:ml-[150px]",
                   )}
                 >
-                  <div className="mb-2 flex items-center gap-2">
-                    <span className="rounded-full border border-gray-200 bg-gray-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-red-700 min-[961px]:border-[#ed1c24e6]/30 min-[961px]:bg-[#ed1c24e6] min-[961px]:text-white">
-                      Early Bird Offer
-                    </span>
-                    <span className="animate-pulse text-[10px] font-bold uppercase tracking-wide text-red-600 min-[961px]:text-[#ed1c24e6]">
-                      Limited Time
-                    </span>
+                  <p className="mb-3 text-[12px] font-extrabold uppercase tracking-wider text-gray-800">
+                    Registration Fees
+                  </p>
+
+                  <div className="space-y-3">
+                    {home.registrationTiers.map((ticket) => (
+                      <div
+                        key={ticket.id}
+                        className="flex items-center justify-between gap-3 border-b border-gray-100 pb-3 last:border-0 last:pb-0"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-bold text-gray-800">
+                            {ticket.name}
+                          </p>
+                          <p className="mt-0.5 text-[10px] text-gray-500">
+                            {ticket.period}
+                          </p>
+                        </div>
+
+                        <div className="shrink-0 text-right">
+                          {ticket.kes > 0 && (
+                            <p className="text-[15px] font-extrabold text-gray-900">
+                              KES {ticket.kes.toLocaleString("en-KE")}
+                            </p>
+                          )}
+                          {ticket.usd > 0 && (
+                            <p className="text-[10px] text-gray-500">
+                              USD {ticket.usd.toLocaleString("en-US")}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
-                  <p className="text-[14px] font-extrabold leading-snug text-black max-[640px]:text-[13px]">
-                    Register Early. Save More.
-                  </p>
-
-                  <p className="mt-1 text-[12px] leading-relaxed text-black/75 max-[640px]:text-[11px]">
-                    {home.earlyBirdNote}
-                  </p>
+                  <Link
+                    to="/register"
+                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[#ed1c24] px-4 py-2.5 text-[11px] font-extrabold text-white transition-colors hover:bg-[#c91820]"
+                  >
+                    Register Early & Save
+                    <span>→</span>
+                  </Link>
                 </div>
               </Link>
             </div>
@@ -507,6 +524,160 @@ export function HomePage() {
           </div>
         </div>
       </section>
+      <section
+  aria-labelledby="event-info-cta-title"
+  className="border-t border-[#e6ebf1] bg-white py-10 sm:py-14"
+>
+  <div className={cn(container, "min-w-0")}>
+    <div
+      className={cn(
+        "relative grid grid-cols-1 items-center gap-8 overflow-hidden rounded-2xl",
+        "border border-[#e6ebf1] bg-white p-6 sm:p-8 lg:grid-cols-[1.2fr_0.9fr] lg:gap-10 lg:p-10",
+        "shadow-[0_4px_20px_rgba(15,23,42,0.035)]",
+      )}
+    >
+      {/* Decorative accents */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-24 -top-32 h-72 w-72 rounded-full border-[35px] border-[#eaf3ff]/70"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute left-0 top-8 h-1 w-16 rounded-r-full bg-[#ed1c24]"
+      />
+
+      {/* Content */}
+      <div className="relative z-[1] min-w-0">
+        <p className="mb-4 text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#08713f] sm:text-[12px]">
+          Plan your participation
+        </p>
+
+        <h2
+          id="event-info-cta-title"
+          className="mb-4 max-w-[650px] text-[clamp(1.8rem,3.5vw,2.8rem)] font-black leading-[1.08] tracking-[-0.045em] text-[#10213d]"
+        >
+          Everything you need to know
+          <span className="block text-[#075fd8]">
+            before you attend.
+          </span>
+        </h2>
+
+        <p className="mb-7 max-w-[650px] text-[14px] leading-[1.75] text-[#647084] sm:text-[15px]">
+          Explore venue details, accommodation options, travel guidance,
+          registration information and other useful details to help you
+          prepare for the event.
+        </p>
+
+        {/* Information highlights */}
+        <div className="grid grid-cols-2 gap-y-6 sm:grid-cols-4 sm:gap-3">
+          {[
+            {
+              title: "Venue",
+              subtitle: "Information",
+              icon: "⌖",
+              color: "text-[#075fd8]",
+              background: "bg-[#eaf2ff]",
+            },
+            {
+              title: "Accommodation",
+              subtitle: "Options",
+              icon: "▤",
+              color: "text-[#08713f]",
+              background: "bg-[#eaf7ef]",
+            },
+            {
+              title: "Travel",
+              subtitle: "Guidance",
+              icon: "✈",
+              color: "text-[#ed1c24]",
+              background: "bg-[#fff0f0]",
+            },
+            {
+              title: "Registration",
+              subtitle: "Details",
+              icon: "▤",
+              color: "text-[#d99000]",
+              background: "bg-[#fff5df]",
+            },
+          ].map((item, index) => (
+            <div
+              key={item.title}
+              className={cn(
+                "flex min-w-0 flex-col items-center px-2 text-center",
+                index > 0 && "sm:border-l sm:border-[#e1e7ef]",
+              )}
+            >
+              <span
+                className={cn(
+                  "mb-3 grid h-14 w-14 place-items-center rounded-full text-[25px] font-bold",
+                  item.background,
+                  item.color,
+                )}
+                aria-hidden="true"
+              >
+                {item.icon}
+              </span>
+
+              <span className="text-[12px] font-extrabold leading-snug text-[#10213d] sm:text-[13px]">
+                {item.title}
+                <span className="block">{item.subtitle}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Venue visual and information CTA */}
+      <div className="relative z-[1] flex min-w-0 flex-col gap-0 lg:border-l lg:border-[#e1e7ef] lg:pl-10">
+        <div className="relative mb-5 h-[190px] overflow-hidden rounded-2xl bg-[#f1f5f9] sm:h-[240px]">
+          {engagement?.bannerImage ? (
+            <img
+              src={engagement.bannerImage}
+              alt="ISIPPE-3 event venue"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <div className="text-center">
+                <MapPin className="mx-auto mb-2 h-9 w-9 text-[#08713f]" />
+                <p className="text-sm font-bold text-[#10213d]">
+                  ISIPPE-3
+                </p>
+                <p className="mt-1 text-xs text-[#647084]">
+                  Mombasa, Kenya
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <Link
+          to="/info"
+          className={cn(
+            "group inline-flex min-h-[52px] w-full items-center justify-center gap-3 rounded-lg",
+            "bg-[#ed1c24] px-6 py-3 text-[14px] font-extrabold text-white no-underline",
+            "shadow-[0_5px_16px_rgba(237,28,36,0.16)] transition-all duration-200",
+            "hover:-translate-y-0.5 hover:bg-[#d71920] hover:shadow-lg",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ed1c24] focus-visible:ring-offset-2",
+            "sm:min-h-[56px]",
+          )}
+        >
+          Read More
+          <span
+            className="text-[22px] leading-none transition-transform duration-200 group-hover:translate-x-1"
+            aria-hidden="true"
+          >
+            →
+          </span>
+        </Link>
+
+        <p className="mt-3 text-center text-[11px] font-medium text-[#8993a3]">
+          Plan ahead. Arrive prepared.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
     </div>
     </PublicEventGate>
   );

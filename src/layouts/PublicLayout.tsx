@@ -96,8 +96,7 @@ function PublicLayoutShell() {
                     isActive &&
                       "font-bold after:absolute after:inset-x-0 after:bottom-7 after:h-[3px] after:bg-[#ed1c24] after:content-['']",
                   )
-                }
-              >
+                }>
                 {t(item.labelKey)}
               </NavLink>
             ))}
