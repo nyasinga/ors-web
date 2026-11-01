@@ -82,10 +82,73 @@ const speakers = [
 ];
 
 const sponsors = [
-  { id: "platinum", name: "Platinum Sponsor", subtitle: "Maximum visibility and strategic engagement opportunities.", price: 1000000, availability: "Open", benefits: ["Prime exhibition space", "Keynote speaking opportunity", "Branding across all event materials", "Multiple delegate passes (5)", "Dedicated networking opportunities", "Acknowledgement during event"], active: true, tone: "amber", tier: "Platinum" },
-  { id: "gold", name: "Gold Sponsor", subtitle: "High visibility and extensive engagement opportunities.", price: 500000, availability: "Open", benefits: ["Prime exhibition space", "Keynote speaking opportunity", "Panel participation opportunity", "Branding across all event materials", "Multiple delegate passes (4)", "Dedicated networking opportunities"], active: true, tone: "yellow", tier: "Gold" },
-  { id: "silver", name: "Silver Sponsor", subtitle: "Enhanced visibility and engagement opportunities.", price: 300000, availability: "Open", benefits: ["Prime exhibition space", "Panel participation opportunity", "Branding across all event materials", "Multiple delegate passes (3)", "Dedicated networking opportunities"], active: true, tone: "slate", tier: "Silver" },
-  { id: "bronze", name: "Bronze Sponsor", subtitle: "Brand exposure and networking opportunities.", price: 150000, availability: "Open", benefits: ["Branding across website", "Multiple delegate passes (2)", "Delegate passes to social events", "Dedicated networking opportunities", "Acknowledgement during event"], active: true, tone: "orange", tier: "Bronze" },
+  {
+    id: "platinum",
+    name: "Platinum Sponsor",
+    subtitle: "Maximum visibility and strategic engagement opportunities.",
+    price: 1000000,
+    availability: "Open",
+    benefits: [
+      "Name featured in the official event title (ISIPPE-3 presented by XXXX)",
+      "Keynote introduction or a 10-minute speaking slot",
+      "Two panelist slots for the sessions relevant to your organisation",
+      "Premium main-stage or entrance booth placement",
+      "8–10 complimentary ISIPPE-3 tickets",
+      "A host of pre-event, at the event and post-event benefits",
+    ],
+    active: true,
+    tone: "amber",
+    tier: "Platinum",
+  },
+  {
+    id: "gold",
+    name: "Gold Sponsor",
+    subtitle: "High visibility and extensive engagement opportunities.",
+    price: 500000,
+    availability: "Open",
+    benefits: [
+      "Large logo placement on main event signage and website",
+      "Two panelist slots for the session relevant to your organisation",
+      "Dedicated social media feature posts and email blast mention",
+      "Standard high-traffic booth space or exhibition table",
+      "6 complimentary ISIPPE-3 tickets",
+    ],
+    active: true,
+    tone: "yellow",
+    tier: "Gold",
+  },
+  {
+    id: "silver",
+    name: "Silver Sponsor",
+    subtitle: "Enhanced visibility and engagement opportunities.",
+    price: 300000,
+    availability: "Open",
+    benefits: [
+      "Medium logo on shared digital banners and printed programme",
+      "One panellist slot for the session relevant to your organisation",
+      "Social media shout-out and website directory link",
+      "4 complimentary ISIPPE-3 tickets",
+    ],
+    active: true,
+    tone: "slate",
+    tier: "Silver",
+  },
+  {
+    id: "bronze",
+    name: "Bronze Sponsor",
+    subtitle: "Brand exposure and networking opportunities.",
+    price: 150000,
+    availability: "Open",
+    benefits: [
+      "Small logo text recognition on the event website",
+      "One panelist slot for the session relevant to your organisation",
+      "Verbal recognition during opening remarks",
+      "2 complimentary ISIPPE-3 tickets",
+    ],
+    active: true,
+    tone: "orange",
+    tier: "Bronze",
+  },
 ];
 
 const tickets = [

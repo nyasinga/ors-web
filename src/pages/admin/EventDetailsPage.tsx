@@ -3384,19 +3384,6 @@ function SponsorsTab({
                 <Download size={14} /> Export
               </span>
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setEditing(null);
-                setModalOpen(true);
-              }}
-              disabled={saving}
-              className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
-            >
-              <span className="inline-flex items-center gap-2">
-                <Plus size={14} strokeWidth={3} /> Add {Noun}
-              </span>
-            </button>
           </div>
 
           <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
