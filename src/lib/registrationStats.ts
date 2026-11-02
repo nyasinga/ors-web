@@ -72,7 +72,7 @@ export function formatAxisDay(ymd: string): string {
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 }
 
-/** Default: current calendar month. */
+/** Fallback when no registrations exist: current calendar month. */
 export function defaultMonthRange(now = new Date()): DateRange {
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -131,17 +131,44 @@ function participantDay(p: AddedParticipant): string | null {
   return null;
 }
 
+/** Full span covering every dated registration (for “show everything” default). */
+export function participantsDateSpan(participants: AddedParticipant[]): DateRange | null {
+  let min: string | null = null;
+  let max: string | null = null;
+  for (const p of participants) {
+    if (p.status === "Cancelled") continue;
+    const day = participantDay(p);
+    if (!day) continue;
+    if (!min || day < min) min = day;
+    if (!max || day > max) max = day;
+  }
+  if (!min || !max) return null;
+  return { start: min, end: max };
+}
+
+/** Default dashboard range: all registrations when available, else this month. */
+export function defaultStatsRange(participants: AddedParticipant[] = []): DateRange {
+  return participantsDateSpan(participants) ?? defaultMonthRange();
+}
+
 function inRange(ymd: string | null, range: DateRange): boolean {
   if (!ymd) return false;
   return ymd >= range.start && ymd <= range.end;
 }
 
-function countInRange(rows: AddedParticipant[], range: DateRange): CategoryCounts {
+function countInRange(
+  rows: AddedParticipant[],
+  range: DateRange,
+  includeUndated = false,
+): CategoryCounts {
   const counts = emptyCounts();
   for (const p of rows) {
     if (p.status === "Cancelled") continue;
     const day = participantDay(p);
-    // Include undated rows only when counting "all time" style? For ranged views, skip undated.
+    if (!day) {
+      if (includeUndated) counts[categorizeParticipant(p)] += 1;
+      continue;
+    }
     if (!inRange(day, range)) continue;
     counts[categorizeParticipant(p)] += 1;
   }
@@ -163,10 +190,12 @@ function toPercents(counts: CategoryCounts, total: number): CategoryCounts {
 export function buildRegistrationStats(
   participants: AddedParticipant[],
   range: DateRange,
+  options?: { includeUndated?: boolean },
 ): RegistrationStats {
-  const counts = countInRange(participants, range);
+  const includeUndated = Boolean(options?.includeUndated);
+  const counts = countInRange(participants, range, includeUndated);
   const total = sumCounts(counts);
-  const previous = countInRange(participants, shiftRangeBack(range));
+  const previous = countInRange(participants, shiftRangeBack(range), false);
   const previousTotal = sumCounts(previous);
   const vsPreviousPct =
     previousTotal > 0

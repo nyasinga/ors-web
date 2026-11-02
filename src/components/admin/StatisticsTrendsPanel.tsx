@@ -27,7 +27,7 @@ import {
   STATS_CATEGORY_META,
   STATS_CATEGORY_ORDER,
   buildRegistrationStats,
-  defaultMonthRange,
+  defaultStatsRange,
   downloadTextFile,
   exportRegistrationStatsCsv,
   formatRangeLabel,
@@ -98,15 +98,31 @@ function KpiCard({
 function ChartToolbar({
   range,
   onRangeChange,
+  onShowAll,
+  isAll,
 }: {
   range: DateRange;
   onRangeChange: (r: DateRange) => void;
+  onShowAll: () => void;
+  isAll: boolean;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="rounded-md border border-[#d7e4f4] bg-white px-2.5 py-1 text-[12px] font-semibold text-[#1e3a5f]">
         Daily
       </span>
+      <button
+        type="button"
+        onClick={onShowAll}
+        className={cn(
+          "rounded-md border px-2.5 py-1 text-[12px] font-semibold",
+          isAll
+            ? "border-blue-500 bg-blue-50 text-blue-700"
+            : "border-[#d7e4f4] bg-white text-[#1e3a5f] hover:bg-slate-50",
+        )}
+      >
+        All
+      </button>
       <label className="inline-flex items-center gap-1.5 rounded-md border border-[#d7e4f4] bg-white px-2 py-1 text-[12px] text-[#334155]">
         <span className="sr-only">From</span>
         <input
@@ -153,11 +169,29 @@ export function StatisticsTrendsPanel({
   eventName = "Event",
   className,
 }: Props) {
-  const [range, setRange] = useState<DateRange>(() => defaultMonthRange());
+  /** Default: show everything; date inputs narrow the view. */
+  const [rangeMode, setRangeMode] = useState<"all" | "custom">("all");
+  const [customRange, setCustomRange] = useState<DateRange>(() => defaultStatsRange());
+
+  const allRange = useMemo(() => defaultStatsRange(participants), [participants]);
+  const range = rangeMode === "all" ? allRange : customRange;
+
+  const setFilteredRange = (next: DateRange) => {
+    setRangeMode("custom");
+    setCustomRange(next);
+  };
+
+  const showAll = () => {
+    setRangeMode("all");
+    setCustomRange(allRange);
+  };
 
   const stats = useMemo(
-    () => buildRegistrationStats(participants, range),
-    [participants, range],
+    () =>
+      buildRegistrationStats(participants, range, {
+        includeUndated: rangeMode === "all",
+      }),
+    [participants, range, rangeMode],
   );
 
   const pieData = useMemo(
@@ -200,18 +234,30 @@ export function StatisticsTrendsPanel({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={showAll}
+            className={cn(
+              "rounded-lg border px-3 py-2 text-[13px] font-semibold shadow-sm",
+              rangeMode === "all"
+                ? "border-blue-500 bg-blue-50 text-blue-700"
+                : "border-[#d7e4f4] bg-white text-[#1e3a5f] hover:bg-slate-50",
+            )}
+          >
+            All
+          </button>
           <label className="inline-flex items-center gap-2 rounded-lg border border-[#d7e4f4] bg-white px-3 py-2 text-[13px] text-[#1e3a5f] shadow-sm">
             <input
               type="date"
               value={range.start}
-              onChange={(e) => setRange((r) => ({ ...r, start: e.target.value }))}
+              onChange={(e) => setFilteredRange({ ...range, start: e.target.value })}
               className="bg-transparent outline-none"
             />
             <span className="text-slate-400">-</span>
             <input
               type="date"
               value={range.end}
-              onChange={(e) => setRange((r) => ({ ...r, end: e.target.value }))}
+              onChange={(e) => setFilteredRange({ ...range, end: e.target.value })}
               className="bg-transparent outline-none"
             />
           </label>
@@ -316,7 +362,12 @@ export function StatisticsTrendsPanel({
         <article className={cn(card, "p-4")}>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-[15px] font-bold text-[#0f274f]">Registration Trend (Daily)</h3>
-            <ChartToolbar range={range} onRangeChange={setRange} />
+            <ChartToolbar
+              range={range}
+              onRangeChange={setFilteredRange}
+              onShowAll={showAll}
+              isAll={rangeMode === "all"}
+            />
           </div>
           <div className="h-[240px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -388,7 +439,12 @@ export function StatisticsTrendsPanel({
             <h3 className="text-[15px] font-bold text-[#0f274f]">
               Registrations by Category (Daily)
             </h3>
-            <ChartToolbar range={range} onRangeChange={setRange} />
+            <ChartToolbar
+              range={range}
+              onRangeChange={setFilteredRange}
+              onShowAll={showAll}
+              isAll={rangeMode === "all"}
+            />
           </div>
           <div className="h-[220px] w-full">
             <ResponsiveContainer width="100%" height="100%">
