@@ -28,43 +28,8 @@ function named(list) {
   return list.map((name) => ({ name }));
 }
 
-const programmeRaw = [
-  ["d1-1", 1, "08:00 – 09:00", "Registration and Networking Coffee", "Registration", "Main Lobby", "-", 0],
-  ["d1-2", 1, "09:00 – 09:30", "Official Opening Ceremony", "Ceremony", "Tsavo Ballroom", "ACA Leadership, Government Representatives", 2],
-  ["d1-3", 1, "09:30 – 10:30", "Keynote Address: The Future of IP Protection in Africa", "Keynote", "Tsavo Ballroom", "International Expert", 1],
-  ["d1-4", 1, "10:30 – 11:00", "Health Break & Networking", "Break", "Exhibition Area", "-", 0],
-  ["d1-5", 1, "11:00 – 12:30", "Panel Discussion: Combating Counterfeiting Through Regional Collaboration", "Panel", "Tsavo Ballroom", "Industry Leaders, Policy Makers", 2],
-  ["d1-6", 1, "12:30 – 14:00", "Lunch Break", "Break", "Simba Restaurant", "-", 0],
-  ["d1-7", 1, "14:00 – 15:30", "Roundtable: Emerging Technologies in IP Enforcement", "Roundtable", "Amboseli Room", "Experts & Stakeholders", 1],
-  ["d1-8", 1, "15:30 – 16:00", "Coffee Break", "Break", "Exhibition Area", "-", 0],
-  ["d1-9", 1, "16:00 – 17:30", "Case Studies: Successful IP Enforcement Initiatives in Africa", "Presentation", "Maasai Room", "Regional Experts", 1],
-  ["d2-1", 2, "09:00 – 10:30", "Roundtable: Digital Tools for IP Protection", "Roundtable", "Amboseli Room", "Industry Leaders", 1],
-  ["d2-2", 2, "10:30 – 11:00", "Networking Break", "Break", "Exhibition Area", "-", 0],
-  ["d2-3", 2, "11:00 – 12:30", "Workshop: Investigating Online Counterfeit Markets", "Workshop", "Maasai Room", "Digital Enforcement Team", 1],
-  ["d2-4", 2, "14:00 – 15:30", "Case Studies: Enforcement Success Stories", "Presentation", "Tsavo Ballroom", "National Agencies", 1],
-  ["d2-5", 2, "16:00 – 17:00", "Industry Showcase & Partner Briefings", "Exhibition", "Exhibition Area", "Sponsors & Exhibitors", 1],
-  ["d3-1", 3, "09:00 – 10:30", "Policy Dialogue: Harmonising Enforcement Frameworks", "Panel", "Tsavo Ballroom", "Policy Makers", 1],
-  ["d3-2", 3, "11:00 – 12:30", "Breakout: Capacity Building for Enforcement Officers", "Workshop", "Amboseli Room", "Training Facilitators", 1],
-  ["d3-3", 3, "14:00 – 15:00", "Closing Ceremony & Communiqué", "Ceremony", "Tsavo Ballroom", "ACA Leadership", 1],
-];
+import { isippeProgramme as programme } from "./isippe-programme.mjs";
 
-const dayLabel = {
-  1: "Day 1 · 16 Nov 2026",
-  2: "Day 2 · 17 Nov 2026",
-  3: "Day 3 · 18 Nov 2026",
-};
-
-const programme = programmeRaw.map(([id, day, time, title, typ, venue, speakers, n]) => ({
-  id,
-  title,
-  description: `${dayLabel[day]} · ${typ}`,
-  time: `Day ${day} · ${time}`,
-  venue,
-  place: venue,
-  badge: typ,
-  speakers: n || (speakers === "-" ? 0 : 1),
-  day,
-}));
 
 const speakers = [
   { id: "amina-yusuf", name: "Dr. Amina Yusuf", role: "Director General", org: "Intellectual Property Office", topic: "Future of IP Enforcement", roleLines: ["Director General", "Intellectual Property Office"], country: "Kenya", flag: "🇰🇪", category: "keynote", badge: "Keynote Speaker", photo: "/assets/speakers/amina-yusuf.jpg", bio: "Leading national efforts on IP protection and market surveillance." },
@@ -157,7 +122,7 @@ const tickets = [
 ];
 
 const venueHighlights = [
-  { id: "vh1", icon: "MapPin", title: "Beachfront Location", text: "PrideInn Flamingo Beach Resort & Spa, Shanzu Beach, Mombasa" },
+  { id: "vh1", icon: "MapPin", title: "Beachfront Location", text: "Mombasa Continental Resort, Shanzu Beach, Mombasa" },
   { id: "vh2", icon: "Users", title: "World-Class Facilities", text: "Modern conference and exhibition spaces" },
   { id: "vh3", icon: "Shield", title: "Secure & Accessible", text: "High security and easy access for delegates" },
   { id: "vh4", icon: "Wifi", title: "Modern Amenities", text: "High-speed internet and full support services" },
@@ -174,7 +139,7 @@ function buildPayload(user) {
   const themeNames = [
     "AUTOMOTIVE SPARE PARTS",
     "AGRICULTURE",
-    "ENERGY, ELECTRICALS AND ELECTRONIC",
+    "ENERGY, ELECTRICALS AND ELECTRONICS",
     "PHARMACEUTICALS AND MEDICAL EQUIPMENT",
     "ALCOHOL AND TOBACCO",
   ];
@@ -182,21 +147,24 @@ function buildPayload(user) {
     engagementType: "symposium",
     engagementName: "ISIPPE-3 — 3rd International Symposium on Intellectual Property Protection and Enforcement",
     category: "legal",
+    overallTheme:
+      "Stepping Up the Fight Against Counterfeiting to Safeguard Public Health and Safety",
     shortDescription:
-      "Strengthening Intellectual Property Protection across Africa and Beyond. PrideInn Flamingo, Mombasa · 16–18 November 2026.",
+      "ISIPPE-3: An International symposium by the Anti-Counterfeit Authority together with the Ministry of Investments, Trade and Industry (MITI). Theme: Stepping Up the Fight Against Counterfeiting to Safeguard Public Health and Safety. 18–19 November 2026, Mombasa Continental Resort, Mombasa.",
     description:
-      "The 3rd International Symposium on Intellectual Property Protection and Enforcement (ISIPPE-3) brings together policymakers, regulators, industry leaders, academia, and practitioners to advance effective strategies for combating counterfeiting, piracy and other forms of intellectual property (IP) infringement.\n\nHosted by the Anti-Counterfeit Authority (ACA), ISIPPE-3 will provide a unique platform for knowledge sharing, policy dialogue and practical solutions towards a safer, more innovative and inclusive global marketplace.",
+      "The 3rd International Symposium on Intellectual Property Protection and Enforcement (ISIPPE-3) brings together policymakers, regulators, industry leaders, academia, and practitioners to advance effective strategies for combating counterfeiting, piracy and other forms of intellectual property (IP) infringement.\n\nOrganised by the Anti-Counterfeit Authority (ACA) in cooperation with the Ministry of Investments, Trade and Industry (MITI), Kenya, ISIPPE-3 will provide a unique platform for knowledge sharing, policy dialogue and practical solutions towards a safer, more innovative and inclusive global marketplace.",
     audience: "mixed",
     tone: "professional",
     language: "en",
     tags: ["ISIPPE-3", "ACA"],
-    startDate: "2026-11-16T06:00:00.000Z",
-    endDate: "2026-11-18T15:00:00.000Z",
+    // Symposium days per provisional agenda (ACA/SYMPOSIUM/2026/INF/10 PROV.)
+    startDate: "2026-11-18T04:30:00.000Z",
+    endDate: "2026-11-19T17:00:00.000Z",
     allDay: false,
     timezone: "Africa/Nairobi",
     mode: "in-person",
-    venue: "PrideInn Flamingo Beach Resort & Spa",
-    venueAddress: "Shanzu Beach, Mombasa, Kenya",
+    venue: "Mombasa Continental Resort",
+    venueAddress: "Serena Road, Near Serena Hotel, Shanzu Beach, Off Mombasa Malindi Road, Mombasa, Kenya",
     city: "Mombasa",
     country: "KE",
     capacity: 1200,
@@ -206,7 +174,7 @@ function buildPayload(user) {
     isFeatured: true,
     publishedAt: new Date().toISOString(),
     registrationEnabled: true,
-    registrationEndDate: "2026-11-16T00:00:00.000Z",
+    registrationEndDate: "2026-11-18T00:00:00.000Z",
     approvalRequired: false,
     waitlistEnabled: true,
     registrationLimit: 1200,

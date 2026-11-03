@@ -14,6 +14,7 @@ import { PublicEventGate } from "../../components/public/PublicEventGate";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { cn } from "../../lib/cn";
 import { engagementToAboutContent } from "../../lib/publicEvent";
+import { engagementBannerUrl } from "../../lib/resources";
 
 const tabs = [
   { id: "overview", label: "Overview", target: "overview" },
@@ -124,7 +125,7 @@ export function AboutPage() {
         breadcrumb="About"
         title={`About ${about.name?.split(' ')?.[0]}`}
         description={about.shortDescription}
-        image="/assets/about-hero.png"
+        image={engagementBannerUrl(engagement)}
         imageAlt={`About ${about.name?.split(' ')?.[0]}`}
         combinedLocation
       />
@@ -338,9 +339,7 @@ export function AboutPage() {
                 <img
                   className="h-full min-h-[160px] w-full rounded-[7px] border border-[#d7e1ed] object-cover"
                   src={
-                    engagement?.bannerImage?.trim() ||
-                    engagement?.logo?.trim() ||
-                    "/assets/about-hero.png"
+                    engagementBannerUrl(engagement)
                   }
                   alt={about.venueTitle || about.name || "Event venue"}
                 />

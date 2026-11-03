@@ -23,7 +23,6 @@ import { apiForm, apiRequest } from "./api";
 import { getAuthUser, getValidAuthToken } from "./auth";
 import { parseKesPrice } from "./ticketAnalytics";
 
-""
 export const EVENT_BG_PHOTO_KEY = "event-background.jpg";
 
 function authToken() {
@@ -79,6 +78,7 @@ export async function getActiveEngagement(): Promise<Engagement | null> {
 function toEngagementFormData(
   input: Record<string, unknown>,
   speakerPhotos: Record<string, File> = {},
+  bannerFile?: File | null,
 ): FormData {
   const photoEntries = Object.entries(speakerPhotos).filter(([, file]) => Boolean(file));
   const avatarFiles = photoEntries.map(([speakerId, file]) => {
@@ -99,6 +99,8 @@ function toEngagementFormData(
       })
     : input.speakers;
   const body: Record<string, unknown> = { ...input, ...(speakersIn ? { speakers } : {}) };
+  // New banner file — clear scalar so the server can fill `bannerImage` from the multipart part.
+  if (bannerFile) body.bannerImage = "";
 
   const formData = new FormData();
   const fields: [string, string | Blob][] = [];
@@ -121,6 +123,10 @@ function toEngagementFormData(
   avatarFiles.forEach((file) => {
     formData.append(FileUploadTypes.Avatar, file, file.name);
   });
+  if (bannerFile) {
+    const name = bannerFile.name?.trim() || EVENT_BG_PHOTO_KEY;
+    formData.append(FileUploadTypes.Banner, bannerFile, name);
+  }
 
   return formData;
 }
@@ -180,9 +186,14 @@ export async function updateEngagementMultipart(
   id: string,
   body: Partial<Engagement>,
   speakerPhotos: Record<string, File> = {},
+  bannerFile?: File | null,
 ) {
   const path = `/engagements/${encodeURIComponent(id)}`;
-  const formData = toEngagementFormData(body as Record<string, unknown>, speakerPhotos);
+  const formData = toEngagementFormData(
+    body as Record<string, unknown>,
+    speakerPhotos,
+    bannerFile,
+  );
   logEngagementMultipartRequest("PATCH", path, formData);
   return apiForm<void>(path, {
     method: "PATCH",
@@ -193,7 +204,7 @@ export async function updateEngagementMultipart(
 
 /**
  * Save engagement exactly like registration `signupAfterPayment`:
- * one multipart/form-data request with scalar/JSON fields + `avatar` file(s).
+ * one multipart/form-data request with scalar/JSON fields + `avatar` / `banner` file(s).
  * POST for create, multipart PATCH for update — never JSON, never `/resources/upload`.
  *
  * @param speakerPhotos map of speakerId → File (filename becomes `{speakerId}.jpg`)
@@ -201,15 +212,20 @@ export async function updateEngagementMultipart(
 export async function saveEngagementLikeRegistration(
   input: NewEngagement | Partial<Engagement>,
   speakerPhotos: Record<string, File> = {},
-  options?: { engagementId?: string | null },
+  options?: { engagementId?: string | null; bannerFile?: File | null },
 ): Promise<Engagement | void> {
   const engagementId = options?.engagementId?.trim();
+  const bannerFile = options?.bannerFile || null;
 
   if (engagementId) {
-    return updateEngagementMultipart(engagementId, input, speakerPhotos);
+    return updateEngagementMultipart(engagementId, input, speakerPhotos, bannerFile);
   }
 
-  const formData = toEngagementFormData(input as Record<string, unknown>, speakerPhotos);
+  const formData = toEngagementFormData(
+    input as Record<string, unknown>,
+    speakerPhotos,
+    bannerFile,
+  );
   logEngagementMultipartRequest("POST", "/engagements", formData);
   return apiForm<Engagement>("/engagements", {
     method: "POST",
@@ -1146,6 +1162,8 @@ export type WizardEngagementInput = {
   facebookUrl?: string;
   twitterUrl?: string;
   linkedinUrl?: string;
+  /** Existing banner resource id/path (preserved on edit when no new file is uploaded). */
+  bannerImage?: string;
   /** Shown as “Need Assistance?” on registration and public surfaces. */
   contactEmail?: string;
   contactPhone?: string;
@@ -1305,6 +1323,7 @@ export function buildEngagementPayload(input: WizardEngagementInput): NewEngagem
     facebookUrl: input.facebookUrl?.trim() || undefined,
     twitterUrl: input.twitterUrl?.trim() || undefined,
     linkedinUrl: input.linkedinUrl?.trim() || undefined,
+    bannerImage: input.bannerImage?.trim() || undefined,
     contactEmail: input.contactEmail?.trim() || undefined,
     // Create only — edit must not overwrite Contacts-tab / existing contactName.
     contactName: input.isEdit ? undefined : user?.fullName,
@@ -1485,6 +1504,7 @@ export function engagementToWizardState(engagement: Engagement) {
     facebookUrl: engagement.facebookUrl || "",
     twitterUrl: engagement.twitterUrl || "",
     linkedinUrl: engagement.linkedinUrl || "",
+    bannerImage: engagement.bannerImage || "",
     contactEmail: engagement.contactEmail || "",
     contactPhone: engagement.contactPhone || "",
     existingSponsors: sponsors,

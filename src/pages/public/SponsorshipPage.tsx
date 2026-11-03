@@ -9,6 +9,7 @@ import {
   type PublicSponsorPackage,
 } from "../../lib/publicEvent";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
+import { engagementBannerUrl } from "../../lib/resources";
 
 
 type Cell = "tick" | "dash" | string;
@@ -86,7 +87,7 @@ export function SponsorshipPage() {
           engagement?.shortDescription?.trim() ||
           "Position your brand as a leader in the fight against counterfeiting and support intellectual property protection and enforcement."
         }
-        image="/assets/about-hero.png"
+        image={engagementBannerUrl(engagement)}
         imageAlt={`${eventName} sponsorship partnership`}
       />
       <section className="pt-[15px] pb-6 sm:pb-10" id="sponsorship">

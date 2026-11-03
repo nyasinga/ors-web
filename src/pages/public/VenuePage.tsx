@@ -12,6 +12,7 @@ import { PublicEventGate } from "../../components/public/PublicEventGate";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { cn } from "../../lib/cn";
 import { engagementToPublicVenue } from "../../lib/publicEvent";
+import { engagementBannerUrl } from "../../lib/resources";
 
 const iconMap: Record<string, LucideIcon> = {
   MapPin,
@@ -49,7 +50,7 @@ export function VenuePage() {
           </>
         }
         description={venue.description}
-        image="/assets/about-hero.png"
+        image={engagementBannerUrl(engagement)}
         imageAlt={`${venue.name}, ${venue.city}`}
         combinedLocation
       />

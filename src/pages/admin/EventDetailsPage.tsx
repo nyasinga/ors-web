@@ -77,6 +77,7 @@ import { cn } from "../../lib/cn";
 import { clearPublicEngagementCache } from "../../lib/publicEvent";
 import { printParticipantTicket } from "../../lib/printParticipantTicket";
 import { listEventParticipants } from "../../lib/eventParticipants";
+import { DEFAULT_EVENT_BANNER, engagementBannerUrl } from "../../lib/resources";
 import {
   analyzeTicketSales,
   fetchEventTransactions,
@@ -399,7 +400,7 @@ function toDetailView(engagement: Engagement | null): DetailView {
     facebook: engagement.facebookUrl || "",
     twitter: engagement.twitterUrl || "",
     linkedin: engagement.linkedinUrl || "",
-    cover: engagement.bannerImage || engagement.logo || "",
+    cover: engagementBannerUrl(engagement),
     organizer: engagement.contactName || "—",
     programme: asProgramme(engagement.programme),
     startDate: engagement.startDate,
@@ -674,7 +675,11 @@ export function EventDetailsPage() {
 
       <div className="flex items-stretch gap-4 rounded-xl border border-[#dfeaf4] bg-[linear-gradient(135deg,#fff_0%,#f7fbff_100%)] px-3.5 py-3 shadow-[0_2px_10px_rgba(57,119,173,.05)] max-[1150px]:flex-wrap max-[820px]:block">
         <div className="h-[118px] w-[300px] flex-none self-center overflow-hidden rounded-[9px] border border-[#dce8f4] bg-[#09165f] max-[820px]:mt-2.5 max-[820px]:h-[145px] max-[820px]:w-full">
-          <img src={detail.cover} alt="" className="h-full w-full object-cover" />
+          <img
+            src={detail.cover || DEFAULT_EVENT_BANNER}
+            alt=""
+            className="h-full w-full object-cover"
+          />
         </div>
         <div className="min-w-0 flex-1">
           <h1 className="my-[3px] flex flex-wrap items-center gap-2 text-[25px] font-extrabold tracking-[-0.7px] text-[#09165f] max-[500px]:text-[22px]">

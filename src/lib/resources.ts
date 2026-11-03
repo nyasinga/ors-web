@@ -50,6 +50,18 @@ function pickResource(payload: unknown): UploadedResource {
   };
 }
 
+export const DEFAULT_EVENT_BANNER = "/assets/about-hero.png";
+
+/** Event page banner: API banner/logo when set, otherwise static default. */
+export function engagementBannerUrl(
+  engagement: { bannerImage?: string | null; logo?: string | null } | null | undefined,
+  fallback: string = DEFAULT_EVENT_BANNER,
+): string {
+  const raw = engagement?.bannerImage?.trim() || engagement?.logo?.trim() || "";
+  if (!raw) return fallback;
+  return resourcePublicUrl(raw) || fallback;
+}
+
 /** Resolve a stored photo field or upload response to a browser-usable URL. */
 export function resourcePublicUrl(resource: UploadedResource | string | null | undefined): string {
   if (!resource) return "";

@@ -19,6 +19,7 @@ import {
 import { PageHero } from "../../components/public/PageHero";
 import { PublicEventGate } from "../../components/public/PublicEventGate";
 import { cn } from "../../lib/cn";
+import { engagementBannerUrl } from "../../lib/resources";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 
 const tabs = [
@@ -184,8 +185,7 @@ function InfoPage() {
       return "";
     }
   }, [engagement]);
-  const heroImage =
-    engagement?.bannerImage || engagement?.logo || "/assets/about-hero.png";
+  const heroImage = engagementBannerUrl(engagement);
   const [activeTab, setActiveTab] =
     useState<(typeof tabs)[number]["id"]>("venue");
 

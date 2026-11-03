@@ -3,6 +3,7 @@ import { PageHero } from "../../components/public/PageHero";
 import { PublicEventGate } from "../../components/public/PublicEventGate";
 import { ProgrammeSchedule } from "../../components/programme/ProgrammeSchedule";
 import { engagementToPublicProgramme } from "../../lib/publicEvent";
+import { engagementBannerUrl } from "../../lib/resources";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 
 /** Programme — content from the public engagement API. */
@@ -17,7 +18,7 @@ export function ProgrammePage() {
         <PageHero
           title="Programme"
           subtitle={eventName}
-          image="/assets/about-hero.png"
+          image={engagementBannerUrl(engagement)}
           imageAlt={`${eventName} programme`}
         />
         <ProgrammeSchedule programme={programme} />

@@ -48,7 +48,7 @@ import { createWizardSteps, eventTypeOptions } from "../../data/adminEvents";
 import { COUNTRY_CODE_OPTIONS } from "../../data/countries";
 import { ApiError } from "../../lib/api";
 import { getAuthUser } from "../../lib/auth";
-import { resourcePublicUrl } from "../../lib/resources";
+import { DEFAULT_EVENT_BANNER, resourcePublicUrl } from "../../lib/resources";
 import {
   SPEAKER_PHOTO_KEY,
   clearSpeakerPhotoDrafts,
@@ -227,8 +227,9 @@ export function CreateEventPage() {
   const [capacity, setCapacity] = useState("");
   const [virtualLink, setVirtualLink] = useState("");
   const [eventBackgroundFile, setEventBackgroundFile] = useState<File | null>(null);
-  console.log(eventBackgroundFile);
   const [eventBackgroundPreview, setEventBackgroundPreview] = useState("");
+  /** Existing API banner id/path — kept on save when no new file is chosen. */
+  const [eventBannerImageId, setEventBannerImageId] = useState("");
   const [programTab, setProgramTab] = useState("schedule");
   const [day, setDay] = useState("1");
   const [extraProgramDays, setExtraProgramDays] = useState(0);
@@ -296,6 +297,7 @@ export function CreateEventPage() {
   const [agendaPreviewOpen, setAgendaPreviewOpen] = useState(false);
   const [speakerModal, setSpeakerModal] = useState(false);
   const [packageModal, setPackageModal] = useState(false);
+  const [editingPackageId, setEditingPackageId] = useState<string | null>(null);
   const [newSessionTitle, setNewSessionTitle] = useState("");
   const [newSessionDesc, setNewSessionDesc] = useState("");
   const [newSessionType, setNewSessionType] = useState("Session");
@@ -419,6 +421,79 @@ export function CreateEventPage() {
       pendingSpeakerPhotoPreviews[sp.id] || (sp.photo ? resourcePublicUrl(sp.photo) : ""),
     );
     setSpeakerModal(true);
+  };
+
+  const resetPackageForm = () => {
+    setEditingPackageId(null);
+    setPkgName("");
+    setPkgPrice("");
+    setPkgDesc("");
+    setPkgAvail("1");
+    setPkgBenefits(["Logo on main stage backdrop"]);
+  };
+
+  const openAddPackage = () => {
+    resetPackageForm();
+    setPackageModal(true);
+  };
+
+  const openEditPackage = (pkg: (typeof packages)[number]) => {
+    setEditingPackageId(pkg.id);
+    setPkgName(pkg.name || "");
+    setPkgPrice(pkg.price ? String(pkg.price) : "");
+    setPkgDesc(pkg.subtitle || "");
+    const availRaw = (pkg.availability || "").replace(/\s*available\s*$/i, "").trim();
+    setPkgAvail(availRaw || "Open");
+    setPkgBenefits(pkg.benefits.length ? [...pkg.benefits] : [""]);
+    setPackageModal(true);
+  };
+
+  const closePackageModal = () => {
+    setPackageModal(false);
+    resetPackageForm();
+  };
+
+  const savePackageFromModal = () => {
+    if (!pkgName.trim() || !pkgPrice.trim()) {
+      toast.error("Enter package name and price.");
+      return;
+    }
+    const name = pkgName.trim();
+    const price = Number(pkgPrice) || 0;
+    const subtitle = pkgDesc.trim() || "Custom sponsorship package";
+    const availTrim = pkgAvail.trim();
+    const availability = /available|open|limited|sold/i.test(availTrim)
+      ? availTrim
+      : `${availTrim || "1"} Available`;
+    const benefits = pkgBenefits.map((b) => b.trim()).filter(Boolean);
+
+    if (editingPackageId) {
+      setPackages((prev) =>
+        prev.map((p) =>
+          p.id === editingPackageId
+            ? { ...p, name, subtitle, price, availability, benefits }
+            : p,
+        ),
+      );
+      toast.success(`${name} package updated`);
+    } else {
+      setPackages((prev) => [
+        ...prev,
+        {
+          id: `pkg${Date.now()}`,
+          name,
+          subtitle,
+          price,
+          availability,
+          benefits,
+          active: true,
+          tone: "orange" as const,
+        },
+      ]);
+      toast.success(`${name} package added`);
+    }
+    closePackageModal();
+    setProgramTab("sponsorship");
   };
 
   /** Writes into local speakers[] only — no API call until Save as Draft / Publish. */
@@ -632,6 +707,11 @@ export function CreateEventPage() {
         setFacebookUrl(state.facebookUrl);
         setTwitterUrl(state.twitterUrl);
         setLinkedinUrl(state.linkedinUrl);
+        setEventBannerImageId(state.bannerImage || "");
+        setEventBackgroundFile(null);
+        setEventBackgroundPreview(
+          state.bannerImage ? resourcePublicUrl(state.bannerImage) : "",
+        );
         setContactEmail(state.contactEmail);
         setContactPhone(state.contactPhone);
       } catch (err) {
@@ -851,6 +931,7 @@ export function CreateEventPage() {
         facebookUrl,
         twitterUrl,
         linkedinUrl,
+        bannerImage: eventBackgroundFile ? undefined : eventBannerImageId || undefined,
         contactEmail,
         contactPhone,
         existingSponsors,
@@ -859,12 +940,13 @@ export function CreateEventPage() {
       console.log("[engagement submit] speakers + pending photos", {
         speakers: payload.speakers,
         pendingPhotoSpeakerIds: Object.keys(pendingSpeakerPhotos),
+        hasBannerFile: Boolean(eventBackgroundFile),
       });
 
-      // Exact registration pattern: one multipart FormData (fields + avatar files).
-      
+      // Multipart FormData: fields + speaker avatars + optional event banner.
       const saved = await saveEngagementLikeRegistration(payload, pendingSpeakerPhotos, {
         engagementId: isEdit ? editId : null,
+        bannerFile: eventBackgroundFile,
       });
 
       const id =
@@ -1325,7 +1407,7 @@ export function CreateEventPage() {
                   View Larger
                 </button>
               </div>
-              <img src="/assets/about-hero.png" alt="" className="h-28 w-full object-cover" />
+              <img src={eventBackgroundPreview || DEFAULT_EVENT_BANNER} alt="" className="h-28 w-full object-cover" />
               <div className="p-4">
                 <p className="font-semibold text-ink line-clamp-2">{title}</p>
                 <p className="mt-2 line-clamp-3 text-sm text-mute">{description}</p>
@@ -1618,7 +1700,7 @@ export function CreateEventPage() {
                 </button>
               </div>
               <img
-                src="/assets/about-hero.png"
+                src={eventBackgroundPreview || DEFAULT_EVENT_BANNER}
                 alt={venueName || "Venue preview"}
                 className="h-28 w-full object-cover"
               />
@@ -1884,7 +1966,7 @@ export function CreateEventPage() {
                     <Button variant="outline" size="sm">
                       Import from template
                     </Button>
-                    <Button size="sm" onClick={() => setPackageModal(true)}>
+                    <Button size="sm" onClick={openAddPackage}>
                       <Plus size={14} /> Add Package
                     </Button>
                   </div>
@@ -1913,7 +1995,7 @@ export function CreateEventPage() {
                           ))}
                         </ul>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Toggle
                           checked={pkg.active}
                           onChange={(next) =>
@@ -1925,7 +2007,15 @@ export function CreateEventPage() {
                         />
                         <button
                           type="button"
-                          className="grid h-8 w-8 place-items-center rounded-lg text-red hover:bg-red-50"
+                          className="inline-flex h-8 items-center gap-1 rounded-lg border border-blue-200 bg-white px-2.5 text-sm font-semibold text-blue hover:bg-blue-50"
+                          aria-label={`Edit ${pkg.name}`}
+                          onClick={() => openEditPackage(pkg)}
+                        >
+                          <Pencil size={13} /> Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 text-red hover:bg-red-50"
                           aria-label={`Delete ${pkg.name}`}
                           onClick={() => setPackages((prev) => prev.filter((p) => p.id !== pkg.id))}
                         >
@@ -1940,8 +2030,8 @@ export function CreateEventPage() {
                   <div className="mt-6 rounded-lg border border-slate-200 p-4">
                     <h4 className="font-bold text-ink">Benefits Mapping</h4>
                     <p className="mt-1 text-sm text-mute">
-                      Tick which benefits each package includes. This drives the Package Comparison
-                      table on the public Sponsorship page.
+                      Edit benefit wording, then tick which packages include it. This drives the
+                      Package Comparison table on the public Sponsorship page.
                     </p>
                     {(() => {
                       const benefitRows = [
@@ -1968,6 +2058,28 @@ export function CreateEventPage() {
                               };
                             }
                             return p;
+                          }),
+                        );
+                      };
+                      const renameBenefitRow = (from: string, toRaw: string) => {
+                        const to = toRaw.trim();
+                        if (!to || to === from) return;
+                        setPackages((prev) =>
+                          prev.map((p) => {
+                            const idx = p.benefits.findIndex(
+                              (b) => b.toLowerCase() === from.toLowerCase(),
+                            );
+                            if (idx < 0) return p;
+                            const next = [...p.benefits];
+                            const alreadyHasTo = next.some(
+                              (b, i) => i !== idx && b.toLowerCase() === to.toLowerCase(),
+                            );
+                            if (alreadyHasTo) {
+                              next.splice(idx, 1);
+                            } else {
+                              next[idx] = to;
+                            }
+                            return { ...p, benefits: next };
                           }),
                         );
                       };
@@ -2035,8 +2147,34 @@ export function CreateEventPage() {
                                 ) : (
                                   benefitRows.map((benefit) => (
                                     <tr key={benefit}>
-                                      <td className="border border-slate-200 px-2 py-2 text-left font-medium text-ink">
-                                        {benefit}
+                                      <td className="border border-slate-200 px-2 py-1.5 text-left">
+                                        <input
+                                          key={benefit}
+                                          type="text"
+                                          defaultValue={benefit}
+                                          aria-label={`Edit benefit: ${benefit}`}
+                                          title="Edit benefit wording"
+                                          onBlur={(e) => {
+                                            const next = e.currentTarget.value.trim();
+                                            if (!next) {
+                                              e.currentTarget.value = benefit;
+                                              return;
+                                            }
+                                            renameBenefitRow(benefit, next);
+                                          }}
+                                          onKeyDown={(e) => {
+                                            if (e.key === "Enter") {
+                                              e.preventDefault();
+                                              (e.target as HTMLInputElement).blur();
+                                            }
+                                            if (e.key === "Escape") {
+                                              e.preventDefault();
+                                              (e.target as HTMLInputElement).value = benefit;
+                                              (e.target as HTMLInputElement).blur();
+                                            }
+                                          }}
+                                          className="w-full min-w-[220px] rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm font-medium text-ink outline-none hover:border-slate-200 focus:border-blue focus:bg-white"
+                                        />
                                       </td>
                                       {packages.map((pkg) => {
                                         const checked = pkg.benefits.some(
@@ -2307,7 +2445,7 @@ export function CreateEventPage() {
               key={`preview-reg-${previewPulse}`}
               className="overflow-hidden create-wizard-preview-pulse"
             >
-              <img src="/assets/about-hero.png" alt="" className="h-28 w-full object-cover" />
+              <img src={eventBackgroundPreview || DEFAULT_EVENT_BANNER} alt="" className="h-28 w-full object-cover" />
               <div className="p-4">
                 <p className="font-semibold text-ink line-clamp-2">{title}</p>
                 <p className="mt-2 text-sm text-mute">{previewDate}</p>
@@ -2351,6 +2489,7 @@ export function CreateEventPage() {
                   if (!file) {
                     setEventBackgroundFile(null);
                     setEventBackgroundPreview("");
+                    setEventBannerImageId("");
                     return;
                   }
 
@@ -2364,6 +2503,7 @@ export function CreateEventPage() {
                   );
 
                   setEventBackgroundFile(renamedFile);
+                  setEventBannerImageId("");
                   setEventBackgroundPreview(
                     URL.createObjectURL(renamedFile)
                   );
@@ -2474,7 +2614,7 @@ export function CreateEventPage() {
                   View Full Event Page
                 </button>
               </div>
-              <img src="/assets/about-hero.png" alt="" className="h-32 w-full object-cover" />
+              <img src={eventBackgroundPreview || DEFAULT_EVENT_BANNER} alt="" className="h-32 w-full object-cover" />
               <div className="p-4">
                 <Pill tone="green">{eventType}</Pill>
                 <p className="mt-2 font-semibold text-ink">{title}</p>
@@ -2878,51 +3018,26 @@ export function CreateEventPage() {
 
       <Modal
         open={packageModal}
-        onClose={() => setPackageModal(false)}
-        title="Add Sponsorship Package"
+        onClose={closePackageModal}
+        title={editingPackageId ? "Edit Sponsorship Package" : "Add Sponsorship Package"}
         className="md:max-w-lg"
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setPackageModal(false)}>
+            <Button variant="outline" onClick={closePackageModal}>
               Cancel
             </Button>
-            <Button
-              onClick={() => {
-                if (!pkgName.trim() || !pkgPrice.trim()) {
-                  toast.error("Enter package name and price.");
-                  return;
-                }
-                const name = pkgName.trim();
-                setPackages((prev) => [
-                  ...prev,
-                  {
-                    id: `pkg${prev.length + 1}`,
-                    name,
-                    subtitle: pkgDesc.trim() || "Custom sponsorship package",
-                    price: Number(pkgPrice) || 0,
-                    availability: `${pkgAvail} Available`,
-                    benefits: pkgBenefits.filter(Boolean),
-                    active: true,
-                    tone: "orange" as const,
-                  },
-                ]);
-                setPkgName("");
-                setPkgPrice("");
-                setPkgDesc("");
-                setPkgAvail("1");
-                setPkgBenefits(["Logo on main stage backdrop"]);
-                setPackageModal(false);
-                setProgramTab("sponsorship");
-                toast.success(`${name} package added`);
-              }}
-            >
-              Save Package
+            <Button onClick={savePackageFromModal}>
+              {editingPackageId ? "Save changes" : "Save Package"}
             </Button>
           </div>
         }
       >
         <div className="grid gap-3">
-          <p className="text-sm text-mute">Create a new sponsorship package for your event.</p>
+          <p className="text-sm text-mute">
+            {editingPackageId
+              ? "Update this sponsorship package. Benefit ticks in Benefits Mapping stay in sync."
+              : "Create a new sponsorship package for your event."}
+          </p>
           <Input
             label="Package Name"
             required
@@ -2955,7 +3070,7 @@ export function CreateEventPage() {
             required
             value={pkgAvail}
             onChange={(e) => setPkgAvail(e.target.value)}
-            placeholder="1"
+            placeholder="Open or 1"
           />
           <div>
             <p className="mb-1.5 text-sm font-medium text-ink">
@@ -2963,14 +3078,31 @@ export function CreateEventPage() {
             </p>
             <div className="grid gap-2">
               {pkgBenefits.map((b, i) => (
-                <Input
-                  key={i}
-                  label={`Benefit ${i + 1}`}
-                  value={b}
-                  onChange={(e) =>
-                    setPkgBenefits((prev) => prev.map((x, idx) => (idx === i ? e.target.value : x)))
-                  }
-                />
+                <div key={i} className="flex items-end gap-2">
+                  <div className="min-w-0 flex-1">
+                    <Input
+                      label={`Benefit ${i + 1}`}
+                      value={b}
+                      onChange={(e) =>
+                        setPkgBenefits((prev) =>
+                          prev.map((x, idx) => (idx === i ? e.target.value : x)),
+                        )
+                      }
+                    />
+                  </div>
+                  {pkgBenefits.length > 1 ? (
+                    <button
+                      type="button"
+                      className="mb-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-slate-200 text-red hover:bg-red-50"
+                      aria-label={`Remove benefit ${i + 1}`}
+                      onClick={() =>
+                        setPkgBenefits((prev) => prev.filter((_, idx) => idx !== i))
+                      }
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  ) : null}
+                </div>
               ))}
             </div>
             <Button

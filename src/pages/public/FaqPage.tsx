@@ -15,6 +15,7 @@ import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
 import { engagementToPublicFaqs } from "../../lib/publicEvent";
+import { engagementBannerUrl } from "../../lib/resources";
 
 const icons = {
   FileText,
@@ -63,7 +64,7 @@ export function FaqPage() {
       <PageHero
         title="Frequently Asked Questions"
         description={`Find answers to common questions about ${event.name || "this event"} registration, payments, participation and more.`}
-        image="/assets/about-hero.png"
+        image={engagementBannerUrl(engagement)}
         imageAlt={`${event.name || "Event"} frequently asked questions`}
       />
 

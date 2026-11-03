@@ -3,6 +3,7 @@ import { PageHero } from "../../components/public/PageHero";
 import { PublicEventGate } from "../../components/public/PublicEventGate";
 import { SpeakersDirectory } from "../../components/speakers/SpeakersDirectory";
 import { engagementToPublicSpeakers } from "../../lib/publicEvent";
+import { engagementBannerUrl } from "../../lib/resources";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 
 const container =
@@ -20,7 +21,7 @@ export function SpeakersPage() {
         <PageHero
           title="Speakers"
           subtitle={eventName}
-          image="/assets/about-hero.png"
+          image={engagementBannerUrl(engagement)}
           imageAlt={`${eventName} speakers`}
         />
         <div id="speakers">

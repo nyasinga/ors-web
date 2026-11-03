@@ -18,6 +18,7 @@ import { PublicEventGate } from "../../components/public/PublicEventGate";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { cn } from "../../lib/cn";
 import { engagementToHomeContent } from "../../lib/publicEvent";
+import { engagementBannerUrl } from "../../lib/resources";
 
 const featureIcons = [Globe2, Users, Handshake, ChartColumnIncreasing, Cog] as const;
 const featureTones = ["blue", "green", "blue", "blue", "blue"] as const;
@@ -504,7 +505,7 @@ export function HomePage() {
             id="venue"
           >
             <img
-              src="/assets/about-hero.png"
+              src={engagementBannerUrl(engagement)}
               alt={home.venueImageAlt}
               className="absolute inset-0 block h-full w-full object-cover"
             />
@@ -630,10 +631,10 @@ export function HomePage() {
       {/* Venue visual and information CTA */}
       <div className="relative z-[1] flex min-w-0 flex-col gap-0 lg:border-l lg:border-[#e1e7ef] lg:pl-10">
         <div className="relative mb-5 h-[190px] overflow-hidden rounded-2xl bg-[#f1f5f9] sm:h-[240px]">
-          {engagement?.bannerImage ? (
+          {engagement?.bannerImage || engagement?.logo ? (
             <img
-              src={engagement.bannerImage}
-              alt="ISIPPE-3 event venue"
+              src={engagementBannerUrl(engagement)}
+              alt={home.venueImageAlt}
               className="h-full w-full object-cover"
             />
           ) : (
@@ -641,10 +642,10 @@ export function HomePage() {
               <div className="text-center">
                 <MapPin className="mx-auto mb-2 h-9 w-9 text-[#08713f]" />
                 <p className="text-sm font-bold text-[#10213d]">
-                  ISIPPE-3
+                  {home.venueName || home.brandYear}
                 </p>
                 <p className="mt-1 text-xs text-[#647084]">
-                  Mombasa, Kenya
+                  {home.venueCityCountry}
                 </p>
               </div>
             </div>
