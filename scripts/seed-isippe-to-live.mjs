@@ -150,15 +150,15 @@ function buildPayload(user) {
     overallTheme:
       "Stepping Up the Fight Against Counterfeiting to Safeguard Public Health and Safety",
     shortDescription:
-      "ISIPPE-3: An International symposium by the Anti-Counterfeit Authority together with the Ministry of Investments, Trade and Industry (MITI). Theme: Stepping Up the Fight Against Counterfeiting to Safeguard Public Health and Safety. 18–19 November 2026, Mombasa Continental Resort, Mombasa.",
+      "ISIPPE-3: An International symposium by the Anti-Counterfeit Authority together with the Ministry of Investments, Trade and Industry (MITI). Theme: Stepping Up the Fight Against Counterfeiting to Safeguard Public Health and Safety. 16–19 November 2026, Mombasa Continental Resort, Mombasa (pre-events 16–17 Nov; symposium 18–19 Nov).",
     description:
-      "The 3rd International Symposium on Intellectual Property Protection and Enforcement (ISIPPE-3) brings together policymakers, regulators, industry leaders, academia, and practitioners to advance effective strategies for combating counterfeiting, piracy and other forms of intellectual property (IP) infringement.\n\nOrganised by the Anti-Counterfeit Authority (ACA) in cooperation with the Ministry of Investments, Trade and Industry (MITI), Kenya, ISIPPE-3 will provide a unique platform for knowledge sharing, policy dialogue and practical solutions towards a safer, more innovative and inclusive global marketplace.",
+      "The 3rd International Symposium on Intellectual Property Protection and Enforcement (ISIPPE-3) brings together policymakers, regulators, industry leaders, academia, and practitioners to advance effective strategies for combating counterfeiting, piracy and other forms of intellectual property (IP) infringement.\n\nOrganised by the Anti-Counterfeit Authority (ACA) in cooperation with the Ministry of Investments, Trade and Industry (MITI), Kenya, ISIPPE-3 will provide a unique platform for knowledge sharing, policy dialogue and practical solutions towards a safer, more innovative and inclusive global marketplace.\n\nPre-event activities (16–17 November) include the BCOCC meeting, brand/product knowledge training, and destruction of counterfeit goods. The main symposium runs 18–19 November 2026.",
     audience: "mixed",
     tone: "professional",
     language: "en",
     tags: ["ISIPPE-3", "ACA"],
-    // Symposium days per provisional agenda (ACA/SYMPOSIUM/2026/INF/10 PROV.)
-    startDate: "2026-11-18T04:30:00.000Z",
+    // Full programme window: pre-events 16–17 Nov + symposium 18–19 Nov
+    startDate: "2026-11-16T05:00:00.000Z",
     endDate: "2026-11-19T17:00:00.000Z",
     allDay: false,
     timezone: "Africa/Nairobi",
