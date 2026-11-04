@@ -36,6 +36,7 @@ import {
 import { EventFaqsTab } from "../../components/admin/EventFaqsTab";
 import { EventProgrammeSchedule } from "../../components/admin/EventProgrammeSchedule";
 import { EventVenueContentTab } from "../../components/admin/EventVenueContentTab";
+import type { AddedParticipant } from "../../components/admin/AddParticipantModal";
 import { ParticipantsTab } from "../../components/admin/ParticipantsTab";
 import {
   PaymentsDashboard,
@@ -44,6 +45,7 @@ import {
 import type { PaymentTxStatus } from "../../data/adminOps";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
+import ImagePicker from "../../components/ui/ImagePicker";
 import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import { ScrollableNav } from "../../components/ui/ScrollableNav";
@@ -77,7 +79,12 @@ import { cn } from "../../lib/cn";
 import { clearPublicEngagementCache } from "../../lib/publicEvent";
 import { printParticipantTicket } from "../../lib/printParticipantTicket";
 import { listEventParticipants } from "../../lib/eventParticipants";
-import { DEFAULT_EVENT_BANNER, engagementBannerUrl } from "../../lib/resources";
+import {
+  DEFAULT_EVENT_BANNER,
+  engagementBannerUrl,
+  resourcePublicUrl,
+  uploadResource,
+} from "../../lib/resources";
 import {
   analyzeTicketSales,
   fetchEventTransactions,
@@ -2823,8 +2830,69 @@ type SponsorRow = {
   status: SponsorRowStatus;
   value: number;
   contact: string;
+  /** Initials fallback when no logo image is available. */
   logo: string;
+  /** Resolved organisation logo URL (registration photo or CRM logo). */
+  logoUrl?: string;
+  /** Row comes from a sponsor/exhibitor registration ticket, not CRM/package JSON. */
+  fromRegistration?: boolean;
 };
+
+/** Marketing package tiers live on engagement.sponsors with a benefits list. */
+function isMarketingPackage(s: EngagementSponsor): boolean {
+  return Array.isArray(s.benefits) && s.benefits.length > 0;
+}
+
+function sponsorStatusFromParticipant(
+  bucket?: AddedParticipant["verificationBucket"],
+  rawStatus?: string,
+): SponsorRowStatus {
+  if (bucket === "confirmed" || bucket === "waived" || bucket === "complimentary") {
+    return "Confirmed";
+  }
+  if (bucket === "cancelled" || rawStatus === "cancelled") return "Declined";
+  return "Pending";
+}
+
+function tierFromTicketPrice(
+  price: number | undefined,
+  packages: EngagementSponsor[],
+): string {
+  if (price != null && Number.isFinite(price) && price > 0) {
+    const match = packages.find((p) => parseSponsorValue(p.price) === price && p.tier);
+    if (match?.tier) return normalizeSponsorType(match.tier);
+    if (match?.name) return normalizeSponsorType(match.name);
+  }
+  return SPONSOR_TYPE_OPTIONS[0];
+}
+
+function mapRegisteredSponsor(
+  p: AddedParticipant,
+  packages: EngagementSponsor[],
+): SponsorRow {
+  const org = p.org && p.org !== "—" ? p.org : "";
+  const name = org || p.name || "Sponsor";
+  const contact = [p.name, p.email].filter(Boolean).join(" · ") || "—";
+  const logo =
+    name
+      .split(/\s+/)
+      .map((w) => w[0])
+      .join("")
+      .slice(0, 3)
+      .toUpperCase() || "SP";
+  return {
+    id: `reg-${p.ticketID || p.id}`,
+    name,
+    category: p.category && p.category !== "—" ? p.category : "Private Sector",
+    type: tierFromTicketPrice(p.ticketPrice, packages),
+    status: sponsorStatusFromParticipant(p.verificationBucket, p.rawStatus),
+    value: Number.isFinite(Number(p.ticketPrice)) ? Number(p.ticketPrice) : 0,
+    contact,
+    logo,
+    logoUrl: p.photoUrl || undefined,
+    fromRegistration: true,
+  };
+}
 
 function parseSponsorValue(price?: number | string): number {
   if (typeof price === "number" && Number.isFinite(price)) return price;
@@ -2886,6 +2954,7 @@ function mapApiSponsors(list: EngagementSponsor[]): SponsorRow[] {
       value: parseSponsorValue(rawPrice),
       contact: s.contact || "—",
       logo,
+      logoUrl: resourcePublicUrl(s.logo) || undefined,
     };
   });
 }
@@ -2909,6 +2978,8 @@ function sponsorRowsToApi(
       contact: s.contact,
       status: s.status,
       active: s.status === "Confirmed",
+      // Explicit logoUrl (including cleared/empty) wins over previous CRM logo.
+      logo: s.logoUrl ? s.logoUrl : undefined,
       // Preserve marketing package benefits — CRM edits must not wipe them.
       benefits: prev?.benefits?.length ? [...prev.benefits] : prev?.benefits,
       availability: prev?.availability,
@@ -2921,6 +2992,25 @@ function sponsorStatusClass(status: SponsorRowStatus) {
   if (status === "Confirmed") return "bg-[#d7fbe8] text-[#087443]";
   if (status === "Pending") return "bg-[#fff0d2] text-[#a85b00]";
   return "bg-[#ffe1e1] text-[#c91e2c]";
+}
+
+function SponsorLogoThumb({ url, initials }: { url?: string; initials: string }) {
+  const [failed, setFailed] = useState(false);
+  if (!url || failed) {
+    return (
+      <span className="flex h-[30px] w-[30px] items-center justify-center rounded-[7px] bg-[#f1f7ff] text-[13px] font-extrabold text-[#075bff]">
+        {initials}
+      </span>
+    );
+  }
+  return (
+    <img
+      src={url}
+      alt=""
+      className="h-[30px] w-[30px] rounded-[7px] object-cover bg-[#f1f7ff]"
+      onError={() => setFailed(true)}
+    />
+  );
 }
 
 function formatKes(n: number) {
@@ -3039,7 +3129,33 @@ function SponsorsTab({
   const [editing, setEditing] = useState<SponsorRow | null>(null);
   const [saving, setSaving] = useState(false);
   const [localExtra, setLocalExtra] = useState<SponsorRow[]>([]);
+  const [registeredRows, setRegisteredRows] = useState<SponsorRow[]>([]);
+  const [registeredLoading, setRegisteredLoading] = useState(false);
+  const [logoDraftFile, setLogoDraftFile] = useState<File | null>(null);
+  const [logoDraftPreview, setLogoDraftPreview] = useState("");
+  const [logoCleared, setLogoCleared] = useState(false);
   const toast = useToast();
+
+  useEffect(() => {
+    if (!modalOpen) {
+      setLogoDraftFile(null);
+      setLogoDraftPreview("");
+      setLogoCleared(false);
+      return;
+    }
+    setLogoDraftFile(null);
+    setLogoDraftPreview(editing?.logoUrl || "");
+    setLogoCleared(false);
+  }, [modalOpen, editing]);
+
+  const packageSponsors = useMemo(
+    () => sponsors.filter(isMarketingPackage),
+    [sponsors],
+  );
+  const crmSponsors = useMemo(
+    () => sponsors.filter((s) => !isMarketingPackage(s)),
+    [sponsors],
+  );
 
   const persistSponsors = async (rows: SponsorRow[], message: string) => {
     if (!fromApi) {
@@ -3048,7 +3164,9 @@ function SponsorsTab({
     }
     setSaving(true);
     try {
-      await updateEngagement(eventId, { sponsors: sponsorRowsToApi(rows, sponsors) });
+      // Keep marketing packages intact; only rewrite CRM / registration-derived rows.
+      const crmApi = sponsorRowsToApi(rows, crmSponsors);
+      await updateEngagement(eventId, { sponsors: [...packageSponsors, ...crmApi] });
       await onChanged();
       setModalOpen(false);
       setEditing(null);
@@ -3060,8 +3178,58 @@ function SponsorsTab({
     }
   };
 
-  const apiRows = useMemo(() => mapApiSponsors(sponsors), [sponsors]);
-  const source: SponsorRow[] = [...localExtra, ...apiRows];
+  useEffect(() => {
+    if (!fromApi || !eventId) {
+      setRegisteredRows([]);
+      return;
+    }
+    let cancelled = false;
+    setRegisteredLoading(true);
+    void (async () => {
+      try {
+        const all = await listEventParticipants(eventId);
+        if (cancelled) return;
+        const want =
+          mode === "exhibitors"
+            ? all.filter((p) => {
+                const t = String(p.participationType || "").toLowerCase();
+                return t === "exhibitor" || p.type === "Exhibitor";
+              })
+            : all.filter((p) => {
+                const t = String(p.participationType || "").toLowerCase();
+                return t === "sponsor" || p.type === "Sponsor";
+              });
+        setRegisteredRows(want.map((p) => mapRegisteredSponsor(p, packageSponsors)));
+      } catch {
+        if (!cancelled) setRegisteredRows([]);
+      } finally {
+        if (!cancelled) setRegisteredLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fromApi, eventId, mode, packageSponsors]);
+
+  const apiRows = useMemo(() => mapApiSponsors(crmSponsors), [crmSponsors]);
+
+  const source: SponsorRow[] = useMemo(() => {
+    const crmIds = new Set(apiRows.map((s) => s.id));
+    const crmKeys = new Set(
+      apiRows.flatMap((s) => {
+        const keys = [s.name.toLowerCase(), s.contact.toLowerCase()];
+        return keys.filter(Boolean);
+      }),
+    );
+    const uniqueRegistered = registeredRows.filter((s) => {
+      if (crmIds.has(s.id)) return false;
+      const nameKey = s.name.toLowerCase();
+      const contactKey = s.contact.toLowerCase();
+      if (crmKeys.has(nameKey) || (contactKey && crmKeys.has(contactKey))) return false;
+      return true;
+    });
+    return [...localExtra, ...uniqueRegistered, ...apiRows];
+  }, [localExtra, registeredRows, apiRows]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -3474,9 +3642,7 @@ function SponsorsTab({
                     </td>
                     <td className="px-2 py-3 text-slate-500">{start + i + 1}</td>
                     <td className="px-2 py-3">
-                      <span className="flex h-[30px] w-[30px] items-center justify-center rounded-[7px] bg-[#f1f7ff] text-[13px] font-extrabold text-[#075bff]">
-                        {s.logo}
-                      </span>
+                      <SponsorLogoThumb url={s.logoUrl} initials={s.logo} />
                     </td>
                     <td className="px-2 py-3 font-semibold">{s.name}</td>
                     <td className="px-2 py-3 text-slate-600">{s.category}</td>
@@ -3509,9 +3675,14 @@ function SponsorsTab({
                         </button>
                         <button
                           type="button"
-                          title={`Delete ${s.name}`}
-                          disabled={saving}
+                          title={
+                            s.fromRegistration
+                              ? `Cancel this ${noun} from the Participants tab`
+                              : `Delete ${s.name}`
+                          }
+                          disabled={saving || Boolean(s.fromRegistration)}
                           onClick={() => {
+                            if (s.fromRegistration) return;
                             if (!window.confirm(`Remove ${noun} “${s.name}”?`)) return;
                             if (live) {
                               void persistSponsors(
@@ -3535,9 +3706,11 @@ function SponsorsTab({
             </table>
             {visible.length === 0 ? (
               <div className="p-8 text-center text-sm text-slate-500">
-                {live && source.length === 0
-                  ? `No ${noun}ship packages saved for this event yet.`
-                  : `No ${noun}s match your filters.`}
+                {live && source.length === 0 && !registeredLoading
+                  ? `No registered ${noun}s for this event yet.`
+                  : registeredLoading
+                    ? `Loading ${noun}s…`
+                    : `No ${noun}s match your filters.`}
               </div>
             ) : null}
           </div>
@@ -3735,38 +3908,72 @@ function SponsorsTab({
                 const value = Number(data.get("value") || 0);
                 const contact = String(data.get("contact") || "").trim();
                 if (!name || !category || !contact) return;
-                const entry: SponsorRow = {
-                  id: editing?.id || `spn-${Date.now()}`,
-                  name,
-                  category,
-                  type,
-                  status,
-                  value,
-                  contact,
-                  logo: name
-                    .split(/\s+/)
-                    .map((x) => x[0])
-                    .join("")
-                    .slice(0, 3)
-                    .toUpperCase(),
-                };
-                if (live) {
-                  const next = editing
-                    ? source.map((row) => (row.id === editing.id ? entry : row))
-                    : [...source, entry];
-                  void persistSponsors(next, editing ? `${Noun} updated` : `${Noun} added`);
+
+                void (async () => {
+                  let nextLogoUrl = logoCleared ? undefined : editing?.logoUrl;
+                  if (logoDraftFile) {
+                    try {
+                      setSaving(true);
+                      const uploaded = await uploadResource(logoDraftFile, {
+                        resourceName: `sponsor-logo-${Date.now()}`,
+                      });
+                      nextLogoUrl =
+                        resourcePublicUrl(uploaded) ||
+                        resourcePublicUrl(uploaded.resourceID) ||
+                        uploaded.url ||
+                        undefined;
+                      if (!nextLogoUrl) {
+                        throw new Error("Upload succeeded but no logo URL was returned.");
+                      }
+                    } catch (err) {
+                      setSaving(false);
+                      toast.error(
+                        err instanceof ApiError
+                          ? err.message
+                          : err instanceof Error
+                            ? err.message
+                            : "Failed to upload logo",
+                      );
+                      return;
+                    }
+                  }
+
+                  const entry: SponsorRow = {
+                    id: editing?.id || `spn-${Date.now()}`,
+                    name,
+                    category,
+                    type,
+                    status,
+                    value,
+                    contact,
+                    logo: name
+                      .split(/\s+/)
+                      .map((x) => x[0])
+                      .join("")
+                      .slice(0, 3)
+                      .toUpperCase(),
+                    logoUrl: nextLogoUrl,
+                  };
+                  if (live) {
+                    const next = editing
+                      ? source.map((row) => (row.id === editing.id ? entry : row))
+                      : [...source, entry];
+                    void persistSponsors(next, editing ? `${Noun} updated` : `${Noun} added`);
+                    setPage(1);
+                    return;
+                  }
+                  if (editing) {
+                    setLocalExtra((prev) =>
+                      prev.map((row) => (row.id === editing.id ? entry : row)),
+                    );
+                  } else {
+                    setLocalExtra((prev) => [entry, ...prev]);
+                  }
+                  setModalOpen(false);
+                  setEditing(null);
                   setPage(1);
-                  return;
-                }
-                if (editing) {
-                  setLocalExtra((prev) => prev.map((row) => (row.id === editing.id ? entry : row)));
-                } else {
-                  setLocalExtra((prev) => [entry, ...prev]);
-                }
-                setModalOpen(false);
-                setEditing(null);
-                setPage(1);
-                toast.success(editing ? `${Noun} updated` : `${Noun} added`);
+                  toast.success(editing ? `${Noun} updated` : `${Noun} added`);
+                })();
               }}
             >
               <label className="text-sm font-semibold">
@@ -3842,6 +4049,31 @@ function SponsorsTab({
                   <option>Declined</option>
                 </select>
               </label>
+              <div className="sm:col-span-2">
+                <p className="mb-1 text-sm font-semibold">Organisation Logo</p>
+                <p className="mb-2 text-xs font-normal text-slate-500">
+                  Optional. Crop and save — the logo is uploaded when you save this {noun}.
+                </p>
+                <ImagePicker
+                  imageKey={`sponsor-logo-${editing?.id || "new"}.jpg`}
+                  value={logoDraftPreview}
+                  aspect={1}
+                  cropShape="rect"
+                  previewClassName="h-20 w-20 rounded-lg object-cover"
+                  onChange={(file) => {
+                    if (!file) {
+                      setLogoDraftFile(null);
+                      setLogoDraftPreview("");
+                      setLogoCleared(true);
+                      return;
+                    }
+                    const previewUrl = URL.createObjectURL(file);
+                    setLogoDraftFile(file);
+                    setLogoDraftPreview(previewUrl);
+                    setLogoCleared(false);
+                  }}
+                />
+              </div>
               <div className="flex justify-end gap-2 pt-3 sm:col-span-2">
                 <button
                   type="button"

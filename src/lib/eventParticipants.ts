@@ -23,7 +23,6 @@ import {
   parseWaiverFromTicket,
   type WaiverReason,
 } from "./participantWaiver";
-
 export type { VerificationBucket };
 export { canIssueEventPass, verificationBucketLabel };
 
@@ -67,7 +66,8 @@ export type ListEventParticipantsOptions = {
 const typeLabel: Record<string, string> = {
   delegate: "Delegate",
   speaker: "Speaker",
-  sponsor: "Exhibitor",
+  // Registration stores participationType "sponsor" for the Sponsor / Exhibitor path.
+  sponsor: "Sponsor",
   exhibitor: "Exhibitor",
   virtual: "Virtual Participant",
   student: "Student",
@@ -293,6 +293,15 @@ function toAddedParticipant(ticket: EngagementParticipantTicket): AddedParticipa
     paymentProofUrls: proofUrls.length ? proofUrls : undefined,
     verificationBucket: bucket,
     passAllowed: canIssueEventPass(ticket),
+    ticketPrice: Number.isFinite(Number(ticket.ticketPrice))
+      ? Number(ticket.ticketPrice)
+      : undefined,
+    photoUrl: (() => {
+      const raw = pickString(ticket.photo, extra?.photo, extra?.logo);
+      if (!raw) return undefined;
+      // Ticket photos are resource IDs — same download URL shape as payment proofs.
+      return resolvePaymentProofUrl(raw) || undefined;
+    })(),
   };
 }
 

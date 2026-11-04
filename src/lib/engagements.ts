@@ -565,6 +565,7 @@ export function asSponsors(value: unknown): EngagementSponsor[] {
         category: row.category != null ? String(row.category) : undefined,
         contact: row.contact != null ? String(row.contact) : undefined,
         status: row.status != null ? String(row.status) : undefined,
+        logo: row.logo != null ? String(row.logo) : undefined,
       } satisfies EngagementSponsor;
     })
     .filter(Boolean) as EngagementSponsor[];

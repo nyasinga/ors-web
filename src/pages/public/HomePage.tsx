@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -17,7 +17,11 @@ import { EventCountdown } from "../../components/EventCountdown";
 import { PublicEventGate } from "../../components/public/PublicEventGate";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { cn } from "../../lib/cn";
-import { engagementToHomeContent } from "../../lib/publicEvent";
+import {
+  engagementToHomeContent,
+  fetchHomeSponsors,
+  type PublicHomeSponsor,
+} from "../../lib/publicEvent";
 import { engagementBannerUrl } from "../../lib/resources";
 
 const featureIcons = [Globe2, Users, Handshake, ChartColumnIncreasing, Cog] as const;
@@ -34,11 +38,188 @@ const featureFallbackKeys = [
 const pillarIcons = [Shield, Users, Lightbulb] as const;
 const container = "mx-auto w-[calc(100%-clamp(32px,5vw,120px))] max-w-[1440px] max-[768px]:w-[calc(100%-40px)] max-[480px]:w-[calc(100%-32px)]";
 
+const SPONSOR_TIER_ORDER = ["Platinum", "Gold", "Silver", "Bronze", "Supporting", "Exhibitor", "Sponsor"] as const;
+
+function groupSponsorsByTier(sponsors: PublicHomeSponsor[]) {
+  const map = new Map<string, PublicHomeSponsor[]>();
+  for (const sponsor of sponsors) {
+    const tier = sponsor.tier?.trim() || "Sponsor";
+    const list = map.get(tier) || [];
+    list.push(sponsor);
+    map.set(tier, list);
+  }
+  const ordered = SPONSOR_TIER_ORDER.filter((t) => map.has(t));
+  const extras = [...map.keys()].filter((t) => !SPONSOR_TIER_ORDER.includes(t as (typeof SPONSOR_TIER_ORDER)[number]));
+  return [...ordered, ...extras.sort()].map((tier) => ({
+    tier,
+    items: map.get(tier) || [],
+  }));
+}
+
+function HomeSponsorMark({
+  sponsor,
+  featured,
+}: {
+  sponsor: PublicHomeSponsor;
+  featured?: boolean;
+}) {
+  const [failed, setFailed] = useState(false);
+  const size = featured ? "h-[72px] w-[72px] text-[18px]" : "h-[56px] w-[56px] text-[14px]";
+
+  return (
+    <div
+      className={cn(
+        "group flex flex-col items-center text-center",
+        "animate-[homeSponsorIn_0.55s_ease-out_both]",
+      )}
+    >
+      <div
+        className={cn(
+          "relative grid place-items-center overflow-hidden rounded-[18px]",
+          "bg-white shadow-[0_1px_0_rgba(16,33,61,0.06)]",
+          "ring-1 ring-[#d7e3f2]/90 transition duration-300",
+          "group-hover:-translate-y-0.5 group-hover:ring-[#075fd8]/35",
+          size,
+        )}
+      >
+        {sponsor.logoUrl && !failed ? (
+          <img
+            src={sponsor.logoUrl}
+            alt=""
+            className="h-full w-full object-contain p-2.5"
+            onError={() => setFailed(true)}
+          />
+        ) : (
+          <span
+            className="font-black tracking-wide text-[#3F5BA9]"
+            aria-hidden
+          >
+            {sponsor.initials}
+          </span>
+        )}
+      </div>
+      <p
+        className={cn(
+          "mt-3 max-w-[9.5rem] truncate font-extrabold tracking-[-0.02em] text-[#10213d]",
+          featured ? "text-[15px]" : "text-[13px]",
+        )}
+        title={sponsor.name}
+      >
+        {sponsor.name}
+      </p>
+    </div>
+  );
+}
+
+function HomeSponsorsSection({
+  sponsors,
+  brandMark,
+}: {
+  sponsors: PublicHomeSponsor[];
+  brandMark: string;
+}) {
+  const tiers = useMemo(() => groupSponsorsByTier(sponsors), [sponsors]);
+  const singleTier = tiers.length === 1;
+
+  return (
+    <section
+      aria-labelledby="home-sponsors-title"
+      className="relative isolate overflow-hidden border-t border-[#e6ebf1] py-12 sm:py-16"
+      id="sponsors"
+    >
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_420px_at_12%_-10%,rgba(8,113,63,0.07),transparent_55%),radial-gradient(700px_380px_at_92%_0%,rgba(7,95,216,0.08),transparent_50%),linear-gradient(180deg,#fbfcfe_0%,#f3f7fb_100%)]"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#08713f]/35 to-transparent"
+        aria-hidden
+      />
+
+      <div className={cn(container, "relative min-w-0")}>
+        <div className="mb-10 flex flex-col gap-5 sm:mb-12 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-2xl">
+            <p className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.22em] text-[#08713f] sm:text-[12px]">
+              Partners
+            </p>
+            <h2
+              id="home-sponsors-title"
+              className="text-[clamp(1.7rem,3.2vw,2.35rem)] font-black tracking-[-0.045em] text-[#10213d]"
+            >
+              Our Sponsors
+            </h2>
+            <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-[#647084]">
+              Organisations standing with {brandMark} — recognised by sponsorship tier.
+            </p>
+          </div>
+          <Link
+            to="/sponsorship"
+            className="inline-flex items-center gap-1.5 self-start text-[13px] font-bold text-[#075fd8] transition hover:gap-2.5 hover:underline sm:self-auto"
+          >
+            View sponsorship packages
+            <span aria-hidden>→</span>
+          </Link>
+        </div>
+
+        <div className="space-y-10">
+          {tiers.map(({ tier, items }) => {
+            const featured = singleTier || /platinum/i.test(tier);
+            return (
+              <div key={tier}>
+                <div className="mb-5 flex items-center gap-3">
+                  <span className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#3F5BA9]">
+                    {tier}
+                  </span>
+                  <span className="h-px flex-1 bg-gradient-to-r from-[#c9d7ea] to-transparent" aria-hidden />
+                </div>
+                <ul
+                  className={cn(
+                    "flex flex-wrap gap-x-8 gap-y-8",
+                    featured ? "justify-center sm:justify-start" : "justify-start",
+                  )}
+                >
+                  {items.map((sponsor, index) => (
+                    <li
+                      key={sponsor.id}
+                      style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}
+                    >
+                      <HomeSponsorMark sponsor={sponsor} featured={featured} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes homeSponsorIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+    </section>
+  );
+}
+
 /** Home — hero and about content from the public engagement API. */
 export function HomePage() {
   const { t } = useTranslation(["home", "common"]);
   const { engagement } = usePublicEngagement();
   const home = useMemo(() => engagementToHomeContent(engagement), [engagement]);
+  const [sponsors, setSponsors] = useState<PublicHomeSponsor[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const rows = await fetchHomeSponsors(engagement);
+      if (!cancelled) setSponsors(rows);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [engagement]);
 
   const features = home.themes.slice(0, 5).map((theme, i) => ({
     icon: featureIcons[i] || Globe2,
@@ -525,6 +706,14 @@ export function HomePage() {
           </div>
         </div>
       </section>
+
+      {sponsors.length > 0 ? (
+        <HomeSponsorsSection
+          sponsors={sponsors}
+          brandMark={home.brandMark || "this event"}
+        />
+      ) : null}
+
       <section
   aria-labelledby="event-info-cta-title"
   className="border-t border-[#e6ebf1] bg-white py-10 sm:py-14"

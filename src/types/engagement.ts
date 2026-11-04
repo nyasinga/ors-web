@@ -113,6 +113,8 @@ export type EngagementSponsor = {
   category?: string;
   contact?: string;
   status?: "Confirmed" | "Pending" | "Declined" | string;
+  /** Organisation logo URL or resource id (from registration photo / admin edit). */
+  logo?: string;
 };
 
 export type EngagementTicket = {

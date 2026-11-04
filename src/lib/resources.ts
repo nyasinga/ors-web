@@ -1,4 +1,4 @@
-import { API_BASE_URL, apiUpload } from "./api";
+import { API_BASE_URL, TENANT_ID, apiUpload } from "./api";
 import { getValidAuthToken } from "./auth";
 
 export type UploadedResource = {
@@ -62,27 +62,54 @@ export function engagementBannerUrl(
   return resourcePublicUrl(raw) || fallback;
 }
 
-/** Resolve a stored photo field or upload response to a browser-usable URL. */
+function withTenantQuery(url: string): string {
+  if (!url || /[?&]tenant-id=/i.test(url)) return url;
+  return `${url}${url.includes("?") ? "&" : "?"}tenant-id=${encodeURIComponent(TENANT_ID)}`;
+}
+
+/** Resolve a stored photo/logo field or upload response to a browser-usable URL. */
 export function resourcePublicUrl(resource: UploadedResource | string | null | undefined): string {
   if (!resource) return "";
   if (typeof resource === "string") {
     const value = resource.trim();
     if (!value) return "";
-    if (value.startsWith("data:") || value.startsWith("blob:") || /^https?:\/\//i.test(value)) {
-      return value;
+    if (value.startsWith("data:") || value.startsWith("blob:")) return value;
+    if (/^(https?:)/i.test(value)) {
+      return /\/resources\/download\//i.test(value) ? withTenantQuery(value) : value;
     }
-    if (value.startsWith("/")) return `${API_BASE_URL}${value}`;
-    return `${API_BASE_URL}/${value}`;
+    if (/\/resources\/download\//i.test(value)) {
+      const path = value.startsWith("/") ? value : `/${value}`;
+      return withTenantQuery(`${API_BASE_URL.replace(/\/$/, "")}${path}`);
+    }
+    if (value.startsWith("/")) {
+      return /\/resources\/download\//i.test(value)
+        ? withTenantQuery(`${API_BASE_URL.replace(/\/$/, "")}${value}`)
+        : `${API_BASE_URL.replace(/\/$/, "")}${value}`;
+    }
+    // Bare resource id (ticket photo / logo) → authenticated download endpoint.
+    if (!value.includes("/") && !value.includes(".")) {
+      return withTenantQuery(
+        `${API_BASE_URL.replace(/\/$/, "")}/resources/download/${encodeURIComponent(value)}`,
+      );
+    }
+    return `${API_BASE_URL.replace(/\/$/, "")}/${value.replace(/^\/+/, "")}`;
   }
 
   if (resource.url?.trim()) return resourcePublicUrl(resource.url);
   if (resource.resourcePath?.trim()) {
     const path = resource.resourcePath.trim();
-    if (/^https?:\/\//i.test(path) || path.startsWith("/")) return resourcePublicUrl(path);
-    return `${API_BASE_URL}/${path}`;
+    if (/^https?:\/\//i.test(path) || path.startsWith("/") || /\/resources\/download\//i.test(path)) {
+      return resourcePublicUrl(path);
+    }
+    if (!path.includes("/") && !path.includes(".")) {
+      return resourcePublicUrl(path);
+    }
+    return `${API_BASE_URL.replace(/\/$/, "")}/${path.replace(/^\/+/, "")}`;
   }
   if (resource.resourceID?.trim()) {
-    return `${API_BASE_URL}/resources/download/${encodeURIComponent(resource.resourceID.trim())}`;
+    return withTenantQuery(
+      `${API_BASE_URL.replace(/\/$/, "")}/resources/download/${encodeURIComponent(resource.resourceID.trim())}`,
+    );
   }
   return "";
 }

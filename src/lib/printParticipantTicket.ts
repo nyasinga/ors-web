@@ -40,7 +40,10 @@ export async function fetchEventPassPdfUrl(passCode: string): Promise<{ url: str
     throw new Error(`Could not load event pass (${res.status}).`);
   }
 
-  const blob = await res.blob();
+  const raw = await res.blob();
+  // Force application/pdf so Android download/open handlers recognize the file
+  // even when the API omits or mis-sets Content-Type.
+  const blob = new Blob([raw], { type: "application/pdf" });
   return {
     url: URL.createObjectURL(blob),
     passCode: code,

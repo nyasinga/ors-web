@@ -68,6 +68,10 @@ export type AddedParticipant = {
     | "cancelled";
   /** Whether event pass / QR may be issued. */
   passAllowed?: boolean;
+  /** Ticket price from registration (KES), when provided by the API. */
+  ticketPrice?: number;
+  /** Resolved organisation logo / profile photo URL from the ticket. */
+  photoUrl?: string;
 };
 
 const emptyDetails: RegistrationDetails = {

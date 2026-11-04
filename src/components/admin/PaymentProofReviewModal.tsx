@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { getDocument, GlobalWorkerOptions, type PDFDocumentProxy } from "pdfjs-dist";
-import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import type { PDFDocumentProxy } from "pdfjs-dist";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 import { TENANT_ID } from "../../lib/api";
+import { loadPdfDocument, waitForElement } from "../../lib/pdfjsWorker";
 import type { AddedParticipant } from "./AddParticipantModal";
 
 type Props = {
@@ -15,26 +15,6 @@ type Props = {
   onApprove: (p: AddedParticipant) => void;
   onCancelTicket: (p: AddedParticipant) => void;
 };
-
-/** Same worker bootstrap as EventPassPreviewModal (handles bad .mjs MIME). */
-let workerReady: Promise<void> | null = null;
-
-function ensurePdfWorker(): Promise<void> {
-  if (!workerReady) {
-    workerReady = (async () => {
-      try {
-        const res = await fetch(pdfWorkerUrl);
-        if (!res.ok) throw new Error(`Worker fetch failed (${res.status})`);
-        const buf = await res.arrayBuffer();
-        const blob = new Blob([buf], { type: "text/javascript" });
-        GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
-      } catch {
-        GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
-      }
-    })();
-  }
-  return workerReady;
-}
 
 function authToken(): string | null {
   return (
@@ -86,10 +66,12 @@ function ProofPreview({ url, label }: { url: string; label: string }) {
 
     async function load() {
       setState({ status: "loading" });
-      const host = canvasHostRef.current;
-      if (host) host.replaceChildren();
 
       try {
+        const host = await waitForElement(() => canvasHostRef.current);
+        if (cancelled) return;
+        if (host) host.replaceChildren();
+
         const token = authToken();
         const res = await fetch(url, {
           headers: {
@@ -128,46 +110,43 @@ function ProofPreview({ url, label }: { url: string; label: string }) {
           objectUrl = URL.createObjectURL(pdfBlob);
           const data = await pdfBlob.arrayBuffer();
 
-          await ensurePdfWorker();
-          let pdf: PDFDocumentProxy;
-          try {
-            pdf = await getDocument({ data }).promise;
-          } catch {
-            pdf = await getDocument({
-              data,
-              useWorkerFetch: false,
-              isEvalSupported: false,
-            }).promise;
-          }
+          const pdf = await loadPdfDocument(data);
           if (cancelled) {
             await pdf.destroy();
             return;
           }
           pdfRef.current = pdf;
 
-          const maxWidth = Math.min(host?.clientWidth || 680, 720);
-          for (let pageNum = 1; pageNum <= pdf.numPages; pageNum += 1) {
-            const page = await pdf.getPage(pageNum);
-            if (cancelled) return;
+          if (host) {
+            const narrow = typeof window !== "undefined" && window.innerWidth < 768;
+            const maxWidth = Math.min(
+              host.clientWidth || (narrow ? 360 : 680),
+              narrow ? 420 : 720,
+            );
+            const maxScale = narrow ? 1.5 : 2.2;
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum += 1) {
+              const page = await pdf.getPage(pageNum);
+              if (cancelled) return;
 
-            const unscaled = page.getViewport({ scale: 1 });
-            const scale = maxWidth / unscaled.width;
-            const viewport = page.getViewport({
-              scale: Math.min(Math.max(scale, 1.05), 2.2),
-            });
+              const unscaled = page.getViewport({ scale: 1 });
+              const scale = maxWidth / unscaled.width;
+              const viewport = page.getViewport({
+                scale: Math.min(Math.max(scale, 1.05), maxScale),
+              });
 
-            const canvas = document.createElement("canvas");
-            canvas.width = Math.floor(viewport.width);
-            canvas.height = Math.floor(viewport.height);
-            canvas.className =
-              "mb-3 w-full rounded-md border border-blue-100 bg-white shadow-sm last:mb-0";
-            canvas.setAttribute("aria-label", `${label} page ${pageNum}`);
+              const canvas = document.createElement("canvas");
+              canvas.width = Math.floor(viewport.width);
+              canvas.height = Math.floor(viewport.height);
+              canvas.className =
+                "mb-3 w-full rounded-md border border-blue-100 bg-white shadow-sm last:mb-0";
+              canvas.setAttribute("aria-label", `${label} page ${pageNum}`);
 
-            const ctx = canvas.getContext("2d");
-            if (!ctx) continue;
-            await page.render({ canvasContext: ctx, viewport }).promise;
-            if (cancelled) return;
-            host?.appendChild(canvas);
+              const ctx = canvas.getContext("2d", { alpha: false });
+              if (!ctx) continue;
+              await page.render({ canvasContext: ctx, viewport }).promise;
+              if (cancelled) return;
+              host.appendChild(canvas);
+            }
           }
 
           setState({

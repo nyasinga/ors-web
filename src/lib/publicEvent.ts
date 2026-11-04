@@ -3,6 +3,7 @@ import { countryDisplayName } from "../data/countries";
 import type { Engagement, EngagementProgrammeSession, EngagementSponsor } from "../types/engagement";
 import { engagementSpeakerToCard, type SpeakerCardData } from "../components/speakers/SpeakerCard";
 import { apiRequest } from "./api";
+import { listEventParticipants } from "./eventParticipants";
 import {
   asFaqs,
   asProgramme,
@@ -16,6 +17,7 @@ import {
   EVENT_AUDIENCE_OPTIONS,
   formatModeLabel,
 } from "./engagements";
+import { resourcePublicUrl } from "./resources";
 import type {
   EngagementFaqCategory,
   EngagementVenueHighlight,
@@ -775,6 +777,159 @@ function sponsorTierKey(sponsor: EngagementSponsor) {
   if (/silver/.test(fromTier)) return "silver";
   if (/bronze/.test(fromTier)) return "bronze";
   return (sponsor.id || sponsor.name || "sponsor").toLowerCase().replace(/\s+/g, "-");
+}
+
+const HOME_SPONSOR_TIER_ORDER: Record<string, number> = {
+  platinum: 0,
+  gold: 1,
+  silver: 2,
+  bronze: 3,
+};
+
+function sponsorTierLabel(sponsor: EngagementSponsor): string {
+  const raw = String(sponsor.tier || sponsor.name || "").trim();
+  if (/platinum/i.test(raw)) return "Platinum";
+  if (/gold/i.test(raw)) return "Gold";
+  if (/silver/i.test(raw)) return "Silver";
+  if (/bronze/i.test(raw)) return "Bronze";
+  if (/supporting/i.test(raw)) return "Supporting";
+  if (/exhibitor/i.test(raw)) return "Exhibitor";
+  const stripped = raw.replace(/\s+sponsor$/i, "").trim();
+  return stripped || "Sponsor";
+}
+
+function sponsorInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "SP";
+  if (parts.length === 1) return parts[0].slice(0, 3).toUpperCase();
+  return parts
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 3)
+    .toUpperCase();
+}
+
+function isConfirmedHomeSponsor(sponsor: EngagementSponsor): boolean {
+  const status = String(sponsor.status || "").trim();
+  if (status === "Pending" || status === "Declined") return false;
+  if (status === "Confirmed") return true;
+  // Admin Sponsors tab treats missing status + active as Confirmed.
+  return sponsor.active !== false;
+}
+
+export type PublicHomeSponsor = {
+  id: string;
+  name: string;
+  tier: string;
+  initials: string;
+  logoUrl?: string;
+};
+
+function parseSponsorPrice(price?: number | string): number {
+  if (typeof price === "number" && Number.isFinite(price)) return price;
+  if (typeof price === "string") {
+    const n = Number(price.replace(/[^\d.]/g, ""));
+    return Number.isFinite(n) ? n : 0;
+  }
+  return 0;
+}
+
+function tierFromRegisteredPrice(
+  price: number | undefined,
+  packages: EngagementSponsor[],
+): string {
+  if (price != null && Number.isFinite(price) && price > 0) {
+    const match = packages.find((p) => parseSponsorPrice(p.price) === price);
+    if (match) return sponsorTierLabel(match);
+  }
+  return "Sponsor";
+}
+
+/** Confirmed CRM rows on engagement.sponsors (excludes marketing packages). */
+export function engagementToHomeSponsors(engagement: Engagement | null): PublicHomeSponsor[] {
+  const rows = asSponsors(engagement?.sponsors)
+    .filter((s) => {
+      if (!s.name?.trim() || !isConfirmedHomeSponsor(s)) return false;
+      // Marketing packages have benefits — they are not registered organisations.
+      if (Array.isArray(s.benefits) && s.benefits.length > 0) return false;
+      return true;
+    })
+    .map((sponsor, index) => {
+      const name = sponsor.name.trim();
+      const logoUrl = resourcePublicUrl(sponsor.logo) || undefined;
+      const item: PublicHomeSponsor & { order: number } = {
+        id: sponsor.id || `home-sponsor-${index}`,
+        name,
+        tier: sponsorTierLabel(sponsor),
+        initials: sponsorInitials(name),
+        logoUrl,
+        order: HOME_SPONSOR_TIER_ORDER[sponsorTierKey(sponsor)] ?? 50,
+      };
+      return item;
+    })
+    .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+
+  return rows.map(({ order: _order, ...rest }) => rest);
+}
+
+/**
+ * Homepage sponsors: registered sponsor/exhibitor tickets for this engagement,
+ * merged with any Confirmed CRM rows that are not already covered by a registration.
+ */
+export async function fetchHomeSponsors(
+  engagement: Engagement | null,
+): Promise<PublicHomeSponsor[]> {
+  if (!engagement?.engagementID) return [];
+
+  const packages = asSponsors(engagement.sponsors).filter(
+    (s) => Array.isArray(s.benefits) && s.benefits.length > 0,
+  );
+
+  let registered: PublicHomeSponsor[] = [];
+  try {
+    const participants = await listEventParticipants(engagement.engagementID);
+    registered = participants
+      .filter((p) => {
+        const type = String(p.participationType || "").toLowerCase();
+        const label = String(p.type || "").toLowerCase();
+        const isSponsor =
+          type === "sponsor" ||
+          type === "exhibitor" ||
+          label === "sponsor" ||
+          label === "exhibitor";
+        if (!isSponsor) return false;
+        if (p.rawStatus === "cancelled" || p.verificationBucket === "cancelled") return false;
+        return true;
+      })
+      .map((p) => {
+        const org = p.org && p.org !== "—" ? p.org.trim() : "";
+        const name = org || p.name.trim() || "Sponsor";
+        const tier = tierFromRegisteredPrice(p.ticketPrice, packages);
+        const item: PublicHomeSponsor & { order: number } = {
+          id: `reg-${p.ticketID || p.id}`,
+          name,
+          tier,
+          initials: sponsorInitials(name),
+          logoUrl: p.photoUrl || undefined,
+          order: HOME_SPONSOR_TIER_ORDER[tier.toLowerCase()] ?? 50,
+        };
+        return item;
+      })
+      .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
+      .map(({ order: _order, ...rest }) => rest);
+  } catch {
+    registered = [];
+  }
+
+  const seen = new Set(
+    registered.flatMap((s) => [s.id, s.name.toLowerCase()].filter(Boolean)),
+  );
+  const crmExtra = engagementToHomeSponsors(engagement).filter((s) => {
+    if (seen.has(s.id) || seen.has(s.name.toLowerCase())) return false;
+    return true;
+  });
+
+  return [...registered, ...crmExtra];
 }
 
 /** Speakers for the public Speakers page. */

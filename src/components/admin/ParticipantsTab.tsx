@@ -671,6 +671,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
             <option value="">All types</option>
             <option>Delegate</option>
             <option>Speaker</option>
+            <option>Sponsor</option>
             <option>Exhibitor</option>
             <option>Virtual Participant</option>
             <option>Student</option>
