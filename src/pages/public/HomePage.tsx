@@ -56,6 +56,7 @@ function groupSponsorsByTier(sponsors: PublicHomeSponsor[]) {
   }));
 }
 
+
 function HomeSponsorMark({
   sponsor,
   featured,
@@ -64,7 +65,10 @@ function HomeSponsorMark({
   featured?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
-  const size = featured ? "h-[72px] w-[72px] text-[18px]" : "h-[56px] w-[56px] text-[14px]";
+
+  const size = featured
+    ? "h-[112px] w-[112px] sm:h-[128px] sm:w-[128px]"
+    : "h-[88px] w-[88px] sm:h-[104px] sm:w-[104px]";
 
   return (
     <div
@@ -73,35 +77,62 @@ function HomeSponsorMark({
         "animate-[homeSponsorIn_0.55s_ease-out_both]",
       )}
     >
+      {/* Circular sponsor logo */}
       <div
         className={cn(
-          "relative grid place-items-center overflow-hidden rounded-[18px]",
-          "bg-white shadow-[0_1px_0_rgba(16,33,61,0.06)]",
-          "ring-1 ring-[#d7e3f2]/90 transition duration-300",
-          "group-hover:-translate-y-0.5 group-hover:ring-[#075fd8]/35",
+          "relative grid shrink-0 place-items-center rounded-full",
+          "border border-white/90 bg-white/90 backdrop-blur-md",
+          "shadow-[0_0_0_1px_rgba(255,255,255,0.85),0_0_15px_rgba(255,255,255,0.95),0_3px_16px_rgba(16,33,61,0.08)]",
+          "ring-1 ring-white/70",
+          "transition-all duration-500 ease-out",
+          "group-hover:-translate-y-1",
+          "group-hover:shadow-[0_0_0_2px_rgba(255,255,255,1),0_0_28px_rgba(255,255,255,1),0_6px_22px_rgba(7,95,216,0.13)]",
           size,
         )}
       >
-        {sponsor.logoUrl && !failed ? (
-          <img
-            src={sponsor.logoUrl}
-            alt=""
-            className="h-full w-full object-contain p-2.5"
-            onError={() => setFailed(true)}
-          />
-        ) : (
-          <span
-            className="font-black tracking-wide text-[#3F5BA9]"
-            aria-hidden
-          >
-            {sponsor.initials}
-          </span>
-        )}
+        {/* Smoky white outer glow */}
+        <div
+          className={cn(
+            "pointer-events-none absolute -inset-2 rounded-full",
+            "bg-white/50 blur-xl opacity-70",
+            "transition-opacity duration-500 group-hover:opacity-100",
+          )}
+          aria-hidden
+        />
+
+        {/* Inner circular logo area */}
+        <div className="relative grid h-full w-full place-items-center overflow-hidden rounded-full p-4">
+          {sponsor.logoUrl && !failed ? (
+            <img
+              src={sponsor.logoUrl}
+              alt={`${sponsor.name} logo`}
+              className={cn(
+                "h-full w-full object-contain",
+                "transition-transform duration-500",
+                "group-hover:scale-105",
+              )}
+              onError={() => setFailed(true)}
+            />
+          ) : (
+            <span
+              className={cn(
+                "font-black tracking-wide text-[#3F5BA9]",
+                featured ? "text-[26px]" : "text-[22px]",
+              )}
+              aria-hidden
+            >
+              {sponsor.initials}
+            </span>
+          )}
+        </div>
       </div>
+
+      {/* Sponsor name */}
       <p
         className={cn(
-          "mt-3 max-w-[9.5rem] truncate font-extrabold tracking-[-0.02em] text-[#10213d]",
-          featured ? "text-[15px]" : "text-[13px]",
+          "mt-3 max-w-[9.5rem] font-extrabold",
+          "tracking-[-0.02em] leading-snug text-[#10213d]",
+          featured ? "text-[14px]" : "text-[12px]",
         )}
         title={sponsor.name}
       >
@@ -112,8 +143,7 @@ function HomeSponsorMark({
 }
 
 function HomeSponsorsSection({
-  sponsors,
-  brandMark,
+  sponsors
 }: {
   sponsors: PublicHomeSponsor[];
   brandMark: string;
@@ -127,63 +157,85 @@ function HomeSponsorsSection({
       className="relative isolate overflow-hidden border-t border-[#e6ebf1] py-12 sm:py-16"
       id="sponsors"
     >
+      {/* Background */}
       <div
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_420px_at_12%_-10%,rgba(8,113,63,0.07),transparent_55%),radial-gradient(700px_380px_at_92%_0%,rgba(7,95,216,0.08),transparent_50%),linear-gradient(180deg,#fbfcfe_0%,#f3f7fb_100%)]"
         aria-hidden
       />
+
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#08713f]/35 to-transparent"
         aria-hidden
       />
 
       <div className={cn(container, "relative min-w-0")}>
+        {/* Section heading */}
         <div className="mb-10 flex flex-col gap-5 sm:mb-12 sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-2xl">
+            <div className="mb-2.5 h-[5px] w-11 bg-[#ed1c24]" aria-hidden />
             <p className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.22em] text-[#08713f] sm:text-[12px]">
               Partners
             </p>
+
             <h2
               id="home-sponsors-title"
               className="text-[clamp(1.7rem,3.2vw,2.35rem)] font-black tracking-[-0.045em] text-[#10213d]"
             >
               Our Sponsors
             </h2>
-            <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-[#647084]">
-              Organisations standing with {brandMark} — recognised by sponsorship tier.
+
+            <p className="max-w-xl text-[12px] leading-relaxed text-[#647084]">
+              Recognising the organisations whose support makes this event possible.
             </p>
           </div>
+
           <Link
             to="/sponsorship"
             className="inline-flex items-center gap-1.5 self-start text-[13px] font-bold text-[#075fd8] transition hover:gap-2.5 hover:underline sm:self-auto"
           >
-            View sponsorship packages
+            Sponsorship Packages
             <span aria-hidden>→</span>
           </Link>
         </div>
 
+        {/* Sponsor tiers */}
         <div className="space-y-10">
           {tiers.map(({ tier, items }) => {
             const featured = singleTier || /platinum/i.test(tier);
+
             return (
               <div key={tier}>
                 <div className="mb-5 flex items-center gap-3">
-                  <span className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#3F5BA9]">
+                  
+                  <span className="whitespace-nowrap rounded-full bg-[#eaf1fb] px-4 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#3F5BA9]">
                     {tier}
                   </span>
-                  <span className="h-px flex-1 bg-gradient-to-r from-[#c9d7ea] to-transparent" aria-hidden />
+
+                  <span
+                    className="h-px flex-1 bg-gradient-to-r from-[#c9d7ea] to-transparent"
+                    aria-hidden
+                  />
                 </div>
+
                 <ul
                   className={cn(
                     "flex flex-wrap gap-x-8 gap-y-8",
-                    featured ? "justify-center sm:justify-start" : "justify-start",
+                    featured
+                      ? "justify-center sm:justify-start"
+                      : "justify-start",
                   )}
                 >
                   {items.map((sponsor, index) => (
                     <li
                       key={sponsor.id}
-                      style={{ animationDelay: `${Math.min(index, 8) * 60}ms` }}
+                      style={{
+                        animationDelay: `${Math.min(index, 8) * 60}ms`,
+                      }}
                     >
-                      <HomeSponsorMark sponsor={sponsor} featured={featured} />
+                      <HomeSponsorMark
+                        sponsor={sponsor}
+                        featured={featured}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -195,8 +247,14 @@ function HomeSponsorsSection({
 
       <style>{`
         @keyframes homeSponsorIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
       `}</style>
     </section>
@@ -214,6 +272,7 @@ export function HomePage() {
     let cancelled = false;
     void (async () => {
       const rows = await fetchHomeSponsors(engagement);
+      console.log(rows);
       if (!cancelled) setSponsors(rows);
     })();
     return () => {
@@ -232,12 +291,6 @@ export function HomePage() {
     icon: pillarIcons[i] || Shield,
     label: theme,
   }));
-
-  const brandLetters = home.brandMark.split("");
-  const brandBeforeE = home.showBrandLogo
-    ? home.brandMark.replace(/e$/i, "")
-    : home.brandMark;
-  const brandEndsWithE = home.showBrandLogo && /e$/i.test(home.brandMark);
 
   return (
     <PublicEventGate variant="home">
@@ -286,50 +339,58 @@ export function HomePage() {
               )}
             />
 
-            <div
-              className="mb-[22px] flex h-1.5 w-[112px] max-[640px]:mb-3.5 max-[640px]:h-1 max-[640px]:w-[68px]"
-              aria-hidden
-            >
-              <i className="block h-full w-1/2 bg-[#ed1c24]" />
-              <i className="block h-full w-1/2 bg-[#08713f]" />
-            </div>
+            
+            <div className="flex w-full min-w-0 items-center gap-0">
 
-            <h1
-              className={cn(
-                "m-0 whitespace-nowrap text-[82px] font-black leading-[0.92] tracking-[-4px] text-[#3F5BA9]",
-                "max-[1200px]:text-[68px]",
-                "max-[960px]:whitespace-normal max-[960px]:text-[clamp(2.75rem,7vw,3.75rem)] max-[960px]:tracking-[-0.04em]",
-                "max-[640px]:text-[clamp(2.35rem,11vw,3.25rem)] max-[640px]:tracking-[-0.045em]",
-                "max-[640px]:mt-10",
-              )}
-            >
-              {brandEndsWithE ? (
-                <>
-                  {brandBeforeE}
-                  <span className="relative inline-block">
-                    E
-                    <img
-                      src="/assets/logo-issipe.png"
-                      alt=""
-                      aria-hidden="true"
-                      className="absolute bottom-[90%] left-1/2 h-[0.85em] w-[0.85em] max-w-none -translate-x-1/2 object-contain"
-                    />
+              {/* ISIPPE emblem */}
+              <div className="flex shrink-0 items-center">
+                <img
+                  src="/assets/logo-issipe.png"
+                  alt="ISIPPE emblem"
+                  className={cn(
+                    "ml-[-10px] max-[640px]:ml-[0px] block h-auto w-auto object-contain",
+                    "max-h-[calc(5.2rem+8px)]",
+                    "max-w-[clamp(42px,7vw,100px)]",
+                    "max-[640px]:max-h-[calc(5rem+8px)]",
+                    "max-[640px]:max-w-[clamp(42px,10vw,58px)]",
+                  )}
+                />
+              </div>
+
+              {/* ISIPPE 2026 text and underline */}
+              <div className="mt-0 min-w-0 w-fit max-w-full max-[640px]:mt-5 max-[640px]:mb-3">
+                <h1
+                  className={cn(
+                    "m-0 flex w-fit max-w-full flex-nowrap items-center whitespace-nowrap",
+                    "text-[clamp(2rem,4.8vw,4.8rem)]",
+                    "font-black leading-[0.95] tracking-[-0.065em]",
+                    "text-[#3F5BA9]",
+                    "max-[640px]:text-[clamp(2.2rem,9vw,3rem)]",
+                    "max-[640px]:leading-[1.05]",
+                    "max-[640px]:tracking-[-0.06em]",
+                  )}
+                >
+                  <span>ISIPPE</span>
+
+                  <span className="ml-[0.1em] flex items-center tracking-[-0.055em]">
+                    <span className="text-[#ed1c24]">2</span>
+                    <span className="text-[#3F5BA9]">0</span>
+                    <span className="text-[#08713f]">2</span>
+                    <span className="text-[#111111]">6</span>
                   </span>
-                </>
-              ) : (
-                brandLetters.join("")
-              )}{" "}
-              <span className="text-[#ed1c24]/90">{home.brandYear}</span>
-            </h1>
+                </h1>
 
-            <div
-              className="my-[17px] mb-[13px] flex h-[5px] w-[190px] max-[640px]:my-3 max-[640px]:h-1 max-[640px]:w-[116px]"
-              aria-hidden
-            >
-              <span className="block h-full w-1/4 bg-[#075fd8]" />
-              <span className="block h-full w-1/4 bg-[#ed1c24]" />
-              <span className="block h-full w-1/4 bg-[#08713f]" />
-              <span className="block h-full w-1/4 bg-[#111]" />
+                {/* Four-colour underline - exact text width */}
+                <div
+                  className="mt-2 flex h-[5px] w-full overflow-hidden rounded-sm max-[640px]:mt-1.5"
+                  aria-hidden="true"
+                >
+                  <span className="w-1/4 bg-[#3F5BA9]" />
+                  <span className="w-1/4 bg-[#ed1c24]" />
+                  <span className="w-1/4 bg-[#08713f]" />
+                  <span className="w-1/4 bg-[#111111]" />
+                </div>
+              </div>
             </div>
 
             <div
@@ -706,6 +767,161 @@ export function HomePage() {
           </div>
         </div>
       </section>
+      
+      <section
+        aria-labelledby="event-info-cta-title"
+        className="border-t border-[#e6ebf1] bg-white py-10 sm:py-14"
+      >
+        <div className={cn(container, "min-w-0")}>
+          <div
+            className={cn(
+              "relative grid grid-cols-1 items-center gap-8 overflow-hidden rounded-2xl",
+              "border border-[#e6ebf1] bg-white p-6 sm:p-8 lg:grid-cols-[1.2fr_0.9fr] lg:gap-10 lg:p-10",
+              "shadow-[0_4px_20px_rgba(15,23,42,0.035)]",
+            )}
+          >
+            {/* Decorative accents */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-24 -top-32 h-72 w-72 rounded-full border-[35px] border-[#eaf3ff]/70"
+            />
+            <div
+              aria-hidden="true"
+              className="absolute left-0 top-8 h-1 w-16 rounded-r-full bg-[#ed1c24]"
+            />
+
+            {/* Content */}
+            <div className="relative z-[1] min-w-0">
+              <p className="mb-4 text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#08713f] sm:text-[12px]">
+                Plan your participation
+              </p>
+
+              <h2
+                id="event-info-cta-title"
+                className="mb-4 max-w-[650px] text-[clamp(1.8rem,3.5vw,2.8rem)] font-black leading-[1.08] tracking-[-0.045em] text-[#10213d]"
+              >
+                Everything you need to know
+                <span className="block text-[#075fd8]">
+                  before you attend.
+                </span>
+              </h2>
+
+              <p className="mb-7 max-w-[650px] text-[14px] leading-[1.75] text-[#647084] sm:text-[15px]">
+                Explore venue details, accommodation options, travel guidance,
+                registration information and other useful details to help you
+                prepare for the event.
+              </p>
+
+              {/* Information highlights */}
+              <div className="grid grid-cols-2 gap-y-6 sm:grid-cols-4 sm:gap-3">
+                {[
+                  {
+                    title: "Venue",
+                    subtitle: "Information",
+                    icon: "⌖",
+                    color: "text-[#075fd8]",
+                    background: "bg-[#eaf2ff]",
+                  },
+                  {
+                    title: "Accommodation",
+                    subtitle: "Options",
+                    icon: "▤",
+                    color: "text-[#08713f]",
+                    background: "bg-[#eaf7ef]",
+                  },
+                  {
+                    title: "Travel",
+                    subtitle: "Guidance",
+                    icon: "✈",
+                    color: "text-[#ed1c24]",
+                    background: "bg-[#fff0f0]",
+                  },
+                  {
+                    title: "Registration",
+                    subtitle: "Details",
+                    icon: "▤",
+                    color: "text-[#d99000]",
+                    background: "bg-[#fff5df]",
+                  },
+                ].map((item, index) => (
+                  <div
+                    key={item.title}
+                    className={cn(
+                      "flex min-w-0 flex-col items-center px-2 text-center",
+                      index > 0 && "sm:border-l sm:border-[#e1e7ef]",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "mb-3 grid h-14 w-14 place-items-center rounded-full text-[25px] font-bold",
+                        item.background,
+                        item.color,
+                      )}
+                      aria-hidden="true"
+                    >
+                      {item.icon}
+                    </span>
+
+                    <span className="text-[12px] font-extrabold leading-snug text-[#10213d] sm:text-[13px]">
+                      {item.title}
+                      <span className="block">{item.subtitle}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Venue visual and information CTA */}
+            <div className="relative z-[1] flex min-w-0 flex-col gap-0 lg:border-l lg:border-[#e1e7ef] lg:pl-10">
+              <div className="relative mb-5 h-[190px] overflow-hidden rounded-2xl bg-[#f1f5f9] sm:h-[240px]">
+                {engagement?.bannerImage || engagement?.logo ? (
+                  <img
+                    src={engagementBannerUrl(engagement)}
+                    alt={home.venueImageAlt}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <div className="text-center">
+                      <MapPin className="mx-auto mb-2 h-9 w-9 text-[#08713f]" />
+                      <p className="text-sm font-bold text-[#10213d]">
+                        {home.venueName || home.brandYear}
+                      </p>
+                      <p className="mt-1 text-xs text-[#647084]">
+                        {home.venueCityCountry}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <Link
+                to="/info"
+                className={cn(
+                  "group inline-flex min-h-[52px] w-full items-center justify-center gap-3 rounded-lg",
+                  "bg-[#ed1c24] px-6 py-3 text-[14px] font-extrabold text-white no-underline",
+                  "shadow-[0_5px_16px_rgba(237,28,36,0.16)] transition-all duration-200",
+                  "hover:-translate-y-0.5 hover:bg-[#d71920] hover:shadow-lg",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ed1c24] focus-visible:ring-offset-2",
+                  "sm:min-h-[56px]",
+                )}
+              >
+                Read More
+                <span
+                  className="text-[22px] leading-none transition-transform duration-200 group-hover:translate-x-1"
+                  aria-hidden="true"
+                >
+                  →
+                </span>
+              </Link>
+
+              <p className="mt-3 text-center text-[11px] font-medium text-[#8993a3]">
+                Plan ahead. Arrive prepared.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {sponsors.length > 0 ? (
         <HomeSponsorsSection
@@ -714,160 +930,6 @@ export function HomePage() {
         />
       ) : null}
 
-      <section
-  aria-labelledby="event-info-cta-title"
-  className="border-t border-[#e6ebf1] bg-white py-10 sm:py-14"
->
-  <div className={cn(container, "min-w-0")}>
-    <div
-      className={cn(
-        "relative grid grid-cols-1 items-center gap-8 overflow-hidden rounded-2xl",
-        "border border-[#e6ebf1] bg-white p-6 sm:p-8 lg:grid-cols-[1.2fr_0.9fr] lg:gap-10 lg:p-10",
-        "shadow-[0_4px_20px_rgba(15,23,42,0.035)]",
-      )}
-    >
-      {/* Decorative accents */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-24 -top-32 h-72 w-72 rounded-full border-[35px] border-[#eaf3ff]/70"
-      />
-      <div
-        aria-hidden="true"
-        className="absolute left-0 top-8 h-1 w-16 rounded-r-full bg-[#ed1c24]"
-      />
-
-      {/* Content */}
-      <div className="relative z-[1] min-w-0">
-        <p className="mb-4 text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#08713f] sm:text-[12px]">
-          Plan your participation
-        </p>
-
-        <h2
-          id="event-info-cta-title"
-          className="mb-4 max-w-[650px] text-[clamp(1.8rem,3.5vw,2.8rem)] font-black leading-[1.08] tracking-[-0.045em] text-[#10213d]"
-        >
-          Everything you need to know
-          <span className="block text-[#075fd8]">
-            before you attend.
-          </span>
-        </h2>
-
-        <p className="mb-7 max-w-[650px] text-[14px] leading-[1.75] text-[#647084] sm:text-[15px]">
-          Explore venue details, accommodation options, travel guidance,
-          registration information and other useful details to help you
-          prepare for the event.
-        </p>
-
-        {/* Information highlights */}
-        <div className="grid grid-cols-2 gap-y-6 sm:grid-cols-4 sm:gap-3">
-          {[
-            {
-              title: "Venue",
-              subtitle: "Information",
-              icon: "⌖",
-              color: "text-[#075fd8]",
-              background: "bg-[#eaf2ff]",
-            },
-            {
-              title: "Accommodation",
-              subtitle: "Options",
-              icon: "▤",
-              color: "text-[#08713f]",
-              background: "bg-[#eaf7ef]",
-            },
-            {
-              title: "Travel",
-              subtitle: "Guidance",
-              icon: "✈",
-              color: "text-[#ed1c24]",
-              background: "bg-[#fff0f0]",
-            },
-            {
-              title: "Registration",
-              subtitle: "Details",
-              icon: "▤",
-              color: "text-[#d99000]",
-              background: "bg-[#fff5df]",
-            },
-          ].map((item, index) => (
-            <div
-              key={item.title}
-              className={cn(
-                "flex min-w-0 flex-col items-center px-2 text-center",
-                index > 0 && "sm:border-l sm:border-[#e1e7ef]",
-              )}
-            >
-              <span
-                className={cn(
-                  "mb-3 grid h-14 w-14 place-items-center rounded-full text-[25px] font-bold",
-                  item.background,
-                  item.color,
-                )}
-                aria-hidden="true"
-              >
-                {item.icon}
-              </span>
-
-              <span className="text-[12px] font-extrabold leading-snug text-[#10213d] sm:text-[13px]">
-                {item.title}
-                <span className="block">{item.subtitle}</span>
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Venue visual and information CTA */}
-      <div className="relative z-[1] flex min-w-0 flex-col gap-0 lg:border-l lg:border-[#e1e7ef] lg:pl-10">
-        <div className="relative mb-5 h-[190px] overflow-hidden rounded-2xl bg-[#f1f5f9] sm:h-[240px]">
-          {engagement?.bannerImage || engagement?.logo ? (
-            <img
-              src={engagementBannerUrl(engagement)}
-              alt={home.venueImageAlt}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center">
-              <div className="text-center">
-                <MapPin className="mx-auto mb-2 h-9 w-9 text-[#08713f]" />
-                <p className="text-sm font-bold text-[#10213d]">
-                  {home.venueName || home.brandYear}
-                </p>
-                <p className="mt-1 text-xs text-[#647084]">
-                  {home.venueCityCountry}
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <Link
-          to="/info"
-          className={cn(
-            "group inline-flex min-h-[52px] w-full items-center justify-center gap-3 rounded-lg",
-            "bg-[#ed1c24] px-6 py-3 text-[14px] font-extrabold text-white no-underline",
-            "shadow-[0_5px_16px_rgba(237,28,36,0.16)] transition-all duration-200",
-            "hover:-translate-y-0.5 hover:bg-[#d71920] hover:shadow-lg",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ed1c24] focus-visible:ring-offset-2",
-            "sm:min-h-[56px]",
-          )}
-        >
-          Read More
-          <span
-            className="text-[22px] leading-none transition-transform duration-200 group-hover:translate-x-1"
-            aria-hidden="true"
-          >
-            →
-          </span>
-        </Link>
-
-        <p className="mt-3 text-center text-[11px] font-medium text-[#8993a3]">
-          Plan ahead. Arrive prepared.
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
     </div>
     </PublicEventGate>
   );
