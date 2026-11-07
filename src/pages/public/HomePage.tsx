@@ -785,14 +785,16 @@ export function HomePage() {
               aria-hidden="true"
               className="pointer-events-none absolute -right-24 -top-32 h-72 w-72 rounded-full border-[35px] border-[#eaf3ff]/70"
             />
+            
+            {/* Red accent */}
             <div
               aria-hidden="true"
-              className="absolute left-0 top-8 h-1 w-16 rounded-r-full bg-[#ed1c24]"
+              className="pointer-events-none absolute left-0 top-16 h-[5px] w-32 rounded-full bg-[#ed1c24]"
             />
 
             {/* Content */}
-            <div className="relative z-[1] min-w-0">
-              <p className="mb-4 text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#08713f] sm:text-[12px]">
+            <div className="relative z-[1] min-w-0 px-5 sm:px-8">
+              <p className="mb-7 mt-4 text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#08713f] sm:mb-4 sm:mt-0 sm:text-[12px]">
                 Plan your participation
               </p>
 
