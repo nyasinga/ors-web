@@ -200,7 +200,10 @@ function participationTypeOf(ticket: EngagementParticipantTicket): Participation
   const raw = pickString(ticket.participationType).toLowerCase();
   if (raw === "sponsor" || raw === "exhibitor") return "sponsor";
   if (raw === "speaker") return "speaker";
-  if (raw === "virtual") return "virtual";
+  // Virtual registrants are stored as API userType "participant".
+  if (raw === "virtual" || raw === "participant" || raw === "virtual_participant") {
+    return "virtual";
+  }
   return "delegate";
 }
 

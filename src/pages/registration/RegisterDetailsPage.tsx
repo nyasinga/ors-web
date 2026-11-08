@@ -6,7 +6,7 @@ import { useRegistration } from "../../hooks/useRegistration";
 import { SearchableSelect } from "../../components/ui/SearchableSelect";
 import { useToast } from "../../components/ui/Toast";
 import { COUNTRY_NAME_OPTIONS } from "../../data/countries";
-import { participationTypes } from "../../data/registration";
+import { participationTypes, toTicketingUserType } from "../../data/registration";
 import { formatMoney } from "../../i18n/format";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { cn } from "../../lib/cn";
@@ -125,7 +125,9 @@ export function RegisterDetailsPage() {
           phoneNo: details.phone.trim(),
           country: details.country,
           city: details.city.trim(),
-          userType: isSponsor ? "sponsor" : participationType,
+          // API allow-list: delegate | exhibitor | speaker | participant | sponsor
+          // UI "virtual" maps to "participant".
+          userType: isSponsor ? "sponsor" : toTicketingUserType(participationType),
           extraData: {
             language: details.language,
             otherLanguage: details.otherLanguage,

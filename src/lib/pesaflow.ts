@@ -4,6 +4,7 @@ import {
   type ECitizenCheckoutFields,
   type ECitizenCheckoutSession,
 } from "../types/registration";
+import { toTicketingUserType } from "../data/registration";
 import { SHOW_ECITIZEN_IFRAME } from "./paymentMode";
 
 const TENANT_ID = (import.meta.env.VITE_API_TENANT_ID as string | undefined)?.trim() || "ACA";
@@ -440,12 +441,17 @@ export async function signupAfterPayment(
   input: SignupIsippeInput,
   files: File[] = [],
 ) {
+  // Normalize before POST — API rejects UI-only types like "virtual".
+  const normalized: SignupIsippeInput = {
+    ...input,
+    userType: toTicketingUserType(input.userType),
+  };
 
   const formData = new FormData();
   const fields: [string, string | Blob][] = [];
 
-  for (const key in input) {
-    const value = input[key as keyof SignupIsippeInput];
+  for (const key in normalized) {
+    const value = normalized[key as keyof SignupIsippeInput];
 
     if (value === undefined || value === null) continue;
 
@@ -458,7 +464,7 @@ export async function signupAfterPayment(
     }
   }
 
-  const name = input.userType==='sponsor'? FileUploadTypes.Logo : FileUploadTypes.Avatar;
+  const name = normalized.userType === "sponsor" ? FileUploadTypes.Logo : FileUploadTypes.Avatar;
   fields.forEach(([key, value]) => formData.append(key, value));
   files.forEach((file) => formData.append(name, file, file.name));
 
