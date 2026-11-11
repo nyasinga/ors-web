@@ -37,10 +37,10 @@ const brandAca = cn(
 );
 
 const brandIsippe = cn(
-  "block h-[52px] w-auto max-w-[250px] object-contain",
-  "max-[1120px]:h-11 max-[1120px]:max-w-[200px]",
-  "max-[850px]:h-[38px] max-[850px]:max-w-[160px]",
-  "max-[600px]:h-[34px] max-[600px]:max-w-[140px]",
+  "block h-[52px] w-auto max-w-[320px] object-contain object-left",
+  "max-[1120px]:h-11 max-[1120px]:max-w-[260px]",
+  "max-[850px]:h-[38px] max-[850px]:max-w-[210px]",
+  "max-[600px]:h-[34px] max-[600px]:max-w-[170px]",
 );
 
 const sideLinkBase = cn(

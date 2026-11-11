@@ -1,6 +1,7 @@
 /**
  * Participant session helpers.
- * Login and refresh both hit POST /ticketing/register; storage is a cache only.
+ * Login/refresh must only READ the ticket — never POST /ticketing/register,
+ * which the backend treats as a (re)registration and can reset issued → registered.
  */
 
 import { API_BASE_URL, apiRequest, TENANT_ID } from "./api";
@@ -145,10 +146,11 @@ export async function participantLogin(input: ParticipantLoginInput): Promise<Pa
     throw new Error("A valid ticket pass code is required");
   }
 
-  const result = await apiRequest<Record<string, unknown>>("/ticketing/register", {
-    method: "POST",
-    body: { passCode },
-  });
+  // Read-only lookup. Do NOT POST /ticketing/register — that endpoint
+  // re-registers the ticket and can drop status from issued back to registered.
+  const result = await apiRequest<Record<string, unknown>>(
+    `/ticketing/${encodeURIComponent(passCode)}`,
+  );
 
   const session = sessionFromTicketResponse(result, passCode, viaQr ? "qr" : "passcode");
   saveParticipantSession(session, Boolean(input.remember));

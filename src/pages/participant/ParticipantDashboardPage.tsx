@@ -120,8 +120,9 @@ const cardTitle = "text-[17px] font-extrabold text-[#092c9b] max-[600px]:text-[1
 /** Hero background: navy fade over the dashboard photo; flat overlay on phones. */
 const heroBg = cn(
   "absolute inset-0",
-  "[background:linear-gradient(90deg,rgba(1,27,91,0.99)_0%,rgba(3,39,108,0.94)_32%,rgba(3,43,115,0.42)_55%,rgba(3,43,115,0.04)_76%),url('/assets/dashboard-hero.jpg')_center/cover_no-repeat]",
-  "max-[600px]:[background:linear-gradient(180deg,rgba(1,27,91,0.98),rgba(3,39,108,0.8)),url('/assets/dashboard-hero.jpg')_center/cover_no-repeat]",
+  // Opaque navy on the left so photo text/logos cannot ghost behind venue copy.
+  "[background:linear-gradient(90deg,rgba(1,27,91,1)_0%,rgba(3,39,108,0.97)_38%,rgba(3,43,115,0.55)_62%,rgba(3,43,115,0.12)_82%),url('/assets/dashboard-hero.jpg')_right_center/cover_no-repeat]",
+  "max-[600px]:[background:linear-gradient(180deg,rgba(1,27,91,0.98),rgba(3,39,108,0.82)),url('/assets/dashboard-hero.jpg')_center/cover_no-repeat]",
 );
 
 const heroEventSvg = "h-7 w-7 flex-shrink-0 max-[600px]:h-6 max-[600px]:w-6";
@@ -497,7 +498,7 @@ export function ParticipantDashboardPage() {
         {activeTab === "venue" ? (
           <section className={cn(card, "mt-[13px] overflow-hidden")}>
             <div
-              className="h-[140px] [background:url('/assets/about-hero.png')_center/cover] max-[600px]:h-[120px]"
+              className="h-[140px] [background:url('/assets/mombasa-continental-resort.jpg')_center/cover] max-[600px]:h-[120px]"
               role="img"
               aria-label={engagement?.venue || event.venue || "Event venue"}
             />
