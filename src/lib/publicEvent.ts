@@ -898,7 +898,7 @@ export async function fetchHomeSponsors(
           label === "sponsor" ||
           label === "exhibitor";
         if (!isSponsor) return false;
-        if (p.rawStatus === "cancelled" || p.verificationBucket === "cancelled") return false;
+        if (["cancelled", "registered", "draft", undefined].includes(p.rawStatus) || p.verificationBucket === "cancelled") return false;
         return true;
       })
       .map((p) => {

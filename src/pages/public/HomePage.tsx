@@ -339,58 +339,18 @@ export function HomePage() {
               )}
             />
 
-            
-            <div className="flex w-full min-w-0 items-center gap-0">
-
-              {/* ISIPPE emblem */}
-              <div className="flex shrink-0 items-center">
-                <img
-                  src="/assets/logo-issipe.png"
-                  alt="ISIPPE emblem"
-                  className={cn(
-                    "ml-[-10px] max-[640px]:ml-[0px] block h-auto w-auto object-contain",
-                    "max-h-[calc(5.2rem+8px)]",
-                    "max-w-[clamp(42px,7vw,100px)]",
-                    "max-[640px]:max-h-[calc(5rem+8px)]",
-                    "max-[640px]:max-w-[clamp(42px,10vw,58px)]",
-                  )}
-                />
-              </div>
-
-              {/* ISIPPE 2026 text and underline */}
-              <div className="mt-0 min-w-0 w-fit max-w-full max-[640px]:mt-5 max-[640px]:mb-3">
-                <h1
-                  className={cn(
-                    "m-0 flex w-fit max-w-full flex-nowrap items-center whitespace-nowrap",
-                    "text-[clamp(2rem,4.8vw,4.8rem)]",
-                    "font-black leading-[0.95] tracking-[-0.065em]",
-                    "text-[#3F5BA9]",
-                    "max-[640px]:text-[clamp(2.2rem,9vw,3rem)]",
-                    "max-[640px]:leading-[1.05]",
-                    "max-[640px]:tracking-[-0.06em]",
-                  )}
-                >
-                  <span>ISIPPE</span>
-
-                  <span className="ml-[0.1em] flex items-center tracking-[-0.055em]">
-                    <span className="text-[#ed1c24]">2</span>
-                    <span className="text-[#3F5BA9]">0</span>
-                    <span className="text-[#08713f]">2</span>
-                    <span className="text-[#111111]">6</span>
-                  </span>
-                </h1>
-
-                {/* Four-colour underline - exact text width */}
-                <div
-                  className="mt-2 flex h-[5px] w-full overflow-hidden rounded-sm max-[640px]:mt-1.5"
-                  aria-hidden="true"
-                >
-                  <span className="w-1/4 bg-[#3F5BA9]" />
-                  <span className="w-1/4 bg-[#ed1c24]" />
-                  <span className="w-1/4 bg-[#08713f]" />
-                  <span className="w-1/4 bg-[#111111]" />
-                </div>
-              </div>
+            <div className="flex w-full min-w-0 items-center justify-center p-0">
+              <img
+                src="/assets/logo-isippe.png"
+                alt="ISIPPE 2026 - 3rd International Symposium on Intellectual Property Protection and Enforcement"
+                className={cn(
+                  "block h-auto w-full object-contain",
+                  "max-w-full max-[640px]:min-h-[120px]",
+                  "max-[640px]:w-screen max-[640px]:max-w-none",
+                  "sm:max-w-[1100px]",
+                  "max-h-[clamp(65px,12vw,180px)]",
+                )}
+              />
             </div>
 
             <div
@@ -786,15 +746,14 @@ export function HomePage() {
               className="pointer-events-none absolute -right-24 -top-32 h-72 w-72 rounded-full border-[35px] border-[#eaf3ff]/70"
             />
             
-            {/* Red accent */}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute left-0 top-16 h-[5px] w-32 rounded-full bg-[#ed1c24]"
-            />
-
             {/* Content */}
             <div className="relative z-[1] min-w-0 px-5 sm:px-8">
               <p className="mb-7 mt-4 text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#08713f] sm:mb-4 sm:mt-0 sm:text-[12px]">
+                {/* Red accent */}
+                <div
+                  aria-hidden="true"
+                  className="mb-4 h-[5px] w-32 rounded-full bg-[#ed1c24]"
+                />
                 Plan your participation
               </p>
 
