@@ -437,9 +437,19 @@ export function engagementToHomeContent(engagement: Engagement | null): PublicHo
   const early =
     tickets.find((t) => /early/i.test(t.name)) ||
     tickets.find((t) => /early/i.test(t.period || ""));
-  const earlyBirdNote = early
-    ? `Early bird registration is now open.${early.period ? ` ${early.period}.` : ""}${early.price ? ` ${early.price}.` : ""}`
-    : "";
+  const lateTicket =
+    tickets.find(
+      (t) =>
+        t !== early &&
+        (/late/i.test(t.name) || /late/i.test(t.period || "") || /standard|regular/i.test(t.name)),
+    ) || tickets.find((t) => t !== early);
+  const feeActive = resolveActiveFeeTier(early?.period, lateTicket?.period);
+  const earlyBirdNote =
+    feeActive === "late" && lateTicket
+      ? `Late registration is now open.${lateTicket.period ? ` ${lateTicket.period}.` : ""}${lateTicket.price ? ` ${lateTicket.price}.` : ""}`
+      : early
+        ? `Early bird registration is now open.${early.period ? ` ${early.period}.` : ""}${early.price ? ` ${early.price}.` : ""}`
+        : "";
 
   const cityLine = [about.venueCity, about.venueCountry].filter(Boolean).join(", ");
   const shortName = about.name.split(/[—–-]/)[0]?.trim() || about.name;
@@ -596,8 +606,76 @@ const EMPTY_FEES: PublicFeeTier = {
   active: "earlyBird",
 };
 
+/** Strip ordinal suffixes so "11th November 2026" parses reliably. */
+function normalizePeriodDateText(raw: string): string {
+  return raw
+    .replace(/(\d{1,2})(st|nd|rd|th)\b/gi, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Parse ticket period windows:
+ * - "Up to 11th November 2026" → end of that day
+ * - "12th to 18th November 2026" → start of the first day
+ * - "12 November 2026 to 18 November 2026" → start of the first day
+ */
+export function parseTicketPeriodBoundary(
+  period?: string,
+  which: "end" | "start" = "end",
+): Date | null {
+  if (!period?.trim()) return null;
+  const text = normalizePeriodDateText(period);
+
+  const upTo = text.match(/up\s+to\s+(\d{1,2}\s+\w+\s+\d{4})/i);
+  if (upTo) {
+    const d = new Date(`${upTo[1]} ${which === "end" ? "23:59:59" : "00:00:00"}`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  // "12 to 18 November 2026"
+  const shortRange = text.match(/(\d{1,2})\s+to\s+(\d{1,2})\s+(\w+)\s+(\d{4})/i);
+  if (shortRange) {
+    const day = which === "end" ? shortRange[2] : shortRange[1];
+    const stamp = `${day} ${shortRange[3]} ${shortRange[4]} ${which === "end" ? "23:59:59" : "00:00:00"}`;
+    const d = new Date(stamp);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  // "12 November 2026 to 18 November 2026"
+  const fullRange = text.match(
+    /(\d{1,2}\s+\w+\s+\d{4})\s+to\s+(\d{1,2}\s+\w+\s+\d{4})/i,
+  );
+  if (fullRange) {
+    const stamp = `${which === "end" ? fullRange[2] : fullRange[1]} ${which === "end" ? "23:59:59" : "00:00:00"}`;
+    const d = new Date(stamp);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  return null;
+}
+
+/** Early bird while now <= early period end; otherwise late. */
+export function resolveActiveFeeTier(
+  earlyPeriod?: string,
+  latePeriod?: string,
+  now: Date = new Date(),
+): "earlyBird" | "late" {
+  const earlyEnd = parseTicketPeriodBoundary(earlyPeriod, "end");
+  if (earlyEnd && now.getTime() <= earlyEnd.getTime()) return "earlyBird";
+  if (earlyEnd && now.getTime() > earlyEnd.getTime()) return "late";
+
+  const lateStart = parseTicketPeriodBoundary(latePeriod, "start");
+  if (lateStart && now.getTime() >= lateStart.getTime()) return "late";
+
+  return "earlyBird";
+}
+
 /** Registration fee tiers from engagement tickets (API only — no hard-coded prices). */
-export function engagementToRegistrationFees(engagement: Engagement | null): PublicFeeTier {
+export function engagementToRegistrationFees(
+  engagement: Engagement | null,
+  now: Date = new Date(),
+): PublicFeeTier {
   if (!engagement) return EMPTY_FEES;
   const tickets = asTickets(engagement.tickets);
   if (!tickets.length) return EMPTY_FEES;
@@ -629,7 +707,7 @@ export function engagementToRegistrationFees(engagement: Engagement | null): Pub
       kes: lateAmounts.kes,
       usd: lateAmounts.usd,
     },
-    active: "earlyBird",
+    active: resolveActiveFeeTier(early.period, late.period, now),
   };
 }
 

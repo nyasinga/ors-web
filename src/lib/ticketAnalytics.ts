@@ -86,14 +86,24 @@ function isCanceled(tx: PaymentTransaction): boolean {
 
 function parseCutoffDate(period?: string): Date | null {
   if (!period) return null;
-  // "Up to 31 October 2026"
-  const upTo = period.match(/up\s+to\s+(\d{1,2}\s+\w+\s+\d{4})/i);
+  const text = period
+    .replace(/(\d{1,2})(st|nd|rd|th)\b/gi, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+  // "Up to 11 November 2026"
+  const upTo = text.match(/up\s+to\s+(\d{1,2}\s+\w+\s+\d{4})/i);
   if (upTo) {
     const d = new Date(`${upTo[1]} 23:59:59`);
     return Number.isNaN(d.getTime()) ? null : d;
   }
-  // "1 to 18 November 2026" → starts on first date
-  const range = period.match(/(\d{1,2}\s+\w+\s+\d{4})\s+to\s+(\d{1,2}\s+\w+\s+\d{4})/i);
+  // "12 to 18 November 2026" → starts on first day
+  const shortRange = text.match(/(\d{1,2})\s+to\s+(\d{1,2})\s+(\w+)\s+(\d{4})/i);
+  if (shortRange) {
+    const d = new Date(`${shortRange[1]} ${shortRange[3]} ${shortRange[4]} 00:00:00`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  // "1 November 2026 to 18 November 2026" → starts on first date
+  const range = text.match(/(\d{1,2}\s+\w+\s+\d{4})\s+to\s+(\d{1,2}\s+\w+\s+\d{4})/i);
   if (range) {
     const d = new Date(`${range[1]} 00:00:00`);
     return Number.isNaN(d.getTime()) ? null : d;

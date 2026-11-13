@@ -48,6 +48,9 @@ export function RegisterDetailsPage() {
     sponsorEntrySource,
     participationType,
     feeKes,
+    feeUsd,
+    feeLabel,
+    feeUntil,
     reference,
     setInvoice,
     setPaymentPhase,
@@ -477,21 +480,35 @@ export function RegisterDetailsPage() {
                 <div className={r.sidePrice}>
                   <div className={r.priceLabel}>🏷 Registration Fee</div>
                   <div className={r.period}>
-                    {earlyBird.label} &nbsp; <b>Current Period</b>
+                    {feeLabel} &nbsp; <b>Current Period</b>
                   </div>
-                  <div className={r.price}>{formatMoney(earlyBird.kes, "KES")}</div>
-                  <div className={r.priceSub}>
-                    {formatMoney(earlyBird.usd, "USD")} (Approx.)
+                  <div className={r.price}>{formatMoney(feeKes, "KES")}</div>
+                  {feeUsd > 0 ? (
+                    <div className={r.priceSub}>
+                      {formatMoney(feeUsd, "USD")} (Approx.)
+                    </div>
+                  ) : null}
+                  <div className={r.period}>{feeUntil}</div>
+                </div>
+                {feeLabel === late.label ? (
+                  <div className={r.late}>
+                    <b>{earlyBird.label}</b>
+                    <br />
+                    <span className="text-[11px] text-[#61708a]">{earlyBird.until} · expired</span>
+                    <br />
+                    <strong className="text-[#94a3b8] line-through">
+                      {formatMoney(earlyBird.kes, "KES")}
+                    </strong>
                   </div>
-                  <div className={r.period}>{earlyBird.until}</div>
-                </div>
-                <div className={r.late}>
-                  <b>{late.label}</b>
-                  <br />
-                  <span className="text-[11px] text-[#61708a]">{late.until}</span>
-                  <br />
-                  <strong>{formatMoney(late.kes, "KES")}</strong>
-                </div>
+                ) : (
+                  <div className={r.late}>
+                    <b>{late.label}</b>
+                    <br />
+                    <span className="text-[11px] text-[#61708a]">{late.until}</span>
+                    <br />
+                    <strong>{formatMoney(late.kes, "KES")}</strong>
+                  </div>
+                )}
               </>
             )}
             <div className={r.infoBox}>
