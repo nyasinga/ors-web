@@ -114,33 +114,34 @@ export function ParticipantLayout() {
                 </Link>
               ))}
             </nav>
-            <div className="ml-[22px] flex h-[51px] min-w-[180px] items-center gap-[10px] rounded-[25px] bg-[#f2f7fd] px-4 max-[1120px]:ml-[10px] max-[1120px]:min-w-[160px] max-[850px]:hidden">
-              <div className="grid h-[35px] w-[35px] flex-none place-items-center overflow-hidden rounded-[50%] bg-[#075fe5] text-[11px] font-extrabold text-white">
-                {photo ? (
-                  <img
-                    src={photo}
-                    alt={name || "Participant"}
-                    className="h-full w-full rounded-[50%] object-cover"
-                  />
-                ) : (
-                  initials
-                )}
-              </div>
-              <div>
-                <strong className="block text-[12px]">{name}</strong>
-                <small className="mt-[2px] block text-[10px] text-[#647596]">Participant</small>
-              </div>
-              <button
-                type="button"
-                className="ml-auto cursor-pointer border-0 bg-transparent p-0 text-[11px] font-semibold text-[#075fe5]"
-                onClick={signOut}
-              >
-                Sign out
-              </button>
-            </div>
 
             <div className="ml-auto flex shrink-0 items-center gap-2">
-              <LanguageButton className="min-[961px]:hidden"/>
+              <LanguageButton showLabel={true} variant="button" />
+
+              <div className="ml-[22px] flex h-[51px] min-w-[180px] items-center gap-[10px] rounded-[25px] bg-[#f2f7fd] px-4 max-[1120px]:ml-[10px] max-[1120px]:min-w-[160px] max-[850px]:hidden">
+                <div className="grid h-[35px] w-[35px] flex-none place-items-center overflow-hidden rounded-[50%] bg-[#075fe5] text-[11px] font-extrabold text-white">
+                  {photo ? (
+                    <img
+                      src={photo}
+                      alt={name || "Participant"}
+                      className="h-full w-full rounded-[50%] object-cover"
+                    />
+                  ) : (
+                    initials
+                  )}
+                </div>
+                <div>
+                  <strong className="block text-[12px]">{name}</strong>
+                  <small className="mt-[2px] block text-[10px] text-[#647596]">Participant</small>
+                </div>
+                <button
+                  type="button"
+                  className="ml-auto cursor-pointer border-0 bg-transparent p-0 text-[11px] font-semibold text-[#075fe5]"
+                  onClick={signOut}
+                >
+                  Sign out
+                </button>
+              </div>
 
               <button
                 type="button"

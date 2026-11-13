@@ -354,36 +354,69 @@ export function ParticipantLoginPage() {
             </section>
           </div>
 
-          <section className="mt-[22px] flex items-center gap-7 rounded-[9px] bg-[#edf6ff] px-[30px] py-[21px] max-[850px]:flex-wrap max-[600px]:gap-[13px] max-[600px]:p-[17px]">
-            <Headphones
-              className="h-[53px] w-[53px] flex-none text-[#08359d] max-[600px]:h-10 max-[600px]:w-10"
-              size={53}
-              strokeWidth={1.7}
-            />
-            <div>
-              <h3 className="mb-[5px] text-[16px] font-extrabold text-[#08164d] max-[600px]:text-[13px]">
-                Need Assistance?
-              </h3>
-              <p className="text-[13px] text-[#627494] max-[600px]:text-[10px]">For login support, please contact us:</p>
-            </div>
-            <div
-              className={cn(
-                "ml-[10px] flex items-center gap-[45px]",
-                "max-[1050px]:gap-5",
-                "max-[850px]:ml-0",
-                "max-[600px]:ml-[53px] max-[600px]:grid max-[600px]:w-full max-[600px]:grid-cols-[1fr] max-[600px]:gap-[9px]",
-              )}
-            >
-              <a className={supportItem} href={`mailto:${event.supportEmail}`}>
-                <Mail className={supportSvg} size={22} fill="currentColor" strokeWidth={0} />
-                {event.supportEmail}
-              </a>
-              <a className={supportItem} href={`tel:${event.supportPhone}`}>
-                <Phone className={supportSvg} size={22} fill="currentColor" strokeWidth={0} />
-                {event.supportPhone}
-              </a>
-            </div>
-          </section>
+          <section
+  className={cn(
+    "relative mt-[22px] flex items-center gap-7 rounded-[9px] bg-[#edf6ff] px-[30px] py-[21px] pr-[300px]",
+    "max-[1050px]:pr-[260px]",
+    "max-[850px]:flex-wrap max-[850px]:pr-[30px]",
+    "max-[600px]:gap-[13px] max-[600px]:p-[17px] max-[600px]:pb-[65px]",
+  )}
+>
+  <Headphones
+    className="h-[53px] w-[53px] flex-none text-[#08359d] max-[600px]:h-10 max-[600px]:w-10"
+    size={53}
+    strokeWidth={1.7}
+  />
+
+  <div className="min-w-0">
+    <h3 className="mb-[5px] text-[16px] font-extrabold text-[#08164d] max-[600px]:text-[13px]">
+      Need Assistance?
+    </h3>
+    <p className="text-[13px] text-[#627494] max-[600px]:text-[10px]">
+      For login support, please contact us:
+    </p>
+  </div>
+
+  <div
+    className={cn(
+      "ml-[10px] flex items-center gap-[45px]",
+      "max-[1050px]:gap-5",
+      "max-[850px]:ml-0",
+      "max-[600px]:ml-[53px] max-[600px]:grid max-[600px]:w-full max-[600px]:grid-cols-1 max-[600px]:gap-[9px]",
+    )}
+  >
+    <a className={supportItem} href={`mailto:${event.supportEmail}`}>
+      <Mail className={supportSvg} size={22} fill="currentColor" strokeWidth={0} />
+      {event.supportEmail}
+    </a>
+
+    <a className={supportItem} href={`tel:${event.supportPhone}`}>
+      <Phone className={supportSvg} size={22} fill="currentColor" strokeWidth={0} />
+      {event.supportPhone}
+    </a>
+  </div>
+
+  {/* Partner logos - bottom right */}
+  <div
+    className={cn(
+      "absolute bottom-4 right-6 flex items-center justify-end gap-5",
+      "max-[850px]:bottom-3 max-[850px]:right-5 max-[850px]:gap-4",
+      "max-[600px]:bottom-3 max-[600px]:right-4 max-[600px]:gap-3",
+    )}
+  >
+    <img
+      src="/assets/logo-aca.png"
+      alt="Anti-Counterfeit Authority"
+      className="h-12 w-auto max-w-[130px] object-contain sm:h-14 max-[600px]:h-9 max-[600px]:max-w-[90px]"
+    />
+
+    <img
+      src="/assets/logo-isippe.png"
+      alt="ISIPPE 2026"
+      className="h-12 w-auto max-w-[180px] object-contain sm:h-14 max-[600px]:h-9 max-[600px]:max-w-[115px]"
+    />
+  </div>
+</section>
         </div>
       </main>
     </div>

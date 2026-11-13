@@ -150,26 +150,27 @@ export function AdminLoginPage() {
         >
           {/* Left copy */}
           <div className="min-w-0 max-[900px]:pt-16">
+            <div className="flex w-full min-w-0 items-start justify-start p-0">
+              <img
+                src="/assets/logo-isippe.png"
+                alt="ISIPPE 2026 - 3rd International Symposium on Intellectual Property Protection and Enforcement"
+                className={cn(
+                  "block h-auto w-full object-contain object-left",
+                  "max-w-full",
+                  "sm:max-w-[1100px]",
+                  "max-h-[clamp(65px,12vw,180px)]",
+                )}
+              />
+            </div>
+
             <div
-              className="mb-4 flex h-1.5 w-[112px] max-[600px]:mb-3 max-[600px]:h-1 max-[600px]:w-[72px]"
-              aria-hidden
-            >
+              className="mb-4 flex h-1.5 w-[112px] max-[600px]:mb-3 max-[600px]:h-1 max-[600px]:w-[72px]" aria-hidden>
               <i className="block h-full w-1/2 bg-[#ed1c24]" />
               <i className="block h-full w-1/2 bg-[#078047]" />
             </div>
-
             <p className="mb-3 text-[12px] font-semibold uppercase tracking-[0.22em] text-[#50638b] max-[600px]:mb-2 max-[600px]:text-[10px] max-[600px]:tracking-[0.18em]">
               { event.fullName }
             </p>
-
-            <h1
-              className={cn(
-                "m-0 max-w-[34rem] text-[clamp(2rem,4.2vw,3.15rem)] font-black leading-[1.05] tracking-[-0.04em] text-[#080f38]",
-                "max-[600px]:max-w-none",
-              )}
-            >
-              { event.name }
-            </h1>
 
             <p className="mt-4 max-w-[32rem] text-[17px] leading-[1.45] text-[#3a4668] max-[600px]:mt-3 max-[600px]:text-[15px]">
               { event.shortDescription }
@@ -429,7 +430,7 @@ export function AdminLoginPage() {
       </section>
 
       {/* Logos / meta strip */}
-      <section className="bg-white py-7 max-[600px]:py-5">
+      <section className="border-t border-[#e0e7ef] bg-white py-7 max-[600px]:py-5">
         <div className={pageContainer}>
           <div
             className={cn(
@@ -438,21 +439,31 @@ export function AdminLoginPage() {
               "max-[600px]:grid-cols-1 max-[600px]:gap-4",
             )}
           >
-            <div
-              className="h-16 [background:url('/assets/footer-logos.png')_left_center/contain_no-repeat] max-[600px]:h-14"
-              role="img"
-              aria-label={t("brand.logoAlt")}
-            />
-            <div className="flex items-center gap-3 border-l border-[#d9e1eb] pl-6 max-[600px]:border-l-0 max-[600px]:border-t max-[600px]:pl-0 max-[600px]:pt-4">
-              <CalendarDays className="h-6 w-6 shrink-0 text-[#0c1747]" size={24} strokeWidth={1.8} />
-              <span className="text-[13px] leading-[1.4] text-[#111b3f]">{event.dates}</span>
-            </div>
-            <div className="flex items-center gap-3 border-l border-[#d9e1eb] pl-6 max-[900px]:col-span-2 max-[600px]:col-span-1 max-[600px]:border-l-0 max-[600px]:border-t max-[600px]:pl-0 max-[600px]:pt-4">
-              <MapPin
-                className="h-6 w-6 shrink-0 text-[#0c1747]"
-                size={24}
-                strokeWidth={1.8}
+            {/* Partner logos */}
+            <div className="flex items-center gap-6">
+              <img
+                src="/assets/logo-aca.png"
+                alt="Anti-Counterfeit Authority"
+                className="h-14 w-auto max-w-[150px] object-contain"
               />
+              <img
+                src="/assets/logo-isippe.png"
+                alt="ISIPPE 2026"
+                className="h-14 w-auto max-w-[220px] object-contain"
+              />
+            </div>
+
+            {/* Event dates */}
+            <div className="flex items-center gap-3 border-l border-[#d9e1eb] pl-6 max-[600px]:border-l-0 max-[600px]:border-t max-[600px]:pl-0 max-[600px]:pt-4">
+              <CalendarDays className="h-6 w-6 shrink-0 text-[#0c1747]" />
+              <span className="text-[13px] leading-[1.4] text-[#111b3f]">
+                {event.dates}
+              </span>
+            </div>
+
+            {/* Venue */}
+            <div className="flex items-center gap-3 border-l border-[#d9e1eb] pl-6 max-[900px]:col-span-2 max-[600px]:col-span-1 max-[600px]:border-l-0 max-[600px]:border-t max-[600px]:pl-0 max-[600px]:pt-4">
+              <MapPin className="h-6 w-6 shrink-0 text-[#0c1747]" />
               <span className="text-[13px] leading-[1.4] text-[#111b3f]">
                 {event.venue}, {event.city}
               </span>
@@ -460,6 +471,7 @@ export function AdminLoginPage() {
           </div>
         </div>
       </section>
+      
     </div>
   );
 }

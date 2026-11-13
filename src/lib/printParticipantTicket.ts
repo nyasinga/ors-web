@@ -18,6 +18,39 @@ export type PrintableEventInfo = {
 };
 
 /**
+ * Fetch the official invoice PDF as a blob URL for iframe preview / print.
+ * Caller must revoke the URL when done (`URL.revokeObjectURL`).
+ * @see https://ciprop.mustsacco.co.ke/explorer/#/EngagementTicketController/EngagementTicketController.getInvoice
+ */
+export async function fetchInvoicePdfUrl(ticketId: string): Promise<string> {
+  const id = String(ticketId || "").trim();
+
+  if (!id) {
+    throw new Error("This registration has no ticket ID to print an invoice.");
+  }
+
+  const url = `${API_BASE_URL}/ticketing/${encodeURIComponent(id)}/invoice?tenant-id=${encodeURIComponent(TENANT_ID)}`;
+
+  const res = await fetch(url, {
+    headers: {
+      Accept: "application/pdf",
+      "x-tenant-id": TENANT_ID,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Could not load invoice (${res.status}).`);
+  }
+
+  const raw = await res.blob();
+
+  // Force application/pdf for consistent browser and Android PDF handling.
+  const blob = new Blob([raw], { type: "application/pdf" });
+
+  return URL.createObjectURL(blob);
+}
+
+/**
  * Fetch the official event-pass PDF as a blob URL for iframe preview / print.
  * Caller must revoke the URL when done (`URL.revokeObjectURL`).
  * @see https://ciprop.mustsacco.co.ke/explorer/#/EngagementTicketController/EngagementTicketController.getEventPass

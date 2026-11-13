@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Download, Plus, Printer, Search, Timer, Users } from "lucide-react";
+import { Check, Download, InfoIcon, MoreVertical, Plus, Printer, Search, Timer, Users } from "lucide-react";
 import { AddParticipantModal, type AddedParticipant } from "./AddParticipantModal";
 import { GrantWaiverModal } from "./GrantWaiverModal";
 import { ParticipantDetailModal } from "./ParticipantDetailModal";
@@ -19,7 +19,8 @@ import {
   waiverReasonLabel,
   type WaiverReason,
 } from "../../lib/participantWaiver";
-import { fetchEventPassPdfUrl } from "../../lib/printParticipantTicket";
+import { fetchEventPassPdfUrl, fetchInvoicePdfUrl } from "../../lib/printParticipantTicket";
+import { InvoiceDownloadModal } from "../tickets/InvoiceDownloadModal";
 
 /** Temporarily off until POST /ticketing waiver payload is confirmed with backend. */
 const WAIVER_ENABLED = false;
@@ -91,6 +92,11 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     url: string;
     passCode: string;
     name: string;
+  } | null>(null);
+
+  const [invoicePreview, setInvoicePreview] = useState<{
+    url: string;
+    ticketId: string;
   } | null>(null);
 
   const closePassPreview = () => {
@@ -351,7 +357,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
       return;
     }
     const ok = window.confirm(
-      `Cancel registration for ${p.name}? Their event pass will no longer be valid.`,
+      `Cancel Registration for ${p.name}? Their event pass will no longer be valid.`,
     );
     if (!ok) return;
 
@@ -618,6 +624,19 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
         onError={(message) => toast.error(message)}
       />
 
+      <InvoiceDownloadModal
+        open={Boolean(invoicePreview)}
+        url={invoicePreview?.url ?? null}
+        ticketId={invoicePreview?.ticketId}
+        onClose={() => {
+          if (invoicePreview?.url) {
+            URL.revokeObjectURL(invoicePreview.url);
+          }
+          setInvoicePreview(null);
+        }}
+        onError={(message) => toast.error(message)}
+      />
+
       {pendingVerificationCount > 0 && !listBusy ? (
         <div className="mb-2.5 flex flex-wrap items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] text-amber-950">
           <Timer size={16} className="shrink-0 text-amber-700" />
@@ -718,8 +737,255 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
           </button>
         </div>
 
-        <div className="max-h-[min(52vh,520px)] overflow-auto [scrollbar-width:thin]">
-          <table className="w-full min-w-[760px] border-separate border-spacing-0 text-[14px] text-blue-900">
+        {/* Mobile participant cards */}
+        <div className="space-y-3 p-3 md:hidden">
+          {visible.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-blue-100 px-4 py-10 text-center text-sm text-slate-400">
+              {listBusy
+                ? "Loading participants…"
+                : listError
+                  ? listError
+                  : source.length === 0
+                    ? "No participants registered for this event yet."
+                    : "No participants match your filters."}
+            </div>
+          ) : (
+            visible.map((p, i) => (
+              <article
+                key={p.id}
+                className="rounded-xl border border-blue-100 bg-white p-3 shadow-sm"
+              >
+                <div className="flex items-start gap-2.5">
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${p.name}`}
+                    className="mt-1 h-4 w-4 shrink-0 accent-blue-600"
+                    checked={Boolean(selected[p.id])}
+                    onChange={(e) =>
+                      setSelected((prev) => ({ ...prev, [p.id]: e.target.checked }))
+                    }
+                  />
+
+                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-bold">
+                    <span
+                      className={cn(
+                        "grid h-9 w-9 place-items-center rounded-full text-xs font-bold",
+                        avatarToneClass[p.avatarTone] || avatarToneClass.blue,
+                      )}
+                    >
+                      {p.initials}
+                    </span>
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-[11px] text-slate-400">#{pageStart + i + 1}</span>
+                          <button
+                            type="button"
+                            className="break-words text-left text-sm font-semibold text-blue-800 hover:underline"
+                            onClick={() => openParticipantReview(p)}
+                          >
+                            {p.name}
+                          </button>
+                        </div>
+                        <p className="mt-0.5 break-all text-xs text-slate-500">{p.email}</p>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button
+                          type="button"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-blue-700 hover:bg-blue-50"
+                          aria-label={`View details for ${p.name}`}
+                          title="View participant details"
+                          onClick={() => setDetailTarget(p)}
+                        >
+                          <InfoIcon size={17} />
+                        </button>
+
+                        <details className="group relative">
+                          <summary
+                            className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-md border border-blue-100 text-blue-700 hover:bg-blue-50 [&::-webkit-details-marker]:hidden"
+                            aria-label={`More actions for ${p.name}`}
+                            title="More actions"
+                          >
+                            <MoreVertical size={17} />
+                          </summary>
+                          <div className="absolute right-0 top-full z-30 mt-1.5 flex min-w-[190px] flex-col overflow-hidden rounded-lg border border-blue-100 bg-white p-1.5 text-left shadow-lg">
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-green-700 hover:bg-green-50"
+                              onClick={(e) => {
+                                e.currentTarget.closest("details")?.removeAttribute("open");
+                                void (async () => {
+                                  try {
+                                    closePassPreview();
+                                    const url = await fetchInvoicePdfUrl(p.id);
+                                    setInvoicePreview({ url, ticketId: p.id });
+                                  } catch (err) {
+                                    toast.error(err instanceof Error ? err.message : "Unable to load invoice.");
+                                  }
+                                })();
+                              }}
+                            >
+                              <Printer size={14} /> View Invoice
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={printingId === p.id || !p.passCode || !(p.passAllowed || isPaymentPaid(p))}
+                              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                              onClick={(e) => {
+                                e.currentTarget.closest("details")?.removeAttribute("open");
+                                void (async () => {
+                                  if (!(p.passAllowed || isPaymentPaid(p))) {
+                                    toast.info("Verify payment before printing the event pass.");
+                                    return;
+                                  }
+                                  setPrintingId(p.id);
+                                  try {
+                                    closePassPreview();
+                                    const { url, passCode } = await fetchEventPassPdfUrl(p.passCode || "");
+                                    setPassPreview({ url, passCode, name: p.name });
+                                  } catch (err) {
+                                    toast.error(err instanceof Error ? err.message : "Unable to load event pass.");
+                                  } finally {
+                                    setPrintingId(null);
+                                  }
+                                })();
+                              }}
+                            >
+                              <Printer size={14} />
+                              {printingId === p.id ? "Loading pass…" : "View Event Pass"}
+                            </button>
+
+                            {canReviewProof(p) && !isPaymentPaid(p) ? (
+                              <button
+                                type="button"
+                                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-amber-700 hover:bg-amber-50"
+                                onClick={(e) => {
+                                  e.currentTarget.closest("details")?.removeAttribute("open");
+                                  setProofTarget(p);
+                                }}
+                              >
+                                <Check size={14} /> Confirm Payment
+                              </button>
+                            ) : null}
+
+                            {canGrantWaiver(p) ? (
+                              <button
+                                type="button"
+                                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-sky-700 hover:bg-sky-50"
+                                onClick={(e) => {
+                                  e.currentTarget.closest("details")?.removeAttribute("open");
+                                  setWaiverTarget(p);
+                                }}
+                              >
+                                <Check size={14} /> Grant waiver
+                              </button>
+                            ) : null}
+
+                            {p.status !== "Cancelled" ? (
+                              <button
+                                type="button"
+                                disabled={cancelBusyId === p.id || !(p.ticketID || (p.id && !p.id.startsWith("p-")))}
+                                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                onClick={(e) => {
+                                  e.currentTarget.closest("details")?.removeAttribute("open");
+                                  void handleCancelTicket(p);
+                                }}
+                              >
+                                <span className="w-[14px] text-center font-bold">×</span>
+                                {cancelBusyId === p.id ? "Cancelling…" : "Cancel Registration"}
+                              </button>
+                            ) : null}
+                          </div>
+                        </details>
+                      </div>
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <span className={statusPillClass(p.status)}>{p.status}</span>
+                      <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                        {p.type}
+                      </span>
+                      {p.checkIn !== "—" ? (
+                        <span className={checkInPillClass(p.checkIn)}>{p.checkIn}</span>
+                      ) : null}
+                    </div>
+
+                    <dl className="mt-3 grid grid-cols-1 gap-x-3 gap-y-2 text-xs sm:grid-cols-2">
+                      <div className="min-w-0">
+                        <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Organization</dt>
+                        <dd className="mt-0.5 break-words text-slate-700">{p.org}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Registered</dt>
+                        <dd className="mt-0.5 text-slate-700">{p.date}{p.time ? ` · ${p.time}` : ""}</dd>
+                      </div>
+                      {p.waiverReason ? (
+                        <div className="min-w-0 sm:col-span-2">
+                          <dt className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Waiver</dt>
+                          <dd className="mt-0.5 break-words text-slate-700">
+                            {waiverReasonLabel(p.waiverReason)}{p.agencyName ? ` · ${p.agencyName}` : ""}
+                          </dd>
+                        </div>
+                      ) : null}
+                    </dl>
+
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-blue-50 pt-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-slate-500">Payment</span>
+                        {showPaymentToggle(p) && !isWaived(p) ? (
+                          <label
+                            className="inline-flex items-center gap-1.5"
+                            title={
+                              toggleFailedId === p.id
+                                ? "Confirm failed — still pending"
+                                : isPaymentPaid(p)
+                                  ? "Payment confirmed"
+                                  : "Toggle on to Confirm Payment"
+                            }
+                          >
+                            <span className={cn(
+                              "text-xs font-semibold",
+                              toggleFailedId === p.id ? "text-red-600" : isPaymentPaid(p) ? "text-emerald-700" : "text-amber-700",
+                            )}>
+                              {isPaymentPaid(p) ? "Paid" : "Pending"}
+                            </span>
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={isPaymentPaid(p) || confirmingId === p.id}
+                              aria-label={`Toggle payment for ${p.name}`}
+                              disabled={confirmingId === p.id || !(p.ticketID || (p.id && !p.id.startsWith("p-")))}
+                              onClick={() => void handleTogglePayment(p)}
+                              className={cn(
+                                "relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                                toggleFailedId === p.id ? "bg-red-300" : isPaymentPaid(p) || confirmingId === p.id ? "bg-emerald-500" : "bg-slate-300",
+                              )}
+                            >
+                              <span className={cn(
+                                "absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform",
+                                (isPaymentPaid(p) || confirmingId === p.id) && "translate-x-4",
+                              )} />
+                            </button>
+                          </label>
+                        ) : (
+                          <span className="text-xs text-slate-500">{isWaived(p) ? "Waived" : p.status === "Cancelled" ? "Cancelled" : "—"}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+
+        <div className="hidden max-h-[min(65vh,640px)] overflow-auto [scrollbar-width:thin] md:block">
+          <table className="w-full min-w-[980px] border-separate border-spacing-0 text-[13px] text-blue-900">
             <thead className="sticky top-0 z-10">
               <tr className="bg-blue-50 text-left text-[#07165e]">
                 <th className="border-b border-blue-100 px-2 py-1.5">
@@ -748,7 +1014,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                 <th className="border-b border-blue-100 px-2 py-1.5">Registered</th>
                 <th className="border-b border-blue-100 px-2 py-1.5">Check-in</th>
                 <th className="border-b border-blue-100 px-2 py-1.5 text-center">Paid</th>
-                <th className="border-b border-blue-100 px-2 py-1.5 text-center">Actions</th>
+                <th className="border-b border-blue-100 px-2 py-1.5 text-center"> </th>
               </tr>
             </thead>
             <tbody>
@@ -831,7 +1097,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                                   ? "Confirm failed — still pending"
                                   : isPaymentPaid(p)
                                     ? "Payment confirmed"
-                                    : "Toggle on to confirm payment"
+                                    : "Toggle on to Confirm Payment"
                             }
                           >
                             <span
@@ -891,85 +1157,133 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                         ) : null}
                       </div>
                     </td>
-                    <td className="border-b border-blue-50 px-2 py-1.5 text-center">
-                      <div className="inline-grid grid-cols-[auto_4.5rem_auto_auto] items-center justify-items-center gap-1.5">
+                    <td className="border-b border-blue-50 px-2 py-1.5">
+                      <div className="flex items-center justify-center gap-1.5">
+                        {/* Participant information is intentionally kept as a separate icon. */}
                         <button
                           type="button"
-                          disabled={
-                            printingId === p.id ||
-                            !p.passCode ||
-                            !(p.passAllowed || isPaymentPaid(p))
-                          }
-                          className="inline-flex items-center gap-1 rounded-md border border-blue-100 px-2 py-0.5 text-[13px] font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
-                          aria-label={`Print ticket for ${p.name}`}
-                          title={
-                            !(p.passAllowed || isPaymentPaid(p))
-                              ? "Verify payment before issuing pass"
-                              : p.passCode
-                                ? "Open event pass PDF"
-                                : "No pass code on this registration"
-                          }
-                          onClick={() => {
-                            void (async () => {
-                              if (!(p.passAllowed || isPaymentPaid(p))) {
-                                toast.info("Verify payment before printing the event pass.");
-                                return;
-                              }
-                              setPrintingId(p.id);
-                              try {
-                                closePassPreview();
-                                const { url, passCode } = await fetchEventPassPdfUrl(p.passCode || "");
-                                setPassPreview({ url, passCode, name: p.name });
-                              } catch (err) {
-                                toast.error(
-                                  err instanceof Error ? err.message : "Unable to load event pass.",
-                                );
-                              } finally {
-                                setPrintingId(null);
-                              }
-                            })();
-                          }}
-                        >
-                          <Printer size={12} />
-                          {printingId === p.id ? "…" : "Print"}
-                        </button>
-                        <div className="w-full">
-                          {canReviewProof(p) && !isPaymentPaid(p) ? (
-                            <button
-                              type="button"
-                              className="inline-flex w-full items-center justify-center rounded-md border border-amber-400 bg-amber-400 px-2 py-0.5 text-[12px] font-semibold text-white hover:bg-amber-500"
-                              onClick={() => setProofTarget(p)}
-                            >
-                              Confirm
-                            </button>
-                          ) : null}
-                        </div>
-                        <button
-                          type="button"
-                          className="inline-flex min-w-[3.75rem] items-center justify-center rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-[12px] font-semibold text-blue-700 hover:bg-blue-100"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-blue-700 transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                          aria-label={`View details for ${p.name}`}
+                          title="View participant details"
                           onClick={() => setDetailTarget(p)}
                         >
-                          Details
+                          <InfoIcon size={17} />
                         </button>
-                        <div className="min-w-[3.5rem]">
-                          {p.status !== "Cancelled" ? (
+
+                        {/* All row actions are grouped under one compact dropdown. */}
+                        <details className="group relative">
+                          <summary
+                            className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-md border border-blue-100 text-blue-700 transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-300 [&::-webkit-details-marker]:hidden"
+                            aria-label={`More actions for ${p.name}`}
+                            title="More actions"
+                          >
+                            <MoreVertical size={17} />
+                          </summary>
+
+                          <div className="absolute right-0 top-full z-30 mt-1.5 flex min-w-[190px] flex-col overflow-hidden rounded-lg border border-blue-100 bg-white p-1.5 text-left shadow-lg">
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-green-700 hover:bg-green-50"
+                              onClick={() => {
+                                void (async () => {
+                                  try {
+                                    closePassPreview();
+                                    const url = await fetchInvoicePdfUrl(p.id);
+                                    setInvoicePreview({ url, ticketId: p.id });
+                                  } catch (err) {
+                                    toast.error(
+                                      err instanceof Error ? err.message : "Unable to load invoice.",
+                                    );
+                                  }
+                                })();
+                              }}
+                            >
+                              <Printer size={14} />
+                              View Invoice
+                            </button>
+
                             <button
                               type="button"
                               disabled={
-                                cancelBusyId === p.id ||
-                                !(p.ticketID || (p.id && !p.id.startsWith("p-")))
+                                printingId === p.id ||
+                                !p.passCode ||
+                                !(p.passAllowed || isPaymentPaid(p))
                               }
-                              className="inline-flex w-full items-center justify-center rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-[12px] font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-                              aria-label={`Cancel ticket for ${p.name}`}
-                              title="Cancel this registration"
+                              title={
+                                !(p.passAllowed || isPaymentPaid(p))
+                                  ? "Verify payment before issuing pass"
+                                  : p.passCode
+                                    ? "Open event pass PDF"
+                                    : "No pass code on this registration"
+                              }
+                              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
                               onClick={() => {
-                                void handleCancelTicket(p);
+                                void (async () => {
+                                  if (!(p.passAllowed || isPaymentPaid(p))) {
+                                    toast.info("Verify payment before printing the event pass.");
+                                    return;
+                                  }
+                                  setPrintingId(p.id);
+                                  try {
+                                    closePassPreview();
+                                    const { url, passCode } = await fetchEventPassPdfUrl(p.passCode || "");
+                                    setPassPreview({ url, passCode, name: p.name });
+                                  } catch (err) {
+                                    toast.error(
+                                      err instanceof Error ? err.message : "Unable to load event pass.",
+                                    );
+                                  } finally {
+                                    setPrintingId(null);
+                                  }
+                                })();
                               }}
                             >
-                              {cancelBusyId === p.id ? "…" : "Cancel"}
+                              <Printer size={14} />
+                              {printingId === p.id ? "Loading pass…" : "View Event Pass"}
                             </button>
-                          ) : null}
-                        </div>
+
+                            {canReviewProof(p) && !isPaymentPaid(p) ? (
+                              <button
+                                type="button"
+                                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-amber-700 hover:bg-amber-50"
+                                onClick={() => setProofTarget(p)}
+                              >
+                                <Check size={14} />
+                                Confirm Payment
+                              </button>
+                            ) : null}
+
+                            {canGrantWaiver(p) ? (
+                              <button
+                                type="button"
+                                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-sky-700 hover:bg-sky-50"
+                                onClick={() => setWaiverTarget(p)}
+                              >
+                                <Check size={14} />
+                                Grant waiver
+                              </button>
+                            ) : null}
+
+                            {p.status !== "Cancelled" ? (
+                              <button
+                                type="button"
+                                disabled={
+                                  cancelBusyId === p.id ||
+                                  !(p.ticketID || (p.id && !p.id.startsWith("p-")))
+                                }
+                                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                aria-label={`Cancel ticket for ${p.name}`}
+                                title="Cancel this registration"
+                                onClick={() => {
+                                  void handleCancelTicket(p);
+                                }}
+                              >
+                                <span className="w-[14px] text-center font-bold">×</span>
+                                {cancelBusyId === p.id ? "Cancelling…" : "Cancel Registration"}
+                              </button>
+                            ) : null}
+                          </div>
+                        </details>
                       </div>
                     </td>
                   </tr>
