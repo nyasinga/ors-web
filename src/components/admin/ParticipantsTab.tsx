@@ -1122,11 +1122,11 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                               role="switch"
                               aria-checked={isPaymentPaid(p) || confirmingId === p.id}
                               aria-label={`Toggle payment for ${p.name}`}
-                              disabled={
-                                confirmingId === p.id || !(p.ticketID || (p.id && !p.id.startsWith("p-")))
+                              disabled={ true
+                                //confirmingId === p.id || !(p.ticketID || (p.id && !p.id.startsWith("p-")))
                               }
                               onClick={() => {
-                                void handleTogglePayment(p);
+                                //void handleTogglePayment(p);
                               }}
                               className={cn(
                                 "relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50",
