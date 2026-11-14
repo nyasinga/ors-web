@@ -509,6 +509,7 @@ export function asProgramme(value: unknown): EngagementProgrammeSession[] {
         venue: row.venue != null ? String(row.venue) : undefined,
         place: row.place != null ? String(row.place) : undefined,
         badge: row.badge != null ? String(row.badge) : undefined,
+        access: row.access != null ? String(row.access) : undefined,
         speakers: row.speakers as number | string[] | undefined,
         speakerNames: Array.isArray(row.speakerNames)
           ? row.speakerNames.map(String)
@@ -1112,6 +1113,7 @@ export type WizardEngagementInput = {
     speakers: number;
     place: string;
     badge: string;
+    access?: string;
   }>;
   speakers: Array<{
     id: string;
@@ -1193,6 +1195,11 @@ export function buildEngagementPayload(input: WizardEngagementInput): NewEngagem
 
   const programme: EngagementProgrammeSession[] = input.sessions.map((s) => {
     const dayNum = Number(s.day);
+    const accessRaw = String(s.access || "open").trim().toLowerCase().replace(/\s+/g, "_");
+    const access =
+      accessRaw === "closed_door" || accessRaw === "invite_only" || accessRaw === "open"
+        ? accessRaw
+        : "open";
     return {
       id: s.id,
       day: Number.isFinite(dayNum) && dayNum > 0 ? dayNum : s.day || 1,
@@ -1201,6 +1208,7 @@ export function buildEngagementPayload(input: WizardEngagementInput): NewEngagem
       time: s.time,
       venue: s.place,
       badge: s.badge,
+      access,
       speakers: s.speakers,
     };
   });
@@ -1439,6 +1447,7 @@ export function engagementToWizardState(engagement: Engagement) {
             speakers: typeof s.speakers === "number" ? s.speakers : Array.isArray(s.speakers) ? s.speakers.length : 0,
             place: s.venue || s.place || "",
             badge: s.badge || "Session",
+            access: String(s.access || "open"),
             tone: "blue" as const,
           }))
         : [],

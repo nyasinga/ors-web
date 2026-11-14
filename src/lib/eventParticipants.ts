@@ -464,7 +464,11 @@ export async function createAdminParticipant(
       : Number.isFinite(input.ticketPrice)
         ? Number(input.ticketPrice)
         : 0,
-    status: "registered",
+    status: paymentMode === "complimentary"
+      ? "complimentary"
+      : paymentMode === "waived"
+        ? "waived"
+        : "registered",
     transactionReference,
     extraData: {
       organisation: input.organisation.trim(),

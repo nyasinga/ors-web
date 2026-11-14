@@ -19,10 +19,16 @@ import {
   waiverReasonLabel,
   type WaiverReason,
 } from "../../lib/participantWaiver";
+import { csvPlain, csvRow, downloadCsv } from "../../lib/csv";
+import {
+  categorizePayment,
+  paymentCategoryLabel,
+  type PaymentCategoryKey,
+} from "../../lib/registrationStats";
 import { fetchEventPassPdfUrl, fetchInvoicePdfUrl } from "../../lib/printParticipantTicket";
 import { InvoiceDownloadModal } from "../tickets/InvoiceDownloadModal";
 
-/** Temporarily off until POST /ticketing waiver payload is confirmed with backend. */
+/** Admin can waive pending tickets via PATCH /ticketing/{ticketID} (multipart). */
 const WAIVER_ENABLED = true;
 
 const avatarToneClass: Record<string, string> = {
@@ -69,6 +75,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
   const [query, setQuery] = useState("");
   const [ticketFilter, setTicketFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState<"" | PaymentCategoryKey>("");
   const [orgFilter, setOrgFilter] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [addOpen, setAddOpen] = useState(false);
@@ -184,8 +191,15 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     if (isWaived(p)) return true;
     if (p.passAllowed || p.verificationBucket === "confirmed") return true;
     const raw = (p.rawStatus || "").toLowerCase();
-    // Backend: issued = confirmed; checked-in = on site.
-    if (raw === "issued" || raw === "checked-in" || raw === "checked_in") return true;
+    // Backend: issued / confirmed = paid confirmed; checked-in = on site.
+    if (
+      raw === "issued" ||
+      raw === "confirmed" ||
+      raw === "checked-in" ||
+      raw === "checked_in"
+    ) {
+      return true;
+    }
     return p.status === "Confirmed";
   };
 
@@ -226,6 +240,9 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
       sponsorTicketID: patch.sponsorTicketID,
       transactionReference: patch.transactionReference,
       rawStatus: patch.rawStatus || p.rawStatus || "registered",
+      verificationBucket:
+        patch.paymentMode === "complimentary" ? ("complimentary" as const) : ("waived" as const),
+      passAllowed: true,
     };
     setApiRows((prev) => prev.map((row: any) => (row.id === p.id ? { ...row, ...next } : row)));
     setLocalRows((prev) => prev.map((row: any) => (row.id === p.id ? { ...row, ...next } : row)));
@@ -424,14 +441,15 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
       if (q && !hay.includes(q)) return false;
       if (ticketFilter && p.type !== ticketFilter) return false;
       if (statusFilter && p.status !== statusFilter) return false;
+      if (paymentFilter && categorizePayment(p) !== paymentFilter) return false;
       if (orgFilter && p.org !== orgFilter) return false;
       return true;
     });
-  }, [source, query, ticketFilter, statusFilter, orgFilter]);
+  }, [source, query, ticketFilter, statusFilter, paymentFilter, orgFilter]);
 
   useEffect(() => {
     setPage(1);
-  }, [query, ticketFilter, statusFilter, orgFilter, pageSize]);
+  }, [query, ticketFilter, statusFilter, paymentFilter, orgFilter, pageSize]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -443,9 +461,10 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
   const pendingVerificationCount = source.filter(
     (p) => p.status === "Pending verification",
   ).length;
-  const confirmedCount = source.filter((p) => p.status === "Confirmed").length;
-  const waivedCount = source.filter(
-    (p) => p.status === "Waived" || p.status === "Complimentary",
+  const paidCount = source.filter((p) => categorizePayment(p) === "paid").length;
+  const waivedCount = source.filter((p) => categorizePayment(p) === "waived").length;
+  const complimentaryCount = source.filter(
+    (p) => categorizePayment(p) === "complimentary",
   ).length;
   const listBusy = listLoading || (fromApi && loading);
 
@@ -464,8 +483,8 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
       tone: "amber",
     },
     {
-      label: "Confirmed",
-      value: listBusy ? "…" : String(confirmedCount),
+      label: "Confirmed (paid)",
+      value: listBusy ? "…" : String(paidCount),
       Icon: Check,
       tone: "green",
     },
@@ -474,6 +493,12 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
       value: listBusy ? "…" : String(waivedCount),
       Icon: Check,
       tone: "sky",
+    },
+    {
+      label: "Complimentary",
+      value: listBusy ? "…" : String(complimentaryCount),
+      Icon: Check,
+      tone: "purple",
     },
   ];
 
@@ -492,18 +517,33 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
   );
 
   const exportCsv = () => {
-    const header = ["#", "Name", "Email", "Organization", "Ticket Type", "Status", "Registration Date", "Check-in"];
+    const header = [
+      "#",
+      "Name",
+      "Email",
+      "Organization",
+      "Ticket Type",
+      "Status",
+      "Payment",
+      "Waiver reason",
+      "Registration Date",
+      "Check-in",
+    ];
     const lines = filtered.map((p, i) =>
-      [i + 1, p.name, p.email, p.org, p.type, p.status, `${p.date} ${p.time}`, p.checkIn]
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-        .join(","),
+      csvRow([
+        i + 1,
+        p.name,
+        p.email,
+        csvPlain(p.org),
+        p.type,
+        p.status,
+        paymentCategoryLabel(categorizePayment(p)),
+        p.waiverReason ? waiverReasonLabel(p.waiverReason) : "",
+        csvPlain(`${p.date} ${p.time}`.trim()),
+        p.checkIn === "Checked In" ? "Checked In" : "Not checked in",
+      ]),
     );
-    const blob = new Blob([[header.join(","), ...lines].join("\n")], { type: "text/csv;charset=utf-8;" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "participants.csv";
-    a.click();
-    URL.revokeObjectURL(a.href);
+    downloadCsv("participants.csv", [csvRow(header), ...lines].join("\n"));
   };
 
   const allVisibleSelected = visible.length > 0 && visible.every((p) => selected[p.id]);
@@ -613,6 +653,14 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
         onCancelTicket={(p) => {
           void handleCancelTicket(p);
         }}
+        onWaiver={
+          WAIVER_ENABLED
+            ? (p) => {
+                setProofTarget(null);
+                setWaiverTarget(p);
+              }
+            : undefined
+        }
       />
 
       <EventPassPreviewModal
@@ -654,7 +702,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
         </div>
       ) : null}
 
-      <section className="mb-2.5 grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-5">
+      <section className="mb-2.5 grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
         {kpis.map((kpi) => (
           <article
             key={kpi.label}
@@ -708,6 +756,18 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
             <option>Waived</option>
             <option>Complimentary</option>
             <option>Cancelled</option>
+          </select>
+          <select
+            className="h-8 rounded-md border border-blue-100 bg-white px-2 text-[14px]"
+            value={paymentFilter}
+            onChange={(e) => setPaymentFilter(e.target.value as "" | PaymentCategoryKey)}
+            aria-label="Filter by payment"
+          >
+            <option value="">All payment</option>
+            <option value="paid">Paid</option>
+            <option value="waived">Waived</option>
+            <option value="complimentary">Complimentary</option>
+            <option value="pending">Pending</option>
           </select>
           <select
             className="h-8 max-w-[160px] rounded-md border border-blue-100 bg-white px-2 text-[14px]"

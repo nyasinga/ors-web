@@ -155,8 +155,32 @@ type WizardSession = {
   speakers: number;
   place: string;
   badge: string;
+  /** Attendance restriction — independent of session type. */
+  access: "open" | "closed_door" | "invite_only";
   tone: "green" | "purple" | "orange" | "blue";
 };
+
+const SESSION_ACCESS_OPTIONS = [
+  { value: "open", label: "Open" },
+  { value: "closed_door", label: "Closed door" },
+  { value: "invite_only", label: "Invite only" },
+] as const;
+
+function normalizeWizardAccess(raw?: string): WizardSession["access"] {
+  const key = String(raw || "open")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  if (key === "closed_door") return "closed_door";
+  if (key === "invite_only") return "invite_only";
+  return "open";
+}
+
+function accessPillLabel(access: WizardSession["access"]): string | null {
+  if (access === "closed_door") return "Closed door";
+  if (access === "invite_only") return "Invite only";
+  return null;
+}
 
 function toTimeInputValue(raw: string): string {
   const m = raw.trim().match(/^(\d{1,2}):(\d{2})$/);
@@ -307,6 +331,7 @@ export function CreateEventPage() {
   const [newSessionVenue, setNewSessionVenue] = useState("");
   const [newSessionSpeakers, setNewSessionSpeakers] = useState("0");
   const [newSessionCapacity, setNewSessionCapacity] = useState("");
+  const [newSessionAccess, setNewSessionAccess] = useState<WizardSession["access"]>("open");
   const [editingSpeakerId, setEditingSpeakerId] = useState<string | null>(null);
   const [newSpeakerName, setNewSpeakerName] = useState("");
   const [newSpeakerRole, setNewSpeakerRole] = useState("");
@@ -680,6 +705,8 @@ export function CreateEventPage() {
           const normalized = state.sessions.map((s) => ({
             ...s,
             day: String(s.day || "1"),
+            access: normalizeWizardAccess(s.access),
+            tone: toneForSessionBadge(s.badge || "Session"),
           }));
           setSessions(normalized);
           const maxDay = Math.max(1, ...normalized.map((s) => Number(s.day) || 1));
@@ -786,6 +813,7 @@ export function CreateEventPage() {
     setNewSessionVenue(venueName || "");
     setNewSessionSpeakers("0");
     setNewSessionCapacity("");
+    setNewSessionAccess("open");
   };
 
   const openAddSession = () => {
@@ -805,6 +833,7 @@ export function CreateEventPage() {
     setNewSessionVenue(session.place || "");
     setNewSessionSpeakers(String(session.speakers ?? 0));
     setNewSessionCapacity("");
+    setNewSessionAccess(normalizeWizardAccess(session.access));
     setSessionModal(true);
   };
 
@@ -824,6 +853,7 @@ export function CreateEventPage() {
       speakers: Math.max(0, Number(newSessionSpeakers) || 0),
       place: newSessionVenue.trim() || venueName || "Main hall",
       badge: newSessionType,
+      access: newSessionAccess,
       tone: toneForSessionBadge(newSessionType),
     };
     setSessions((prev) => {
@@ -1821,6 +1851,11 @@ export function CreateEventPage() {
                             <Pill tone={s.tone === "green" ? "green" : s.tone === "purple" ? "purple" : "orange"}>
                               {s.badge}
                             </Pill>
+                            {accessPillLabel(s.access) ? (
+                              <Pill tone={s.access === "closed_door" ? "red" : "green"}>
+                                {accessPillLabel(s.access)}
+                              </Pill>
+                            ) : null}
                           </div>
                           <p className="mt-1 text-sm text-mute">{s.description}</p>
                           <p className="mt-2 flex flex-wrap items-center gap-3 text-sm text-mute">
@@ -2758,6 +2793,11 @@ export function CreateEventPage() {
                             >
                               {s.badge}
                             </Pill>
+                            {accessPillLabel(s.access) ? (
+                              <Pill tone={s.access === "closed_door" ? "red" : "green"}>
+                                {accessPillLabel(s.access)}
+                              </Pill>
+                            ) : null}
                           </div>
                           {s.description ? (
                             <p className="mt-1 text-sm text-mute">{s.description}</p>
@@ -2862,6 +2902,12 @@ export function CreateEventPage() {
               const list = base.includes(newSessionType) ? base : [...base, newSessionType];
               return list.map((value) => ({ value, label: value }));
             })()}
+          />
+          <Select
+            label="Access"
+            value={newSessionAccess}
+            onChange={(e) => setNewSessionAccess(normalizeWizardAccess(e.target.value))}
+            options={[...SESSION_ACCESS_OPTIONS]}
           />
           <label className="grid gap-1.5 text-sm">
             <span className="font-medium text-ink">Description</span>

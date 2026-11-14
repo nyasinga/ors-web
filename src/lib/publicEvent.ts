@@ -1,4 +1,4 @@
-import type { ProgrammeSession } from "../data/publicContent";
+import type { ProgrammeSession, ProgrammeSessionAccess } from "../data/publicContent";
 import { countryDisplayName } from "../data/countries";
 import type { Engagement, EngagementProgrammeSession, EngagementSponsor } from "../types/engagement";
 import { engagementSpeakerToCard, type SpeakerCardData } from "../components/speakers/SpeakerCard";
@@ -761,6 +761,22 @@ const SPONSOR_MEDALS: Record<string, string> = {
   bronze: "/assets/sponsor-bronze.png",
 };
 
+function normalizeSessionAccess(raw?: string): ProgrammeSessionAccess {
+  const key = String(raw || "open")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  if (key === "closed_door" || key === "closed-door" || key === "closeddoor") return "closed_door";
+  if (key === "invite_only" || key === "invite-only" || key === "inviteonly") return "invite_only";
+  return "open";
+}
+
+function accessLabel(access: ProgrammeSessionAccess): string | undefined {
+  if (access === "closed_door") return "Closed door";
+  if (access === "invite_only") return "Invite only";
+  return undefined;
+}
+
 function badgeTone(badge?: string): ProgrammeSession["tone"] {
   const value = (badge || "").toLowerCase();
   if (/ceremon|opening|closing/.test(value)) return "red";
@@ -1033,6 +1049,7 @@ export function engagementToPublicProgramme(engagement: Engagement | null): {
   const sessions: ProgrammeSession[] = source.map((session, index) => {
     const day = dayNumberOf(session, index);
     const type = session.badge?.trim() || "Session";
+    const access = normalizeSessionAccess(session.access);
     const { speakers, speakerLines } = speakersLabel(session);
     return {
       id: session.id || `session-${index + 1}`,
@@ -1041,6 +1058,8 @@ export function engagementToPublicProgramme(engagement: Engagement | null): {
       title: session.title,
       type,
       tone: badgeTone(type),
+      access,
+      accessLabel: accessLabel(access),
       speakers,
       speakerLines,
       venue: session.venue || session.place || venueTitle,

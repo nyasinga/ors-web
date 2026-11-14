@@ -1,11 +1,18 @@
 /**
  * Registration analytics for the admin Statistics / Trends dashboard.
- * Buckets are mutually exclusive so donut %s sum to ~100%.
+ *
+ * Two independent dimensions:
+ * - Participation type (delegates / speakers / sponsors / other)
+ * - Payment category (paid / waived / complimentary / pending)
+ *
+ * Waived registrants stay in their participation type and are counted under payment.
  */
 
 import type { AddedParticipant } from "../components/admin/AddParticipantModal";
 
-export type StatsCategoryKey = "delegates" | "speakers" | "sponsors" | "waivers" | "other";
+export type StatsCategoryKey = "delegates" | "speakers" | "sponsors" | "other";
+
+export type PaymentCategoryKey = "paid" | "waived" | "complimentary" | "pending";
 
 export const STATS_CATEGORY_META: Record<
   StatsCategoryKey,
@@ -14,7 +21,6 @@ export const STATS_CATEGORY_META: Record<
   delegates: { label: "Delegates", color: "#2563eb", short: "Delegates" },
   speakers: { label: "Speakers", color: "#8b5cf6", short: "Speakers" },
   sponsors: { label: "Sponsors", color: "#f97316", short: "Sponsors" },
-  waivers: { label: "Waivers", color: "#16a34a", short: "Waivers" },
   other: { label: "Other", color: "#64748b", short: "Other" },
 };
 
@@ -22,25 +28,55 @@ export const STATS_CATEGORY_ORDER: StatsCategoryKey[] = [
   "delegates",
   "speakers",
   "sponsors",
-  "waivers",
   "other",
+];
+
+export const PAYMENT_CATEGORY_META: Record<
+  PaymentCategoryKey,
+  { label: string; color: string; short: string }
+> = {
+  paid: { label: "Paid", color: "#16a34a", short: "Paid" },
+  waived: { label: "Waived", color: "#0284c7", short: "Waived" },
+  complimentary: { label: "Complimentary", color: "#7c3aed", short: "Comp" },
+  pending: { label: "Pending", color: "#d97706", short: "Pending" },
+};
+
+export const PAYMENT_CATEGORY_ORDER: PaymentCategoryKey[] = [
+  "paid",
+  "waived",
+  "complimentary",
+  "pending",
+];
+
+/** Confirmed attendees only — paid + waived + complimentary. */
+export const CONFIRMED_PAYMENT_ORDER: Exclude<PaymentCategoryKey, "pending">[] = [
+  "paid",
+  "waived",
+  "complimentary",
 ];
 
 export type DateRange = { start: string; end: string }; // YYYY-MM-DD inclusive
 
 export type CategoryCounts = Record<StatsCategoryKey, number>;
+export type PaymentCounts = Record<PaymentCategoryKey, number>;
 
 export type DailyCategoryRow = {
   date: string; // YYYY-MM-DD
   label: string;
   total: number;
-} & CategoryCounts;
+} & CategoryCounts &
+  PaymentCounts;
 
 export type RegistrationStats = {
   range: DateRange;
   total: number;
   counts: CategoryCounts;
   percents: CategoryCounts;
+  payment: PaymentCounts;
+  paymentPercents: PaymentCounts;
+  /** Confirmed subset: paid + waived + complimentary (excludes pending). */
+  confirmedTotal: number;
+  confirmed: Pick<PaymentCounts, "paid" | "waived" | "complimentary">;
   previousTotal: number;
   vsPreviousPct: number | null;
   daily: DailyCategoryRow[];
@@ -102,25 +138,66 @@ function shiftRangeBack(range: DateRange): DateRange {
 }
 
 function emptyCounts(): CategoryCounts {
-  return { delegates: 0, speakers: 0, sponsors: 0, waivers: 0, other: 0 };
+  return { delegates: 0, speakers: 0, sponsors: 0, other: 0 };
 }
 
+function emptyPayment(): PaymentCounts {
+  return { paid: 0, waived: 0, complimentary: 0, pending: 0 };
+}
+
+/** Participation type only — waived people stay in their real type. */
 export function categorizeParticipant(p: AddedParticipant): StatsCategoryKey {
-  if (
-    p.waiverReason ||
-    p.paymentMode === "waived" ||
-    p.paymentMode === "complimentary" ||
-    p.verificationBucket === "waived" ||
-    p.verificationBucket === "complimentary" ||
-    p.status === "Waived"
-  ) {
-    return "waivers";
-  }
   const t = String(p.participationType || p.type || "").toLowerCase();
   if (t.includes("speaker")) return "speakers";
   if (t.includes("sponsor") || t.includes("exhibitor")) return "sponsors";
   if (t.includes("delegate")) return "delegates";
   return "other";
+}
+
+/**
+ * Payment / confirmation category for reporting.
+ * Complimentary and waived are confirmed without payment; paid is verified payment.
+ */
+export function categorizePayment(p: AddedParticipant): PaymentCategoryKey {
+  if (p.status === "Cancelled") return "pending";
+
+  const mode = String(p.paymentMode || "").toLowerCase();
+  const bucket = String(p.verificationBucket || "").toLowerCase();
+  const status = String(p.status || "").toLowerCase();
+  const rawStatus = String(p.rawStatus || "").toLowerCase();
+
+  if (
+    mode === "complimentary" ||
+    bucket === "complimentary" ||
+    status === "complimentary" ||
+    rawStatus === "complimentary"
+  ) {
+    return "complimentary";
+  }
+  if (
+    mode === "waived" ||
+    bucket === "waived" ||
+    status === "waived" ||
+    rawStatus === "waived"
+  ) {
+    return "waived";
+  }
+  // Paid confirmed: UI "Confirmed", bucket confirmed, or API issued/confirmed.
+  if (
+    status === "confirmed" ||
+    bucket === "confirmed" ||
+    rawStatus === "issued" ||
+    rawStatus === "confirmed" ||
+    rawStatus === "checked-in" ||
+    rawStatus === "checked_in"
+  ) {
+    return "paid";
+  }
+  return "pending";
+}
+
+export function paymentCategoryLabel(key: PaymentCategoryKey): string {
+  return PAYMENT_CATEGORY_META[key].label;
 }
 
 function participantDay(p: AddedParticipant): string | null {
@@ -160,19 +237,24 @@ function countInRange(
   rows: AddedParticipant[],
   range: DateRange,
   includeUndated = false,
-): CategoryCounts {
-  const counts = emptyCounts();
+): { category: CategoryCounts; payment: PaymentCounts } {
+  const category = emptyCounts();
+  const payment = emptyPayment();
   for (const p of rows) {
     if (p.status === "Cancelled") continue;
     const day = participantDay(p);
     if (!day) {
-      if (includeUndated) counts[categorizeParticipant(p)] += 1;
+      if (includeUndated) {
+        category[categorizeParticipant(p)] += 1;
+        payment[categorizePayment(p)] += 1;
+      }
       continue;
     }
     if (!inRange(day, range)) continue;
-    counts[categorizeParticipant(p)] += 1;
+    category[categorizeParticipant(p)] += 1;
+    payment[categorizePayment(p)] += 1;
   }
-  return counts;
+  return { category, payment };
 }
 
 function sumCounts(c: CategoryCounts): number {
@@ -187,16 +269,24 @@ function toPercents(counts: CategoryCounts, total: number): CategoryCounts {
   return pct;
 }
 
+function toPaymentPercents(counts: PaymentCounts, total: number): PaymentCounts {
+  const pct = emptyPayment();
+  for (const k of PAYMENT_CATEGORY_ORDER) {
+    pct[k] = total > 0 ? Math.round((counts[k] / total) * 1000) / 10 : 0;
+  }
+  return pct;
+}
+
 export function buildRegistrationStats(
   participants: AddedParticipant[],
   range: DateRange,
   options?: { includeUndated?: boolean },
 ): RegistrationStats {
   const includeUndated = Boolean(options?.includeUndated);
-  const counts = countInRange(participants, range, includeUndated);
+  const { category: counts, payment } = countInRange(participants, range, includeUndated);
   const total = sumCounts(counts);
   const previous = countInRange(participants, shiftRangeBack(range), false);
-  const previousTotal = sumCounts(previous);
+  const previousTotal = sumCounts(previous.category);
   const vsPreviousPct =
     previousTotal > 0
       ? Math.round(((total - previousTotal) / previousTotal) * 1000) / 10
@@ -205,8 +295,8 @@ export function buildRegistrationStats(
         : null;
 
   const days = eachDay(range);
-  const byDay = new Map<string, CategoryCounts>();
-  for (const d of days) byDay.set(d, emptyCounts());
+  const byDay = new Map<string, CategoryCounts & PaymentCounts>();
+  for (const d of days) byDay.set(d, { ...emptyCounts(), ...emptyPayment() });
 
   for (const p of participants) {
     if (p.status === "Cancelled") continue;
@@ -214,23 +304,42 @@ export function buildRegistrationStats(
     if (!day || !byDay.has(day)) continue;
     const bucket = byDay.get(day)!;
     bucket[categorizeParticipant(p)] += 1;
+    bucket[categorizePayment(p)] += 1;
   }
 
   const daily: DailyCategoryRow[] = days.map((date) => {
-    const c = byDay.get(date) || emptyCounts();
+    const c = byDay.get(date) || { ...emptyCounts(), ...emptyPayment() };
     return {
       date,
       label: formatAxisDay(date),
-      total: sumCounts(c),
-      ...c,
+      total: STATS_CATEGORY_ORDER.reduce((n, k) => n + c[k], 0),
+      delegates: c.delegates,
+      speakers: c.speakers,
+      sponsors: c.sponsors,
+      other: c.other,
+      paid: c.paid,
+      waived: c.waived,
+      complimentary: c.complimentary,
+      pending: c.pending,
     };
   });
+
+  const confirmed = {
+    paid: payment.paid,
+    waived: payment.waived,
+    complimentary: payment.complimentary,
+  };
+  const confirmedTotal = confirmed.paid + confirmed.waived + confirmed.complimentary;
 
   return {
     range,
     total,
     counts,
     percents: toPercents(counts, total),
+    payment,
+    paymentPercents: toPaymentPercents(payment, total),
+    confirmedTotal,
+    confirmed,
     previousTotal,
     vsPreviousPct,
     daily,
@@ -242,19 +351,42 @@ export function exportRegistrationStatsCsv(stats: RegistrationStats, eventName: 
     ["Event", eventName],
     ["Range", formatRangeLabel(stats.range)],
     ["Total registrants", String(stats.total)],
+    ["Confirmed (paid + waived + complimentary)", String(stats.confirmedTotal)],
     [],
-    ["Category", "Count", "Percent"],
+    ["Payment category", "Count", "Percent of total"],
+    ...PAYMENT_CATEGORY_ORDER.map((k) => [
+      PAYMENT_CATEGORY_META[k].label,
+      String(stats.payment[k]),
+      `${stats.paymentPercents[k]}%`,
+    ]),
+    [],
+    ["Confirmed breakdown", "Count", "Percent of confirmed"],
+    ...CONFIRMED_PAYMENT_ORDER.map((k) => [
+      PAYMENT_CATEGORY_META[k].label,
+      String(stats.confirmed[k]),
+      stats.confirmedTotal > 0
+        ? `${Math.round((stats.confirmed[k] / stats.confirmedTotal) * 1000) / 10}%`
+        : "0%",
+    ]),
+    [],
+    ["Participation type", "Count", "Percent"],
     ...STATS_CATEGORY_ORDER.map((k) => [
       STATS_CATEGORY_META[k].label,
       String(stats.counts[k]),
       `${stats.percents[k]}%`,
     ]),
     [],
-    ["Date", "Total", ...STATS_CATEGORY_ORDER.map((k) => STATS_CATEGORY_META[k].label)],
+    [
+      "Date",
+      "Total",
+      ...STATS_CATEGORY_ORDER.map((k) => STATS_CATEGORY_META[k].label),
+      ...PAYMENT_CATEGORY_ORDER.map((k) => PAYMENT_CATEGORY_META[k].label),
+    ],
     ...stats.daily.map((row) => [
       row.date,
       String(row.total),
       ...STATS_CATEGORY_ORDER.map((k) => String(row[k])),
+      ...PAYMENT_CATEGORY_ORDER.map((k) => String(row[k])),
     ]),
   ].map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","));
 
@@ -262,7 +394,9 @@ export function exportRegistrationStatsCsv(stats: RegistrationStats, eventName: 
 }
 
 export function downloadTextFile(filename: string, content: string, mime = "text/csv;charset=utf-8") {
-  const blob = new Blob([content], { type: mime });
+  const isCsv = mime.includes("csv");
+  const body = isCsv && !content.startsWith("\uFEFF") ? `\uFEFF${content}` : content;
+  const blob = new Blob([body], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

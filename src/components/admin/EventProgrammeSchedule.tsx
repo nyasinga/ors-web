@@ -5,12 +5,16 @@ import { cn } from "../../lib/cn";
 
 type SessionTypeTone = "blue" | "red" | "green" | "purple" | "orange";
 
+type SessionAccess = "open" | "closed_door" | "invite_only";
+
 type ScheduleRow = {
   id: string;
   time: string;
   title: string;
   type: string;
   typeTone: SessionTypeTone;
+  access: SessionAccess;
+  accessLabel?: string;
   speakers: string;
   venue: string;
   venueSub?: string;
@@ -32,6 +36,27 @@ const typeToneClass: Record<SessionTypeTone, string> = {
   purple: "bg-[#eee5ff] text-[#7438f6]",
   orange: "bg-[#fff0d7] text-[#c96a00]",
 };
+
+const accessToneClass: Record<Exclude<SessionAccess, "open">, string> = {
+  closed_door: "bg-[#ffe5e8] text-[#e11d32]",
+  invite_only: "bg-[#dff5e9] text-[#14864d]",
+};
+
+function normalizeAccess(raw?: string): SessionAccess {
+  const key = String(raw || "open")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  if (key === "closed_door" || key === "closed-door" || key === "closeddoor") return "closed_door";
+  if (key === "invite_only" || key === "invite-only" || key === "inviteonly") return "invite_only";
+  return "open";
+}
+
+function accessLabelFor(access: SessionAccess): string | undefined {
+  if (access === "closed_door") return "Closed door";
+  if (access === "invite_only") return "Invite only";
+  return undefined;
+}
 
 const DEFAULT_THUMB = "/assets/about-hero.png";
 
@@ -109,6 +134,7 @@ function formatDayDate(startIso: string | undefined, dayIndex: number): string {
 function toRows(sessions: EngagementProgrammeSession[]): ScheduleRow[] {
   return sessions.map((s, i) => {
     const type = inferType(s);
+    const access = normalizeAccess(s.access);
     const venue = s.venue || s.place || "—";
     return {
       id: s.id || `session-${i}`,
@@ -116,6 +142,8 @@ function toRows(sessions: EngagementProgrammeSession[]): ScheduleRow[] {
       title: s.title,
       type,
       typeTone: toneForBadge(type),
+      access,
+      accessLabel: accessLabelFor(access),
       speakers: speakersLabel(s),
       venue,
       venueSub: venue !== "—" ? undefined : undefined,
@@ -200,14 +228,26 @@ function ScheduleTable({ rows }: { rows: ScheduleRow[] }) {
               <td className="whitespace-nowrap px-5 py-3 text-[#60718d]">{row.time}</td>
               <td className="px-5 py-3 font-semibold text-[#172033]">{row.title}</td>
               <td className="px-5 py-3">
-                <span
-                  className={cn(
-                    "inline-flex items-center whitespace-nowrap rounded-[5px] px-3 py-1.5 text-[15px] font-semibold",
-                    typeToneClass[row.typeTone],
-                  )}
-                >
-                  {row.type}
-                </span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span
+                    className={cn(
+                      "inline-flex items-center whitespace-nowrap rounded-[5px] px-3 py-1.5 text-[15px] font-semibold",
+                      typeToneClass[row.typeTone],
+                    )}
+                  >
+                    {row.type}
+                  </span>
+                  {row.accessLabel && row.access !== "open" ? (
+                    <span
+                      className={cn(
+                        "inline-flex items-center whitespace-nowrap rounded-[5px] px-3 py-1.5 text-[15px] font-semibold",
+                        accessToneClass[row.access],
+                      )}
+                    >
+                      {row.accessLabel}
+                    </span>
+                  ) : null}
+                </div>
               </td>
               <td className="px-5 py-3 leading-5 text-[#60718d] whitespace-pre-line">
                 {row.speakers}

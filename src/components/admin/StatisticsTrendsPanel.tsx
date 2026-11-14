@@ -15,15 +15,19 @@ import {
   YAxis,
 } from "recharts";
 import {
+  Banknote,
   Download,
   Mic2,
   MoreHorizontal,
   FileCheck2,
+  Gift,
   Users,
   UsersRound,
 } from "lucide-react";
 import { cn } from "../../lib/cn";
 import {
+  CONFIRMED_PAYMENT_ORDER,
+  PAYMENT_CATEGORY_META,
   STATS_CATEGORY_META,
   STATS_CATEGORY_ORDER,
   buildRegistrationStats,
@@ -32,8 +36,8 @@ import {
   exportRegistrationStatsCsv,
   formatRangeLabel,
   type DateRange,
+  type PaymentCategoryKey,
   type RegistrationStats,
-  type StatsCategoryKey,
 } from "../../lib/registrationStats";
 import type { AddedParticipant } from "./AddParticipantModal";
 
@@ -52,7 +56,9 @@ const kpiIconWrap: Record<
   { wrap: string; Icon: typeof Users }
 > = {
   total: { wrap: "bg-[#e8f1ff] text-[#2563eb]", Icon: Users },
-  waivers: { wrap: "bg-[#e8f8ef] text-[#16a34a]", Icon: FileCheck2 },
+  paid: { wrap: "bg-[#e8f8ef] text-[#16a34a]", Icon: Banknote },
+  waived: { wrap: "bg-[#e0f2fe] text-[#0284c7]", Icon: FileCheck2 },
+  complimentary: { wrap: "bg-[#f3e8ff] text-[#7c3aed]", Icon: Gift },
   speakers: { wrap: "bg-[#f3e8ff] text-[#8b5cf6]", Icon: Mic2 },
   delegates: { wrap: "bg-[#e8f1ff] text-[#1d4ed8]", Icon: UsersRound },
   sponsors: { wrap: "bg-[#fff1e6] text-[#f97316]", Icon: Users },
@@ -62,6 +68,11 @@ const kpiIconWrap: Record<
 function pctOfTotal(n: number, total: number) {
   if (!total) return "0% of total";
   return `${Math.round((n / total) * 1000) / 10}% of total`;
+}
+
+function pctOfConfirmed(n: number, confirmed: number) {
+  if (!confirmed) return "0% of confirmed";
+  return `${Math.round((n / confirmed) * 1000) / 10}% of confirmed`;
 }
 
 function KpiCard({
@@ -163,6 +174,29 @@ function CategoryLegend({ stats }: { stats: RegistrationStats }) {
   );
 }
 
+function PaymentLegend({ stats }: { stats: RegistrationStats }) {
+  return (
+    <ul className="space-y-2.5 text-[13px]">
+      {CONFIRMED_PAYMENT_ORDER.map((key) => {
+        const meta = PAYMENT_CATEGORY_META[key];
+        const n = stats.confirmed[key];
+        const pct =
+          stats.confirmedTotal > 0
+            ? Math.round((n / stats.confirmedTotal) * 1000) / 10
+            : 0;
+        return (
+          <li key={key} className="flex items-center gap-2">
+            <i className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: meta.color }} />
+            <span className="min-w-[5.5rem] text-slate-600">{meta.label}</span>
+            <span className="font-semibold text-[#0f274f]">{n.toLocaleString()}</span>
+            <span className="text-slate-400">({pct}%)</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export function StatisticsTrendsPanel({
   participants,
   loading,
@@ -205,6 +239,17 @@ export function StatisticsTrendsPanel({
     [stats],
   );
 
+  const paymentPieData = useMemo(
+    () =>
+      CONFIRMED_PAYMENT_ORDER.map((key) => ({
+        key,
+        name: PAYMENT_CATEGORY_META[key].label,
+        value: stats.confirmed[key],
+        color: PAYMENT_CATEGORY_META[key].color,
+      })).filter((d) => d.value > 0),
+    [stats],
+  );
+
   const tickEvery = Math.max(1, Math.ceil(stats.daily.length / 8));
 
   const handleExport = () => {
@@ -230,7 +275,7 @@ export function StatisticsTrendsPanel({
             Statistics, Trends &amp; Analysis
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Overview of event registrations, categories and trends
+            Confirmed participants by payment (paid / waived) and by participation type
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -273,7 +318,7 @@ export function StatisticsTrendsPanel({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 xl:grid-cols-8">
         <KpiCard
           title="Total Registrants"
           value={stats.total.toLocaleString()}
@@ -282,17 +327,24 @@ export function StatisticsTrendsPanel({
           loading={loading}
         />
         <KpiCard
-          title="Waivers"
-          value={stats.counts.waivers.toLocaleString()}
-          subtitle={pctOfTotal(stats.counts.waivers, stats.total)}
-          tone="waivers"
+          title="Confirmed (paid)"
+          value={stats.confirmed.paid.toLocaleString()}
+          subtitle={pctOfConfirmed(stats.confirmed.paid, stats.confirmedTotal)}
+          tone="paid"
           loading={loading}
         />
         <KpiCard
-          title="Speakers"
-          value={stats.counts.speakers.toLocaleString()}
-          subtitle={pctOfTotal(stats.counts.speakers, stats.total)}
-          tone="speakers"
+          title="Waived"
+          value={stats.confirmed.waived.toLocaleString()}
+          subtitle={pctOfConfirmed(stats.confirmed.waived, stats.confirmedTotal)}
+          tone="waived"
+          loading={loading}
+        />
+        <KpiCard
+          title="Complimentary"
+          value={stats.confirmed.complimentary.toLocaleString()}
+          subtitle={pctOfConfirmed(stats.confirmed.complimentary, stats.confirmedTotal)}
+          tone="complimentary"
           loading={loading}
         />
         <KpiCard
@@ -303,6 +355,13 @@ export function StatisticsTrendsPanel({
           loading={loading}
         />
         <KpiCard
+          title="Speakers"
+          value={stats.counts.speakers.toLocaleString()}
+          subtitle={pctOfTotal(stats.counts.speakers, stats.total)}
+          tone="speakers"
+          loading={loading}
+        />
+        <KpiCard
           title="Sponsors"
           value={stats.counts.sponsors.toLocaleString()}
           subtitle={pctOfTotal(stats.counts.sponsors, stats.total)}
@@ -310,7 +369,7 @@ export function StatisticsTrendsPanel({
           loading={loading}
         />
         <KpiCard
-          title="Other Categories"
+          title="Other"
           value={stats.counts.other.toLocaleString()}
           subtitle={pctOfTotal(stats.counts.other, stats.total)}
           tone="other"
@@ -318,10 +377,56 @@ export function StatisticsTrendsPanel({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-3">
-        {/* Donut */}
+      <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-2">
         <article className={cn(card, "p-4")}>
-          <h3 className="text-[15px] font-bold text-[#0f274f]">Registrants by Category</h3>
+          <h3 className="text-[15px] font-bold text-[#0f274f]">Confirmed by payment</h3>
+          <p className="mt-0.5 text-[12px] text-slate-500">
+            Paid vs waived vs complimentary among confirmed attendees
+          </p>
+          <div className="mt-3 flex flex-col items-center gap-4 sm:flex-row sm:items-center">
+            <div className="relative h-[200px] w-[200px] shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={
+                      paymentPieData.length
+                        ? paymentPieData
+                        : [{ name: "Empty", value: 1, color: "#e2e8f0" }]
+                    }
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={62}
+                    outerRadius={88}
+                    paddingAngle={paymentPieData.length > 1 ? 2 : 0}
+                    stroke="none"
+                  >
+                    {(paymentPieData.length ? paymentPieData : [{ color: "#e2e8f0" }]).map(
+                      (entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ),
+                    )}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number, name: string) => [value.toLocaleString(), name]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-0 grid place-content-center text-center">
+                <div className="text-2xl font-extrabold text-[#0f274f]">
+                  {loading ? "…" : stats.confirmedTotal.toLocaleString()}
+                </div>
+                <div className="text-[11px] font-medium text-slate-500">Confirmed</div>
+              </div>
+            </div>
+            <PaymentLegend stats={stats} />
+          </div>
+        </article>
+
+        <article className={cn(card, "p-4")}>
+          <h3 className="text-[15px] font-bold text-[#0f274f]">Registrants by type</h3>
+          <p className="mt-0.5 text-[12px] text-slate-500">
+            Participation type (waived people stay in their type)
+          </p>
           <div className="mt-3 flex flex-col items-center gap-4 sm:flex-row sm:items-center">
             <div className="relative h-[200px] w-[200px] shrink-0">
               <ResponsiveContainer width="100%" height="100%">
@@ -340,10 +445,7 @@ export function StatisticsTrendsPanel({
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value: number, name: string) => [
-                      value.toLocaleString(),
-                      name,
-                    ]}
+                    formatter={(value: number, name: string) => [value.toLocaleString(), name]}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -357,11 +459,14 @@ export function StatisticsTrendsPanel({
             <CategoryLegend stats={stats} />
           </div>
         </article>
+      </div>
 
-        {/* Line trend */}
+      <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-2">
         <article className={cn(card, "p-4")}>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-[15px] font-bold text-[#0f274f]">Registration Trend (Daily)</h3>
+            <h3 className="text-[15px] font-bold text-[#0f274f]">
+              Confirmed payment trend (Daily)
+            </h3>
             <ChartToolbar
               range={range}
               onRangeChange={setFilteredRange}
@@ -399,45 +504,39 @@ export function StatisticsTrendsPanel({
                       : ""
                   }
                 />
-                <Line
-                  type="monotone"
-                  dataKey="total"
-                  name="Total"
-                  stroke="#2563eb"
-                  strokeWidth={2.5}
-                  dot={false}
-                  activeDot={{ r: 4 }}
-                />
                 {(
                   [
-                    ["delegates", "#2563eb"],
-                    ["speakers", "#8b5cf6"],
-                    ["sponsors", "#f97316"],
-                    ["waivers", "#16a34a"],
-                    ["other", "#64748b"],
-                  ] as [StatsCategoryKey, string][]
+                    ["paid", "#16a34a"],
+                    ["waived", "#0284c7"],
+                    ["complimentary", "#7c3aed"],
+                  ] as [PaymentCategoryKey, string][]
                 ).map(([key, color]) => (
                   <Line
                     key={key}
                     type="monotone"
                     dataKey={key}
-                    name={STATS_CATEGORY_META[key].label}
+                    name={PAYMENT_CATEGORY_META[key].label}
                     stroke={color}
-                    strokeWidth={1.5}
-                    strokeDasharray="4 3"
+                    strokeWidth={2}
                     dot={false}
+                    activeDot={{ r: 4 }}
                   />
                 ))}
+                <Legend
+                  verticalAlign="bottom"
+                  height={28}
+                  iconType="circle"
+                  wrapperStyle={{ fontSize: 12, paddingTop: 4 }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </article>
 
-        {/* Stacked bars */}
         <article className={cn(card, "p-4")}>
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-[15px] font-bold text-[#0f274f]">
-              Registrations by Category (Daily)
+              Registrations by type (Daily)
             </h3>
             <ChartToolbar
               range={range}
@@ -446,7 +545,7 @@ export function StatisticsTrendsPanel({
               isAll={rangeMode === "all"}
             />
           </div>
-          <div className="h-[220px] w-full">
+          <div className="h-[240px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stats.daily} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
                 <CartesianGrid stroke="#e8eef6" vertical={false} />

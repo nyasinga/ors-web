@@ -66,6 +66,9 @@ export type EngagementPaymentMethod = "mpesa" | "card" | "bank_transfer" | "free
 
 export type EngagementCurrency = "KES" | "USD" | "EUR" | "GBP" | "ZAR" | "UGX" | "TZS" | "RWF";
 
+/** Who may attend a session — independent of session type/badge. */
+export type ProgrammeSessionAccess = "open" | "closed_door" | "invite_only";
+
 export type EngagementProgrammeSession = {
   id?: string;
   day?: number | string;
@@ -77,6 +80,8 @@ export type EngagementProgrammeSession = {
   venue?: string;
   place?: string;
   badge?: string;
+  /** Attendance restriction; omit or "open" = general audience. */
+  access?: ProgrammeSessionAccess | string;
   speakers?: number | string[];
   speakerNames?: string[];
 };

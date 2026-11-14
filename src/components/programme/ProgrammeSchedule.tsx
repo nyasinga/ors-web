@@ -34,6 +34,13 @@ function tagClass(tone: ProgrammeSession["tone"]) {
   return cn(base, "bg-[#e4eef8] text-[#1462d4]");
 }
 
+function accessTagClass(access?: ProgrammeSession["access"]) {
+  const base = "inline-block rounded px-[9px] py-1 text-[10px] font-semibold";
+  if (access === "closed_door") return cn(base, "bg-[#ffe6e8] text-[#e21d2a]");
+  if (access === "invite_only") return cn(base, "bg-[#dff4e8] text-[#168046]");
+  return cn(base, "bg-[#eef2f6] text-[#53627a]");
+}
+
 const thBase = "bg-[#edf4f9] px-[17px] py-[7px] text-left";
 const tdBase =
   "h-[43px] border-t border-[#edf1f5] px-[17px] py-[5px] align-middle max-[700px]:block max-[700px]:h-auto max-[700px]:border-0 max-[700px]:p-0";
@@ -78,7 +85,8 @@ export function ProgrammeSchedule({
     const q = query.trim().toLowerCase();
     return programme.sessions.filter((s) => {
       const dayOk = dayFilter === "all" || String(s.day) === dayFilter;
-      const haystack = `${s.title} ${s.speakers} ${s.type} ${s.venue}`.toLowerCase();
+      const haystack =
+        `${s.title} ${s.speakers} ${s.type} ${s.accessLabel || ""} ${s.venue}`.toLowerCase();
       return dayOk && (!q || haystack.includes(q));
     });
   }, [programme.sessions, dayFilter, query]);
@@ -239,7 +247,12 @@ export function ProgrammeSchedule({
                             <td className={cn(tdBase, td.time, stripe)}>{s.time}</td>
                             <td className={cn(tdBase, td.session, stripe)}>{s.title}</td>
                             <td className={cn(tdBase, td.type, stripe)}>
-                              <span className={tagClass(s.tone)}>{s.type}</span>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className={tagClass(s.tone)}>{s.type}</span>
+                                {s.accessLabel ? (
+                                  <span className={accessTagClass(s.access)}>{s.accessLabel}</span>
+                                ) : null}
+                              </div>
                             </td>
                             <td className={cn(tdBase, td.speakers, stripe)}>
                               {s.speakerLines

@@ -1,7 +1,7 @@
 /**
  * Admin-only registration waivers.
  *
- * Grant: POST /ticketing multipart (JWT required; JSON → 415)
+ * Grant (existing ticket): PATCH /ticketing/{ticketID} multipart (JWT; JSON → 415)
  * Re-hydrate from paymentMode / transactionReference / extraData on list.
  */
 
@@ -165,11 +165,15 @@ function pickTicket(result: Record<string, unknown>, fallbackId?: string): Engag
 }
 
 /**
- * Admin grant waiver via POST /ticketing (multipart — JSON returns 415).
+ * Admin grant waiver via PATCH /ticketing/{ticketID} (multipart — JSON returns 415).
+ * Same route shape as cancel; marks fee waived/complimentary and confirms the ticket.
  */
 export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<GrantWaiverResult> {
   const engagementID = input.engagementID.trim();
   if (!engagementID) throw new Error("Engagement ID is required to grant a waiver.");
+
+  const ticketID = input.ticketID?.trim() || "";
+  if (!ticketID) throw new Error("A ticket ID is required to grant a waiver.");
 
   if (input.reason === "gov_speaker" && !input.agencyName?.trim()) {
     throw new Error("Enter the government agency for this speaker waiver.");
@@ -202,12 +206,14 @@ export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<G
       : toTicketingUserType(input.participationType, "delegate");
 
   const body: Record<string, unknown> = {
+    ticketID,
     engagementID,
     ticketPrice: 0,
     currency: "KES",
     participationType: userType,
     transactionReference: waiver.transactionReference,
-    status: "registered",
+    // Distinct from paid (issued) so reporting can separate waived vs paid.
+    status: paymentMode === "complimentary" ? "complimentary" : "waived",
     extraData: {
       paymentMode: waiver.paymentMode,
       waiverReason: waiver.waiverReason,
@@ -222,18 +228,17 @@ export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<G
     },
   };
 
-  if (input.ticketID?.trim()) body.ticketID = input.ticketID.trim();
   if (input.fullName?.trim()) body.fullName = input.fullName.trim();
   if (input.email?.trim()) body.email = input.email.trim();
   if (input.phoneNo?.trim()) body.phoneNo = input.phoneNo.trim();
 
-  const result = await apiForm<Record<string, unknown>>(`/ticketing${body?.ticketID? ('/' + body?.ticketID) : ''}`, {
-    method: body?.ticketID? "PATCH" : "POST",
+  const result = await apiForm<Record<string, unknown>>(`/ticketing/${encodeURIComponent(ticketID)}`, {
+    method: "PATCH",
     token,
     formData: toFormData(body),
   });
 
-  const ticket = pickTicket(result, input.ticketID);
+  const ticket = pickTicket(result, ticketID);
   const message =
     typeof result.message === "string" && result.message.trim() ? result.message.trim() : undefined;
 

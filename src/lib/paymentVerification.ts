@@ -2,11 +2,14 @@
  * Payment verification lifecycle (admin must approve before pass/QR).
  *
  * Backend EngagementTicketStatus:
- *   draft      — incomplete / early
- *   registered — participant supplied info + proof; pending admin approval
- *   issued     — confirmed (admin approved / ticket issued)
- *   checked-in — arrived on site
- *   cancelled  — void
+ *   draft          — incomplete / early
+ *   registered     — participant supplied info + proof; pending admin approval
+ *   issued         — paid / ticket issued (admin approved payment)
+ *   confirmed      — paid / confirmed (same reporting bucket as issued)
+ *   waived         — fee waived (confirmed without payment)
+ *   complimentary  — sponsor free seat (confirmed without payment)
+ *   checked-in     — arrived on site
+ *   cancelled      — void
  *
  * Also encoded in transactionReference when helpful:
  *   VERIFIED|<original-ref>  → admin confirmed stamp
@@ -57,13 +60,17 @@ export function resolveVerificationBucket(ticket: {
   const status = String(ticket.status || "").toLowerCase();
   if (status === "cancelled" || status === "canceled") return "cancelled";
 
+  // Canonical waived / complimentary statuses (distinct from paid "issued").
+  if (status === "complimentary") return "complimentary";
+  if (status === "waived") return "waived";
+
   const waiver = parseWaiverFromTicket(ticket);
   if (waiver?.paymentMode === "complimentary") return "complimentary";
   if (waiver?.paymentMode === "waived") return "waived";
 
   // Canonical backend statuses (source of truth for list display).
   if (status === "checked-in" || status === "checked_in") return "confirmed";
-  if (status === "issued") return "confirmed";
+  if (status === "issued" || status === "confirmed") return "confirmed";
 
   const ref = String(ticket.transactionReference || "").trim();
   const receipt = String(ticket.paymentReceiptURL || "").trim();

@@ -14,6 +14,8 @@ type Props = {
   onClose: () => void;
   onApprove: (p: AddedParticipant) => void;
   onCancelTicket: (p: AddedParticipant) => void;
+  /** Open grant-waiver flow instead of approving paid proof. */
+  onWaiver?: (p: AddedParticipant) => void;
 };
 
 function authToken(): string | null {
@@ -258,6 +260,7 @@ export function PaymentProofReviewModal({
   onClose,
   onApprove,
   onCancelTicket,
+  onWaiver,
 }: Props) {
   const p = participant;
   const busy = Boolean(approveBusy || cancelBusy);
@@ -292,6 +295,16 @@ export function PaymentProofReviewModal({
               onClick={() => onCancelTicket(p)}
             >
               {cancelBusy ? "Cancelling…" : "Cancel ticket"}
+            </Button>
+          ) : null}
+          {p && canApprove && onWaiver ? (
+            <Button
+              variant="ghost"
+              disabled={busy}
+              onClick={() => onWaiver(p)}
+              className="!text-sky-800"
+            >
+              Grant waiver
             </Button>
           ) : null}
           {p && canApprove ? (

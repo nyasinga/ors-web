@@ -13,6 +13,7 @@ import {
   Download,
   ExternalLink,
   Eye,
+  FileCheck2,
   LayoutGrid,
   Mail,
   MapPin,
@@ -79,6 +80,7 @@ import { cn } from "../../lib/cn";
 import { clearPublicEngagementCache } from "../../lib/publicEvent";
 import { printParticipantTicket } from "../../lib/printParticipantTicket";
 import { listEventParticipants } from "../../lib/eventParticipants";
+import { categorizePayment } from "../../lib/registrationStats";
 import {
   DEFAULT_EVENT_BANNER,
   engagementBannerUrl,
@@ -108,6 +110,7 @@ const kpiIcon = {
   purple: Mic2,
   orange: Building2,
   red: Wallet,
+  sky: FileCheck2,
 } as const;
 
 const sparkStroke = {
@@ -116,6 +119,7 @@ const sparkStroke = {
   purple: "#8b2de8",
   orange: "#ff9700",
   red: "#ed1c2e",
+  sky: "#0284c7",
 } as const;
 
 /* ---- Event details (overview) styling tokens ---- */
@@ -152,6 +156,7 @@ const edStatTone = {
   purple: "bg-[#f2eaff] text-[#8b2de8]",
   orange: "bg-[#fff0d5] text-[#ff9700]",
   red: "bg-[#ffe9eb] text-[#ed1c2e]",
+  sky: "bg-[#e0f2fe] text-[#0284c7]",
 } as const;
 
 /* ---- Ticket management tab styling tokens ---- */
@@ -424,7 +429,12 @@ export function EventDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
-  const [participantStats, setParticipantStats] = useState({ total: 0, confirmed: 0 });
+  const [participantStats, setParticipantStats] = useState({
+    total: 0,
+    confirmedPaid: 0,
+    waived: 0,
+    complimentary: 0,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -483,7 +493,7 @@ export function EventDetailsPage() {
   useEffect(() => {
     let cancelled = false;
     if (!fromApi || !id.trim()) {
-      setParticipantStats({ total: 0, confirmed: 0 });
+      setParticipantStats({ total: 0, confirmedPaid: 0, waived: 0, complimentary: 0 });
       return;
     }
     (async () => {
@@ -493,10 +503,14 @@ export function EventDetailsPage() {
         const active = rows.filter((p) => p.status !== "Cancelled");
         setParticipantStats({
           total: active.length,
-          confirmed: active.filter((p) => p.status === "Confirmed").length,
+          confirmedPaid: active.filter((p) => categorizePayment(p) === "paid").length,
+          waived: active.filter((p) => categorizePayment(p) === "waived").length,
+          complimentary: active.filter((p) => categorizePayment(p) === "complimentary").length,
         });
       } catch {
-        if (!cancelled) setParticipantStats({ total: 0, confirmed: 0 });
+        if (!cancelled) {
+          setParticipantStats({ total: 0, confirmedPaid: 0, waived: 0, complimentary: 0 });
+        }
       }
     })();
     return () => {
@@ -517,22 +531,22 @@ export function EventDetailsPage() {
         tone: "blue" as const,
       },
       {
-        label: "Confirmed Participants",
-        value: participantStats.confirmed.toLocaleString(),
+        label: "Confirmed (paid)",
+        value: participantStats.confirmedPaid.toLocaleString(),
         trend: "—",
         tone: "green" as const,
       },
       {
-        label: "Speakers",
-        value: String(speakers.length),
+        label: "Waived",
+        value: participantStats.waived.toLocaleString(),
         trend: "—",
-        tone: "purple" as const,
+        tone: "sky" as const,
       },
       {
-        label: "Sponsors & Exhibitors",
-        value: String(sponsors.length),
+        label: "Complimentary",
+        value: participantStats.complimentary.toLocaleString(),
         trend: "—",
-        tone: "orange" as const,
+        tone: "purple" as const,
       },
       {
         label: "Total Revenue",
@@ -541,7 +555,7 @@ export function EventDetailsPage() {
         tone: "red" as const,
       },
     ];
-  }, [participantStats, speakers.length, sponsors.length]);
+  }, [participantStats]);
 
   if (tab === "reports") {
     return <Navigate to={`/admin/events/${id}/reports`} replace />;
