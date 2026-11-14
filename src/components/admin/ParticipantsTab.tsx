@@ -23,7 +23,7 @@ import { fetchEventPassPdfUrl, fetchInvoicePdfUrl } from "../../lib/printPartici
 import { InvoiceDownloadModal } from "../tickets/InvoiceDownloadModal";
 
 /** Temporarily off until POST /ticketing waiver payload is confirmed with backend. */
-const WAIVER_ENABLED = false;
+const WAIVER_ENABLED = true;
 
 const avatarToneClass: Record<string, string> = {
   blue: "bg-blue-200 text-blue-700",
@@ -812,7 +812,12 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                           >
                             <MoreVertical size={17} />
                           </summary>
-                          <div className="absolute right-0 top-full z-30 mt-1.5 flex min-w-[190px] flex-col overflow-hidden rounded-lg border border-blue-100 bg-white p-1.5 text-left shadow-lg">
+                          <div className={cn(
+                              "absolute right-0 z-30 flex min-w-[190px] flex-col overflow-hidden rounded-lg border border-blue-100 bg-white p-1.5 text-left shadow-lg",
+                              i >= visible.length - 2
+                                ? "bottom-full mb-1.5"
+                                : "top-full mt-1.5",
+                            )}>
                             <button
                               type="button"
                               className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-green-700 hover:bg-green-50"
@@ -1144,17 +1149,6 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                         ) : (
                           <span className="text-[12px] text-slate-400">—</span>
                         )}
-                        {canGrantWaiver(p) ? (
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 text-[13px] font-semibold text-sky-800 hover:bg-sky-100"
-                            aria-label={`Grant waiver for ${p.name}`}
-                            title="Grant staff / gov speaker / sponsor free-seat waiver"
-                            onClick={() => setWaiverTarget(p)}
-                          >
-                            Waiver
-                          </button>
-                        ) : null}
                       </div>
                     </td>
                     <td className="border-b border-blue-50 px-2 py-1.5">
@@ -1180,11 +1174,17 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                             <MoreVertical size={17} />
                           </summary>
 
-                          <div className="absolute right-0 top-full z-30 mt-1.5 flex min-w-[190px] flex-col overflow-hidden rounded-lg border border-blue-100 bg-white p-1.5 text-left shadow-lg">
+                          <div className={cn(
+                              "absolute right-0 z-30 flex min-w-[190px] flex-col overflow-hidden rounded-lg border border-blue-100 bg-white p-1.5 text-left shadow-lg",
+                              i >= visible.length - 2
+                                ? "bottom-full mb-1.5"
+                                : "top-full mt-1.5",
+                            )}>
                             <button
                               type="button"
                               className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-green-700 hover:bg-green-50"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.currentTarget.closest("details")?.removeAttribute("open");
                                 void (async () => {
                                   try {
                                     closePassPreview();
@@ -1217,7 +1217,8 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                                     : "No pass code on this registration"
                               }
                               className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.currentTarget.closest("details")?.removeAttribute("open");
                                 void (async () => {
                                   if (!(p.passAllowed || isPaymentPaid(p))) {
                                     toast.info("Verify payment before printing the event pass.");
@@ -1246,7 +1247,10 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                               <button
                                 type="button"
                                 className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-amber-700 hover:bg-amber-50"
-                                onClick={() => setProofTarget(p)}
+                                onClick={(e) => {
+                                  e.currentTarget.closest("details")?.removeAttribute("open");
+                                  setProofTarget(p);
+                                }}
                               >
                                 <Check size={14} />
                                 Confirm Payment
@@ -1257,7 +1261,10 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                               <button
                                 type="button"
                                 className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-sky-700 hover:bg-sky-50"
-                                onClick={() => setWaiverTarget(p)}
+                                onClick={(e) => {
+                                  e.currentTarget.closest("details")?.removeAttribute("open");
+                                  setWaiverTarget(p);
+                                }}
                               >
                                 <Check size={14} />
                                 Grant waiver
@@ -1274,7 +1281,8 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                                 className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
                                 aria-label={`Cancel ticket for ${p.name}`}
                                 title="Cancel this registration"
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.currentTarget.closest("details")?.removeAttribute("open");
                                   void handleCancelTicket(p);
                                 }}
                               >
