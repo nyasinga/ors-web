@@ -227,8 +227,8 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
       transactionReference: patch.transactionReference,
       rawStatus: patch.rawStatus || p.rawStatus || "registered",
     };
-    setApiRows((prev) => prev.map((row) => (row.id === p.id ? { ...row, ...next } : row)));
-    setLocalRows((prev) => prev.map((row) => (row.id === p.id ? { ...row, ...next } : row)));
+    setApiRows((prev) => prev.map((row: any) => (row.id === p.id ? { ...row, ...next } : row)));
+    setLocalRows((prev) => prev.map((row: any) => (row.id === p.id ? { ...row, ...next } : row)));
   };
 
   const handleGrantWaiver = async (input: {

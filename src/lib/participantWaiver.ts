@@ -10,7 +10,7 @@ import { apiForm, toFormData } from "./api";
 import { getValidAuthToken } from "./auth";
 import type { EngagementParticipantTicket } from "./eventParticipants";
 
-export type WaiverReason = "staff" | "gov_speaker" | "sponsor_allocation";
+export type WaiverReason = "staff" | "gov_speaker" | "sponsor_allocation" | "facilitator";
 export type PaymentMode = "payable" | "waived" | "complimentary";
 
 export const SPONSOR_COMPLIMENTARY_SEATS = 3;
@@ -55,6 +55,7 @@ const WAIVER_PREFIX = "WAIVER";
 
 export function waiverReasonLabel(reason: WaiverReason): string {
   if (reason === "staff") return "Staff waiver";
+  if (reason === "facilitator") return "Facilitator complementary";
   if (reason === "gov_speaker") return "Speaker — Government Agency";
   return "Sponsor complimentary seat";
 }
@@ -65,6 +66,7 @@ export function encodeWaiverReference(input: {
   sponsorTicketID?: string;
 }): string {
   if (input.reason === "staff") return `${WAIVER_PREFIX}-STAFF`;
+  if (input.reason === "facilitator") return `${WAIVER_PREFIX}-FACILITATOR`;
   if (input.reason === "gov_speaker") {
     const agency = (input.agencyName || "").trim().replace(/\|/g, " ").slice(0, 80);
     return agency ? `${WAIVER_PREFIX}-GOV-SPEAKER|${agency}` : `${WAIVER_PREFIX}-GOV-SPEAKER`;
@@ -113,6 +115,13 @@ export function parseWaiverFromTicket(ticket: {
   if (upper.startsWith(`${WAIVER_PREFIX}-STAFF`)) {
     return { paymentMode: "waived", waiverReason: "staff", transactionReference: ref };
   }
+  if (upper.startsWith(`${WAIVER_PREFIX}-FACILITATOR`)) {
+    return {
+      paymentMode: "waived",
+      waiverReason: "facilitator",
+      transactionReference: ref,
+    };
+  }
   if (upper.startsWith(`${WAIVER_PREFIX}-GOV-SPEAKER`)) {
     const agency = ref.includes("|") ? ref.split("|").slice(1).join("|").trim() : "";
     return {
@@ -141,12 +150,9 @@ export function parseWaiverFromTicket(ticket: {
 
 function normalizeReason(raw: string): WaiverReason | undefined {
   if (raw === "staff") return "staff";
-  if (raw === "gov_speaker" || raw === "gov-speaker" || raw === "government_speaker") {
-    return "gov_speaker";
-  }
-  if (raw === "sponsor_allocation" || raw === "sponsor" || raw === "complimentary") {
-    return "sponsor_allocation";
-  }
+  if (raw === "facilitator") return "facilitator";
+  if (raw === "gov_speaker" || raw === "gov-speaker" || raw === "government_speaker") return "gov_speaker";
+  if (raw === "sponsor_allocation" || raw === "sponsor" || raw === "complimentary") return "sponsor_allocation";
   return undefined;
 }
 
@@ -221,8 +227,8 @@ export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<G
   if (input.email?.trim()) body.email = input.email.trim();
   if (input.phoneNo?.trim()) body.phoneNo = input.phoneNo.trim();
 
-  const result = await apiForm<Record<string, unknown>>("/ticketing", {
-    method: "POST",
+  const result = await apiForm<Record<string, unknown>>(`/ticketing${body?.ticketID? ('/' + body?.ticketID) : ''}`, {
+    method: body?.ticketID? "PATCH" : "POST",
     token,
     formData: toFormData(body),
   });

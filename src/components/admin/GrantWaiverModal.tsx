@@ -139,6 +139,7 @@ export function GrantWaiverModal({
               <option value="staff">{waiverReasonLabel("staff")}</option>
               <option value="gov_speaker">{waiverReasonLabel("gov_speaker")}</option>
               <option value="sponsor_allocation">{waiverReasonLabel("sponsor_allocation")}</option>
+              <option value="facilitator">{waiverReasonLabel("facilitator")}</option>
             </select>
           </div>
 

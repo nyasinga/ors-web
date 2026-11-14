@@ -48,7 +48,7 @@ export type AddedParticipant = {
   rawStatus?: string;
   /** payable | waived | complimentary — set when admin grants a waiver. */
   paymentMode?: "payable" | "waived" | "complimentary";
-  waiverReason?: "staff" | "gov_speaker" | "sponsor_allocation";
+  waiverReason?: "staff" | "gov_speaker" | "sponsor_allocation" | "facilitator";
   agencyName?: string;
   /** Paid sponsor ticket this complimentary seat is charged against. */
   sponsorTicketID?: string;
