@@ -197,7 +197,7 @@ export function ParticipantDashboardPage() {
         const refreshed = await refreshParticipantSession();
         if (!cancelled && refreshed) setSession(refreshed);
       } catch {
-        // Keep cached session if revalidation fails (offline / API blip).
+        // Access denial clears the session (layout redirects). Network blips keep cache.
         if (!cancelled) setSession(getParticipantSession());
       }
     })();

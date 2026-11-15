@@ -2,9 +2,17 @@
  * Participant session helpers.
  * Login/refresh must only READ the ticket — never POST /ticketing/register,
  * which the backend treats as a (re)registration and can reset issued → registered.
+ *
+ * Access requires a verified ticket (paid confirmed / waived / complimentary).
+ * Pending verification must not unlock the participant dashboard or programme.
  */
 
 import { API_BASE_URL, apiRequest, TENANT_ID } from "./api";
+import {
+  canIssueEventPass,
+  resolveVerificationBucket,
+  verificationBucketLabel,
+} from "./paymentVerification";
 
 const TOKEN_KEY = "ors_participant_token";
 const SESSION_KEY = "ors_participant_session";
@@ -104,13 +112,45 @@ export function hasParticipantSession(): boolean {
   return Boolean(getParticipantToken() && getParticipantSession());
 }
 
+function ticketFromResponse(result: Record<string, unknown>): Record<string, unknown> {
+  return (result.ticket || result) as Record<string, unknown>;
+}
+
+/**
+ * Block participant portal access until payment is verified (or waived).
+ * Pass codes exist at registration time — that alone must not grant access.
+ */
+export function assertParticipantPortalAccess(ticket: Record<string, unknown>): void {
+  const bucket = resolveVerificationBucket(ticket);
+  if (canIssueEventPass(ticket)) return;
+
+  if (bucket === "cancelled") {
+    throw new Error("This registration has been cancelled. Participant access is not available.");
+  }
+  if (bucket === "pending_verification" || bucket === "registered") {
+    throw new Error(
+      "Your registration is pending payment verification. You can sign in after an admin confirms payment (or a waiver is granted).",
+    );
+  }
+  if (bucket === "draft") {
+    throw new Error(
+      "Your registration is incomplete. Finish registration and wait for payment verification before signing in.",
+    );
+  }
+  throw new Error(
+    `Participant access is locked (${verificationBucketLabel(bucket)}). Complete payment verification first.`,
+  );
+}
+
 function sessionFromTicketResponse(
   result: Record<string, unknown>,
   passCode: string,
   method: "passcode" | "qr",
   previous?: ParticipantSession | null,
 ): ParticipantSession {
-  const ticket = (result.ticket || result) as Record<string, unknown>;
+  const ticket = ticketFromResponse(result);
+  assertParticipantPortalAccess(ticket);
+
   const participant = (ticket.participant || ticket.user || ticket) as Record<string, unknown>;
   const resolvedPass = String(ticket.passCode || passCode || previous?.passCode || "");
 
@@ -165,6 +205,15 @@ export async function refreshParticipantSession(): Promise<ParticipantSession | 
 
   // Prefer GET /ticketing/{passCode} — lighter than POST /ticketing/register for revalidate.
   const result = await apiRequest<Record<string, unknown>>(`/ticketing/${passCode}`);
+  const ticket = ticketFromResponse(result);
+
+  // Access check before rewriting the session — network-safe path already succeeded.
+  try {
+    assertParticipantPortalAccess(ticket);
+  } catch (err) {
+    clearParticipantSession();
+    throw err;
+  }
 
   const session = sessionFromTicketResponse(result, passCode, current.method, current);
   saveParticipantSession(session, remembersSession());

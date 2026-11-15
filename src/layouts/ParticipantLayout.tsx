@@ -11,6 +11,7 @@ import {
   participantAvatar,
   participantDisplayName,
   participantInitials,
+  refreshParticipantSession,
 } from "../lib/participantAuth";
 import LanguageButton from "../components/i18n/LanguageButton";
 
@@ -75,6 +76,33 @@ export function ParticipantLayout() {
     clearParticipantSession();
     navigate("/participant-login", { replace: true, state: { from: pathname } });
   }, [navigate, pathname, session]);
+
+  // Re-check ticket verification on every /me visit — pending must not keep access.
+  useEffect(() => {
+    if (!hasParticipantSession()) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await refreshParticipantSession();
+      } catch (err) {
+        if (cancelled) return;
+        clearParticipantSession();
+        navigate("/participant-login", {
+          replace: true,
+          state: {
+            from: pathname,
+            notice:
+              err instanceof Error
+                ? err.message
+                : "Participant access requires verified payment.",
+          },
+        });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, pathname]);
 
   const signOut = () => {
     clearParticipantSession();

@@ -86,7 +86,10 @@ export function ParticipantLoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [code, setCode] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() => {
+    const notice = (location.state as { notice?: string } | null)?.notice;
+    return typeof notice === "string" && notice.trim() ? notice.trim() : "";
+  });
   const [busy, setBusy] = useState(false);
   const returnTo =
     (location.state as { from?: string } | null)?.from &&
