@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Download, InfoIcon, MoreVertical, Plus, Printer, Search, Timer, Users } from "lucide-react";
+import {
+  Check,
+  Download,
+  FilePenLine,
+  InfoIcon,
+  MoreVertical,
+  Plus,
+  Printer,
+  Search,
+  Timer,
+  Users,
+  XCircle,
+} from "lucide-react";
 import { AddParticipantModal, type AddedParticipant } from "./AddParticipantModal";
 import { GrantWaiverModal } from "./GrantWaiverModal";
 import { ParticipantDetailModal } from "./ParticipantDetailModal";
@@ -491,6 +503,8 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
   const pageEnd = filtered.length === 0 ? 0 : Math.min(pageStart + visible.length, filtered.length);
 
   const registeredCount = source.filter((p) => p.status === "Registered").length;
+  const draftCount = source.filter((p) => p.status === "Draft").length;
+  const cancelledCount = source.filter((p) => p.status === "Cancelled").length;
   const pendingVerificationCount = source.filter(
     (p) => p.status === "Pending verification",
   ).length;
@@ -510,10 +524,18 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
       tone: "blue",
     },
     {
+      label: "Drafts",
+      value: listBusy ? "…" : String(draftCount),
+      Icon: FilePenLine,
+      tone: "slate",
+      statusFilter: "Draft",
+    },
+    {
       label: "Pending verification",
       value: listBusy ? "…" : String(pendingVerificationCount),
       Icon: Timer,
       tone: "amber",
+      statusFilter: "Pending verification",
     },
     {
       label: "Confirmed (paid)",
@@ -533,6 +555,13 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
       Icon: Check,
       tone: "purple",
     },
+    {
+      label: "Canceled",
+      value: listBusy ? "…" : String(cancelledCount),
+      Icon: XCircle,
+      tone: "red",
+      statusFilter: "Cancelled",
+    },
   ];
 
   const iconTone: Record<string, string> = {
@@ -542,6 +571,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     red: "bg-red-50 text-red-500",
     purple: "bg-purple-50 text-purple-600",
     sky: "bg-sky-50 text-sky-600",
+    slate: "bg-slate-100 text-slate-600",
   };
 
   const orgs = useMemo(
@@ -739,21 +769,38 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
         </div>
       ) : null}
 
-      <section className="mb-2.5 grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
-        {kpis.map((kpi) => (
-          <article
-            key={kpi.label}
-            className="flex min-w-0 items-center gap-2 rounded-md border border-blue-100 bg-white px-2.5 py-2 shadow-sm"
-          >
-            <div className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-md", iconTone[kpi.tone])}>
-              <kpi.Icon size={16} strokeWidth={2} />
-            </div>
-            <div className="min-w-0">
-              <strong className="block text-sm font-extrabold leading-tight">{kpi.value}</strong>
-              <span className="block truncate text-[13px] text-blue-700">{kpi.label}</span>
-            </div>
-          </article>
-        ))}
+      <section className="mb-2.5 grid grid-cols-2 gap-1.5 sm:grid-cols-4 xl:grid-cols-8">
+        {kpis.map((kpi) => {
+          const filterValue =
+            "statusFilter" in kpi && typeof kpi.statusFilter === "string"
+              ? kpi.statusFilter
+              : null;
+          return (
+            <button
+              key={kpi.label}
+              type="button"
+              onClick={() => {
+                if (!filterValue) return;
+                setStatusFilter(statusFilter === filterValue ? "" : filterValue);
+              }}
+              className={cn(
+                "flex min-w-0 items-center gap-2 rounded-md border border-blue-100 bg-white px-2.5 py-2 text-left shadow-sm",
+                filterValue
+                  ? "cursor-pointer transition hover:border-blue-300 hover:bg-blue-50/40"
+                  : "cursor-default",
+                filterValue && statusFilter === filterValue && "border-blue-400 bg-blue-50",
+              )}
+            >
+              <div className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-md", iconTone[kpi.tone])}>
+                <kpi.Icon size={16} strokeWidth={2} />
+              </div>
+              <div className="min-w-0">
+                <strong className="block text-sm font-extrabold leading-tight">{kpi.value}</strong>
+                <span className="block truncate text-[13px] text-blue-700">{kpi.label}</span>
+              </div>
+            </button>
+          );
+        })}
       </section>
 
       <div className="overflow-hidden rounded-lg border border-blue-100 bg-white shadow-sm">
