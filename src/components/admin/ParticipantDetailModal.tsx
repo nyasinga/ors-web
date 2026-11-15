@@ -12,6 +12,8 @@ type Props = {
   onCancelTicket?: (p: AddedParticipant) => void;
   onViewProof?: (p: AddedParticipant) => void;
   onWaiver?: (p: AddedParticipant) => void;
+  /** Button label — "Grant waiver" or "Convert to waiver". */
+  waiverLabel?: string;
   verifyBusy?: boolean;
   cancelBusy?: boolean;
 };
@@ -33,6 +35,7 @@ export function ParticipantDetailModal({
   onCancelTicket,
   onViewProof,
   onWaiver,
+  waiverLabel = "Grant waiver",
   verifyBusy,
   cancelBusy,
 }: Props) {
@@ -48,6 +51,17 @@ export function ParticipantDetailModal({
     p?.status !== "Confirmed" &&
     p?.status !== "Waived" &&
     p?.status !== "Complimentary";
+  const alreadyWaived = p?.status === "Waived" || p?.status === "Complimentary";
+  const canConvertToWaiver =
+    Boolean(p) &&
+    !alreadyWaived &&
+    p?.status !== "Cancelled" &&
+    (p?.status === "Confirmed" ||
+      p?.verificationBucket === "confirmed" ||
+      ["issued", "confirmed", "checked-in", "checked_in"].includes(
+        String(p?.rawStatus || "").toLowerCase(),
+      ));
+  const canOfferWaiver = canApprove || canConvertToWaiver;
   const canCancel = p && p.status !== "Cancelled";
   const hasProof = Boolean(p?.paymentReceiptURL || p?.paymentProofUrls?.length);
 
@@ -71,14 +85,14 @@ export function ParticipantDetailModal({
               {cancelBusy ? "Cancelling…" : "Cancel ticket"}
             </Button>
           ) : null}
-          {p && onWaiver && canApprove ? (
+          {p && onWaiver && canOfferWaiver ? (
             <Button
               variant="ghost"
               disabled={busy}
               onClick={() => onWaiver(p)}
               className="!text-sky-800"
             >
-              Grant waiver
+              {waiverLabel}
             </Button>
           ) : null}
           {p && hasProof && onViewProof ? (

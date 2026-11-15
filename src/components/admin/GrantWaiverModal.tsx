@@ -22,6 +22,8 @@ type Props = {
   /** All participants — used to list paid sponsors and remaining seats. */
   participants: AddedParticipant[];
   busy?: boolean;
+  /** Correcting a paid-confirmed ticket (vs first-time grant on pending). */
+  convertFromPaid?: boolean;
   onClose: () => void;
   onGrant: (input: {
     reason: WaiverReason;
@@ -45,6 +47,7 @@ export function GrantWaiverModal({
   participant,
   participants,
   busy,
+  convertFromPaid = false,
   onClose,
   onGrant,
 }: Props) {
@@ -52,6 +55,8 @@ export function GrantWaiverModal({
   const [agencyName, setAgencyName] = useState("");
   const [sponsorTicketID, setSponsorTicketID] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const actionLabel = convertFromPaid ? "Convert to waiver" : "Grant waiver";
+  const busyLabel = convertFromPaid ? "Converting…" : "Granting…";
 
   useEffect(() => {
     if (!open) return;
@@ -103,7 +108,7 @@ export function GrantWaiverModal({
     <Modal
       open={open}
       onClose={busy ? () => undefined : onClose}
-      title="Grant waiver"
+      title={actionLabel}
       className="md:max-w-md"
       footer={
         <div className="flex justify-end gap-2">
@@ -111,7 +116,7 @@ export function GrantWaiverModal({
             Cancel
           </Button>
           <Button onClick={submit} disabled={busy || !participant}>
-            {busy ? "Granting…" : "Grant waiver"}
+            {busy ? busyLabel : actionLabel}
           </Button>
         </div>
       }
@@ -125,6 +130,14 @@ export function GrantWaiverModal({
               <span className="mt-0.5 block text-blue-700">{participant.email}</span>
             ) : null}
           </p>
+
+          {convertFromPaid ? (
+            <p className="rounded-md border border-amber-100 bg-amber-50 px-2.5 py-2 text-[13px] leading-relaxed text-amber-950">
+              This ticket is currently marked <strong>paid / confirmed</strong>. Converting moves it
+              to waived or complimentary in reporting (Paid ↓, Waived ↑). Participant access stays
+              open.
+            </p>
+          ) : null}
 
           <div>
             <label className={labelClass}>
@@ -195,8 +208,12 @@ export function GrantWaiverModal({
           ) : null}
 
           <p className="text-[13px] leading-relaxed text-blue-700">
-            Admin only. Skips bank payment / proof. The ticket is marked{" "}
-            {reason === "sponsor_allocation" ? "complimentary" : "waived"} and confirmed.
+            Admin only.{" "}
+            {convertFromPaid
+              ? "Updates the paid ticket to"
+              : "Skips bank payment / proof. The ticket is marked"}{" "}
+            {reason === "sponsor_allocation" ? "complimentary" : "waived"}
+            {convertFromPaid ? "." : " and confirmed."}
           </p>
 
           {error ? <span className={errorClass}>{error}</span> : null}

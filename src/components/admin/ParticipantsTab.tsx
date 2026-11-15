@@ -203,6 +203,22 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     return p.status === "Confirmed";
   };
 
+  /** Paid confirmed only — excludes waived / complimentary. */
+  const isPaidConfirmed = (p: AddedParticipant) => {
+    if (isWaived(p) || p.status === "Cancelled") return false;
+    if (p.verificationBucket === "confirmed") return true;
+    const raw = (p.rawStatus || "").toLowerCase();
+    if (
+      raw === "issued" ||
+      raw === "confirmed" ||
+      raw === "checked-in" ||
+      raw === "checked_in"
+    ) {
+      return true;
+    }
+    return p.status === "Confirmed";
+  };
+
   /** Keep Paid toggle visible for all non-cancelled participants. */
   const showPaymentToggle = (p: AddedParticipant) => {
     if (p.status === "Cancelled") return false;
@@ -211,12 +227,25 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     return true;
   };
 
-  const canGrantWaiver = (p: AddedParticipant) => {
+  /** Pending grant or convert paid → waived. */
+  const canOfferWaiver = (p: AddedParticipant) => {
     if (!WAIVER_ENABLED) return false;
-    if (isWaived(p) || isPaymentPaid(p)) return false;
-    if (p.status === "Cancelled") return false;
+    if (isWaived(p) || p.status === "Cancelled") return false;
     const ticketID = p.ticketID || (p.id && !p.id.startsWith("p-") ? p.id : "");
     return Boolean(ticketID);
+  };
+
+  const waiverActionLabel = (p: AddedParticipant) =>
+    isPaidConfirmed(p) ? "Convert to waiver" : "Grant waiver";
+
+  const openWaiverFor = (p: AddedParticipant) => {
+    if (isPaidConfirmed(p)) {
+      const ok = window.confirm(
+        `${p.name} is marked paid / confirmed.\n\nConvert this ticket to waived? Reporting will move it from Paid to Waived (or Complimentary). Participant access stays open.`,
+      );
+      if (!ok) return;
+    }
+    setWaiverTarget(p);
   };
 
   const applyWaiverLocally = (
@@ -262,12 +291,14 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     }
     setWaiverBusy(true);
     try {
+      const converting = isPaidConfirmed(p);
       const { ticket, waiver, message } = await grantParticipantWaiver({
         ticketID,
         engagementID: eventId,
         reason: input.reason,
         agencyName: input.agencyName,
         sponsorTicketID: input.sponsorTicketID,
+        convertFromPaid: converting,
         fullName: p.name,
         email: p.email,
         phoneNo: p.phone,
@@ -286,11 +317,13 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
         agencyName: waiver.agencyName,
         sponsorTicketID: waiver.sponsorTicketID,
         transactionReference: waiver.transactionReference,
-        rawStatus: String(ticket.status || "registered").toLowerCase(),
+        rawStatus: String(ticket.status || mode).toLowerCase(),
       });
       toast.success(
         message ||
-          `${waiverReasonLabel(input.reason)} granted for ${p.name}.`,
+          (converting
+            ? `${p.name} converted to ${waiverReasonLabel(input.reason)}.`
+            : `${waiverReasonLabel(input.reason)} granted for ${p.name}.`),
       );
       setWaiverTarget(null);
       void reloadParticipants();
@@ -605,6 +638,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
         participant={waiverTarget}
         participants={source}
         busy={waiverBusy}
+        convertFromPaid={Boolean(waiverTarget && isPaidConfirmed(waiverTarget))}
         onClose={() => {
           if (!waiverBusy) setWaiverTarget(null);
         }}
@@ -633,9 +667,12 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
           WAIVER_ENABLED
             ? (p) => {
                 setDetailTarget(null);
-                setWaiverTarget(p);
+                openWaiverFor(p);
               }
             : undefined
+        }
+        waiverLabel={
+          detailTarget && isPaidConfirmed(detailTarget) ? "Convert to waiver" : "Grant waiver"
         }
       />
 
@@ -938,16 +975,16 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                               </button>
                             ) : null}
 
-                            {canGrantWaiver(p) ? (
+                            {canOfferWaiver(p) ? (
                               <button
                                 type="button"
                                 className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-sky-700 hover:bg-sky-50"
                                 onClick={(e) => {
                                   e.currentTarget.closest("details")?.removeAttribute("open");
-                                  setWaiverTarget(p);
+                                  openWaiverFor(p);
                                 }}
                               >
-                                <Check size={14} /> Grant waiver
+                                <Check size={14} /> {waiverActionLabel(p)}
                               </button>
                             ) : null}
 
@@ -1317,17 +1354,17 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                               </button>
                             ) : null}
 
-                            {canGrantWaiver(p) ? (
+                            {canOfferWaiver(p) ? (
                               <button
                                 type="button"
                                 className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-sky-700 hover:bg-sky-50"
                                 onClick={(e) => {
                                   e.currentTarget.closest("details")?.removeAttribute("open");
-                                  setWaiverTarget(p);
+                                  openWaiverFor(p);
                                 }}
                               >
                                 <Check size={14} />
-                                Grant waiver
+                                {waiverActionLabel(p)}
                               </button>
                             ) : null}
 

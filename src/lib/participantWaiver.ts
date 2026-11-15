@@ -33,7 +33,9 @@ export type GrantWaiverInput = {
   agencyName?: string;
   /** Required when reason is sponsor_allocation — the paid sponsor ticket */
   sponsorTicketID?: string;
-  /** Snapshot fields forwarded on POST /ticketing */
+  /** True when correcting a paid-confirmed ticket → waived/complimentary. */
+  convertFromPaid?: boolean;
+  /** Snapshot fields forwarded on PATCH /ticketing */
   fullName?: string;
   email?: string;
   phoneNo?: string;
@@ -218,6 +220,12 @@ export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<G
       paymentMode: waiver.paymentMode,
       waiverReason: waiver.waiverReason,
       userType,
+      ...(input.convertFromPaid
+        ? {
+            convertedFrom: "paid",
+            convertedAt: new Date().toISOString(),
+          }
+        : {}),
       ...(input.title?.trim() ? { title: input.title.trim() } : {}),
       ...(input.organisation?.trim() ? { organisation: input.organisation.trim() } : {}),
       ...(input.jobTitle?.trim() ? { jobTitle: input.jobTitle.trim() } : {}),
