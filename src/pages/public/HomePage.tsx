@@ -302,7 +302,7 @@ export function HomePage() {
         )}
       >
         <div
-          className="pointer-events-none absolute inset-y-0 left-[min(44%,520px)] right-0 z-0 hidden bg-[url('/assets/hero-home-visual.png')] bg-[length:auto_100%] bg-[-140px_center] bg-no-repeat min-[961px]:block min-[1400px]:left-[min(26%,580px)] min-[1400px]:bg-[-100px_center]"
+          className="pointer-events-none absolute inset-y-0 left-[min(44%,520px)] right-0 z-0 hidden bg-[url('/assets/hero-home-visual.png')] bg-[length:auto_100%] bg-[-150px_center] bg-no-repeat min-[961px]:block min-[1400px]:left-[min(26%,580px)] min-[1400px]:bg-[50px_center]"
           aria-hidden
         />
 
