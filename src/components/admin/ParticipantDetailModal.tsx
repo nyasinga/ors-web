@@ -12,10 +12,15 @@ type Props = {
   onCancelTicket?: (p: AddedParticipant) => void;
   onViewProof?: (p: AddedParticipant) => void;
   onWaiver?: (p: AddedParticipant) => void;
-  /** Button label — "Grant waiver" or "Convert to waiver". */
+  /** Button label — "Grant waiver", "Convert to waiver", or "Restore as waiver". */
   waiverLabel?: string;
+  /** Restore a cancelled ticket as paid / confirmed. */
+  onRestorePaid?: (p: AddedParticipant) => void;
+  /** Resend registration / invite email (POST /ticketing/{id}/send-invite). */
+  onResendInvite?: (p: AddedParticipant) => void;
   verifyBusy?: boolean;
   cancelBusy?: boolean;
+  resendBusy?: boolean;
 };
 
 function Row({ label, value }: { label: string; value: ReactNode }) {
@@ -36,11 +41,14 @@ export function ParticipantDetailModal({
   onViewProof,
   onWaiver,
   waiverLabel = "Grant waiver",
+  onRestorePaid,
+  onResendInvite,
   verifyBusy,
   cancelBusy,
+  resendBusy,
 }: Props) {
   const p = participant;
-  const busy = Boolean(verifyBusy || cancelBusy);
+  const busy = Boolean(verifyBusy || cancelBusy || resendBusy);
   const pending =
     p?.status === "Pending verification" ||
     p?.status === "Draft" ||
@@ -52,17 +60,55 @@ export function ParticipantDetailModal({
     p?.status !== "Waived" &&
     p?.status !== "Complimentary";
   const alreadyWaived = p?.status === "Waived" || p?.status === "Complimentary";
+  const isCancelled =
+    p?.status === "Cancelled" ||
+    p?.verificationBucket === "cancelled" ||
+    ["cancelled", "canceled"].includes(String(p?.rawStatus || "").toLowerCase());
   const canConvertToWaiver =
     Boolean(p) &&
     !alreadyWaived &&
-    p?.status !== "Cancelled" &&
+    !isCancelled &&
     (p?.status === "Confirmed" ||
       p?.verificationBucket === "confirmed" ||
       ["issued", "confirmed", "checked-in", "checked_in"].includes(
         String(p?.rawStatus || "").toLowerCase(),
       ));
-  const canOfferWaiver = canApprove || canConvertToWaiver;
-  const canCancel = p && p.status !== "Cancelled";
+  const canRestoreAsWaiver = Boolean(p) && isCancelled && Boolean(onWaiver);
+  const canOfferWaiver = canApprove || canConvertToWaiver || canRestoreAsWaiver;
+  const canCancel = p && !isCancelled;
+  const hasTicketId = Boolean(
+    p?.ticketID || (p?.id && !String(p.id).startsWith("p-")),
+  );
+  const statusLower = String(p?.status || "").toLowerCase();
+  const rawLower = String(p?.rawStatus || "").toLowerCase();
+  const bucketLower = String(p?.verificationBucket || "").toLowerCase();
+  const modeLower = String(p?.paymentMode || "").toLowerCase();
+  const isWaivedOrComp =
+    statusLower === "waived" ||
+    statusLower === "complimentary" ||
+    statusLower === "complementary" ||
+    rawLower === "waived" ||
+    rawLower === "complimentary" ||
+    rawLower === "complementary" ||
+    bucketLower === "waived" ||
+    bucketLower === "complimentary" ||
+    modeLower === "waived" ||
+    modeLower === "complimentary" ||
+    modeLower === "complementary" ||
+    Boolean(p?.waiverReason);
+  const isPaidConfirmedTicket =
+    statusLower === "confirmed" ||
+    bucketLower === "confirmed" ||
+    p?.passAllowed === true ||
+    ["issued", "confirmed", "checked-in", "checked_in"].includes(rawLower);
+  const isConfirmedTicket =
+    Boolean(p) && !isCancelled && (isPaidConfirmedTicket || isWaivedOrComp);
+  const canResendInvite =
+    Boolean(p) &&
+    isConfirmedTicket &&
+    hasTicketId &&
+    Boolean(p?.email?.trim()) &&
+    Boolean(onResendInvite);
   const hasProof = Boolean(p?.paymentReceiptURL || p?.paymentProofUrls?.length);
 
   return (
@@ -76,6 +122,15 @@ export function ParticipantDetailModal({
           <Button variant="ghost" onClick={onClose} disabled={busy}>
             Close
           </Button>
+          {p && canResendInvite ? (
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={() => onResendInvite?.(p)}
+            >
+              {resendBusy ? "Sending…" : "Resend email"}
+            </Button>
+          ) : null}
           {p && canCancel && onCancelTicket ? (
             <Button
               variant="danger"
@@ -83,6 +138,15 @@ export function ParticipantDetailModal({
               onClick={() => onCancelTicket(p)}
             >
               {cancelBusy ? "Cancelling…" : "Cancel ticket"}
+            </Button>
+          ) : null}
+          {p && isCancelled && onRestorePaid ? (
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={() => onRestorePaid(p)}
+            >
+              {cancelBusy ? "Restoring…" : "Restore as paid"}
             </Button>
           ) : null}
           {p && onWaiver && canOfferWaiver ? (

@@ -39,6 +39,13 @@ export type RegistrationDetails = {
   verificationStatus?: "pending_verification" | "confirmed" | "waived";
 };
 
+/** Snapshot of what the registrant had selected when the invoice was created. */
+export type InvoiceSelectionSnapshot = {
+  participationType: ParticipationType;
+  packageId?: string;
+  amountKes?: number;
+};
+
 /** Invoice created after Details submit — shown before bank payment. */
 export type RegistrationInvoice = {
   /** URL to view / download the invoice (PDF or HTML). */
@@ -53,6 +60,15 @@ export type RegistrationInvoice = {
   token?: string;
   /** True when `url` is a blob: object URL (do not persist across reloads). */
   isBlobUrl?: boolean;
+  /**
+   * Selection used to create this invoice. If the user later changes type/package,
+   * this no longer matches and Payment must force a new invoice.
+   */
+  selection?: InvoiceSelectionSnapshot;
+  /** participationType / userType returned by signup (source of truth for the PDF). */
+  serverType?: string;
+  /** ticketPrice returned by signup. */
+  serverAmount?: number;
 };
 
 export type SelectedSponsorPackage = {
@@ -65,6 +81,64 @@ export type SelectedSponsorPackage = {
   kes: number;
   usd: number;
 };
+
+/**
+ * True when stored invoice still matches the current registration selection
+ * and (when known) the server ticket type/amount.
+ */
+export function invoiceMatchesSelection(
+  invoice: RegistrationInvoice | null | undefined,
+  opts: {
+    participationType: ParticipationType;
+    selectedSponsorPackage: SelectedSponsorPackage | null;
+    expectedAmountKes: number;
+  },
+): boolean {
+  if (!invoice?.reference && !invoice?.ticketID) return false;
+  const sel = invoice.selection;
+  // Pre-fix / client-only stamps without server fields — force recreate.
+  if (!sel) return false;
+  if (!invoice.serverType && !(invoice.serverAmount && invoice.serverAmount > 0)) {
+    return false;
+  }
+
+  const isSponsor =
+    opts.participationType === "sponsor" || Boolean(opts.selectedSponsorPackage);
+
+  if (isSponsor) {
+    if (sel.participationType !== "sponsor") return false;
+    const pkgId = opts.selectedSponsorPackage?.id;
+    if (pkgId && sel.packageId && sel.packageId !== pkgId) return false;
+    if (pkgId && !sel.packageId) return false;
+  } else if (sel.participationType === "sponsor" || sel.packageId) {
+    return false;
+  }
+
+  const expected = opts.expectedAmountKes > 0 ? opts.expectedAmountKes : 0;
+  if (expected > 0 && sel.amountKes && Math.abs(sel.amountKes - expected) > 1) {
+    return false;
+  }
+
+  // Server ticket type must agree with current selection (PDF Category).
+  const serverType = String(invoice.serverType || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+  if (serverType) {
+    const serverIsSponsor = serverType === "sponsor" || serverType === "exhibitor";
+    if (isSponsor !== serverIsSponsor) return false;
+  }
+  if (
+    expected > 0 &&
+    invoice.serverAmount &&
+    invoice.serverAmount > 0 &&
+    Math.abs(invoice.serverAmount - expected) > 1
+  ) {
+    return false;
+  }
+
+  return true;
+}
 
 export type RegistrationContextValue = {
   files: File[];

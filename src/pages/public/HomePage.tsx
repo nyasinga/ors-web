@@ -515,58 +515,56 @@ export function HomePage() {
                   </div>
                 ))}
               </div>
-              <Link to="/register" className="block no-underline">
-                <div
-                  className={cn(
-                    "relative mt-10 w-full max-w-[390px] rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md",
-                    "max-[960px]:mt-2.5 max-[960px]:max-w-none max-[640px]:mt-6",
-                    "min-[961px]:ml-[150px]",
-                  )}
-                >
-                  <p className="mb-3 text-[12px] font-extrabold uppercase tracking-wider text-gray-800">
-                    Registration Fees
-                  </p>
+              <div
+                className={cn(
+                  "relative mt-10 w-full max-w-[390px] rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md",
+                  "max-[960px]:mt-2.5 max-[960px]:max-w-none max-[640px]:mt-6",
+                  "min-[961px]:ml-[150px]",
+                )}
+              >
+                <p className="mb-3 text-[12px] font-extrabold uppercase tracking-wider text-gray-800">
+                  Registration Fees
+                </p>
 
-                  <div className="space-y-3">
-                    {home.registrationTiers.map((ticket) => (
-                      <div
-                        key={ticket.id}
-                        className="flex items-center justify-between gap-3 border-b border-gray-100 pb-3 last:border-0 last:pb-0"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-[11px] font-bold text-gray-800">
-                            {ticket.name}
-                          </p>
-                          <p className="mt-0.5 text-[10px] text-gray-500">
-                            {ticket.period}
-                          </p>
-                        </div>
-
-                        <div className="shrink-0 text-right">
-                          {ticket.kes > 0 && (
-                            <p className="text-[15px] font-extrabold text-gray-900">
-                              KES {ticket.kes.toLocaleString("en-KE")}
-                            </p>
-                          )}
-                          {ticket.usd > 0 && (
-                            <p className="text-[10px] text-gray-500">
-                              USD {ticket.usd.toLocaleString("en-US")}
-                            </p>
-                          )}
-                        </div>
+                <div className="space-y-3">
+                  {home.registrationTiers.map((ticket) => (
+                    <div
+                      key={ticket.id}
+                      className="flex items-center justify-between gap-3 border-b border-gray-100 pb-3 last:border-0 last:pb-0"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold text-gray-800">
+                          {ticket.name}
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-gray-500">
+                          {ticket.period}
+                        </p>
                       </div>
-                    ))}
-                  </div>
 
-                  <Link
-                    to="/register"
-                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[#ed1c24] px-4 py-2.5 text-[11px] font-extrabold text-white transition-colors hover:bg-[#c91820]"
-                  >
-                    Register Early & Save
-                    <span>→</span>
-                  </Link>
+                      <div className="shrink-0 text-right">
+                        {ticket.kes > 0 && (
+                          <p className="text-[15px] font-extrabold text-gray-900">
+                            KES {ticket.kes.toLocaleString("en-KE")}
+                          </p>
+                        )}
+                        {ticket.usd > 0 && (
+                          <p className="text-[10px] text-gray-500">
+                            USD {ticket.usd.toLocaleString("en-US")}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </Link>
+
+                <Link
+                  to="/register"
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[#ed1c24] px-4 py-2.5 text-[11px] font-extrabold text-white transition-colors hover:bg-[#c91820]"
+                >
+                  Register Early & Save
+                  <span>→</span>
+                </Link>
+              </div>
             </div>
           </aside>
         </div>
@@ -748,14 +746,13 @@ export function HomePage() {
             
             {/* Content */}
             <div className="relative z-[1] min-w-0 px-5 sm:px-8">
-              <p className="mb-7 mt-4 text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#08713f] sm:mb-4 sm:mt-0 sm:text-[12px]">
-                {/* Red accent */}
+              <div className="mb-7 mt-4 text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#08713f] sm:mb-4 sm:mt-0 sm:text-[12px]">
                 <div
                   aria-hidden="true"
                   className="mb-4 h-[5px] w-32 rounded-full bg-[#ed1c24]"
                 />
                 Plan your participation
-              </p>
+              </div>
 
               <h2
                 id="event-info-cta-title"

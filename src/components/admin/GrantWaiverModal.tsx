@@ -24,6 +24,8 @@ type Props = {
   busy?: boolean;
   /** Correcting a paid-confirmed ticket (vs first-time grant on pending). */
   convertFromPaid?: boolean;
+  /** Restoring a cancelled ticket as waived / complimentary. */
+  restoreFromCancelled?: boolean;
   onClose: () => void;
   onGrant: (input: {
     reason: WaiverReason;
@@ -48,6 +50,7 @@ export function GrantWaiverModal({
   participants,
   busy,
   convertFromPaid = false,
+  restoreFromCancelled = false,
   onClose,
   onGrant,
 }: Props) {
@@ -55,8 +58,16 @@ export function GrantWaiverModal({
   const [agencyName, setAgencyName] = useState("");
   const [sponsorTicketID, setSponsorTicketID] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const actionLabel = convertFromPaid ? "Convert to waiver" : "Grant waiver";
-  const busyLabel = convertFromPaid ? "Converting…" : "Granting…";
+  const actionLabel = restoreFromCancelled
+    ? "Restore as waiver"
+    : convertFromPaid
+      ? "Convert to waiver"
+      : "Grant waiver";
+  const busyLabel = restoreFromCancelled
+    ? "Restoring…"
+    : convertFromPaid
+      ? "Converting…"
+      : "Granting…";
 
   useEffect(() => {
     if (!open) return;
@@ -131,7 +142,12 @@ export function GrantWaiverModal({
             ) : null}
           </p>
 
-          {convertFromPaid ? (
+          {restoreFromCancelled ? (
+            <p className="rounded-md border border-amber-100 bg-amber-50 px-2.5 py-2 text-[13px] leading-relaxed text-amber-950">
+              This ticket is <strong>cancelled</strong>. Restoring as waived / complimentary reopens
+              participant access and counts it under Waived (not Paid).
+            </p>
+          ) : convertFromPaid ? (
             <p className="rounded-md border border-amber-100 bg-amber-50 px-2.5 py-2 text-[13px] leading-relaxed text-amber-950">
               This ticket is currently marked <strong>paid / confirmed</strong>. Converting moves it
               to waived or complimentary in reporting (Paid ↓, Waived ↑). Participant access stays
@@ -209,11 +225,15 @@ export function GrantWaiverModal({
 
           <p className="text-[13px] leading-relaxed text-blue-700">
             Admin only.{" "}
-            {convertFromPaid
-              ? "Updates the paid ticket to"
-              : "Skips bank payment / proof. The ticket is marked"}{" "}
-            {reason === "sponsor_allocation" ? "complimentary" : "waived"}
-            {convertFromPaid ? "." : " and confirmed."}
+            {restoreFromCancelled
+              ? "Restores the cancelled ticket as"
+              : convertFromPaid
+                ? "Updates the paid ticket to"
+                : "Skips bank payment / proof. The ticket is marked"}{" "}
+            {reason === "sponsor_allocation" || reason === "facilitator"
+              ? "complimentary"
+              : "waived"}
+            {restoreFromCancelled || convertFromPaid ? "." : " and confirmed."}
           </p>
 
           {error ? <span className={errorClass}>{error}</span> : null}

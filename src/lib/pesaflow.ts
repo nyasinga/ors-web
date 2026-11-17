@@ -349,6 +349,70 @@ export async function fetchTicketInvoice(
   return { url, isBlobUrl: url.startsWith("blob:"), raw: data };
 }
 
+function normalizeTicketType(raw: unknown): string {
+  return String(raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+}
+
+/** Whether a ticket from signup looks like sponsor/exhibitor (vs delegate). */
+export function ticketLooksSponsor(ticket: Record<string, unknown> | null | undefined): boolean {
+  if (!ticket) return false;
+  const top = normalizeTicketType(ticket.participationType || ticket.userType);
+  if (top === "sponsor" || top === "exhibitor") return true;
+  if (top === "delegate" || top === "speaker" || top === "participant" || top === "virtual") {
+    return false;
+  }
+  const extra = asRecord(ticket.extraData);
+  const nested = normalizeTicketType(
+    extra?.userType || extra?.participationType || extra?.participation_type,
+  );
+  return nested === "sponsor" || nested === "exhibitor";
+}
+
+/**
+ * Ensure signup response matches what the registrant just selected.
+ * Catches backend reusing an earlier ticket (e.g. sponsor) after the user
+ * switched to delegate for the same email.
+ */
+export function assertSignupMatchesSelection(
+  ticket: Record<string, unknown> | null | undefined,
+  input: SignupIsippeInput,
+): void {
+  if (!ticket) return;
+
+  const wantSponsor = normalizeTicketType(input.userType) === "sponsor";
+  const top = normalizeTicketType(ticket.participationType || ticket.userType);
+  const hasExplicitType = Boolean(top);
+  const isSponsorTicket = ticketLooksSponsor(ticket);
+
+  const email = String(input.email || "").trim() || "this email";
+  const ref = pickString(ticket.reference, ticket.invoiceRef, ticket.ticketID);
+
+  if (hasExplicitType && wantSponsor !== isSponsorTicket) {
+    throw new Error(
+      wantSponsor
+        ? `This email (${email}) already has a non-sponsor registration${ref ? ` (${ref})` : ""}. To register as a sponsor, use a different email, or ask the event team to cancel the previous registration first.`
+        : `This email (${email}) already has a sponsor registration${ref ? ` (${ref})` : ""}. To register as a delegate, use a different email, or ask the event team to cancel the previous sponsor registration first.`,
+    );
+  }
+
+  const serverPrice = Number(ticket.ticketPrice);
+  const requested = Number(input.extraData?.ticket?.amount);
+  if (
+    Number.isFinite(serverPrice) &&
+    serverPrice > 0 &&
+    Number.isFinite(requested) &&
+    requested > 0 &&
+    Math.abs(serverPrice - requested) > 1
+  ) {
+    throw new Error(
+      `The invoice for ${email} is KES ${serverPrice.toLocaleString("en-KE")}, but you selected KES ${requested.toLocaleString("en-KE")}${ref ? ` (ref ${ref})` : ""}. A previous registration may still be active — use a different email, or ask the event team to cancel it first.`,
+    );
+  }
+}
+
 /**
  * Create registration after Details, then load invoice.
  * 1) POST /signup-isippe (returns flat ticket — often no JWT)
@@ -368,6 +432,9 @@ export async function createRegistrationInvoice(
   if (!ticketID) {
     throw new Error("Registration succeeded but no ticket ID was returned.");
   }
+
+  // Reject reused / mismatched tickets before fetching the PDF.
+  assertSignupMatchesSelection(ticket, input);
 
   const invoice = await fetchTicketInvoice(ticketID, token);
   const reference = pickInvoiceReference(

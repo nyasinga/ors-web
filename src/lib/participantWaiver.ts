@@ -35,6 +35,8 @@ export type GrantWaiverInput = {
   sponsorTicketID?: string;
   /** True when correcting a paid-confirmed ticket → waived/complimentary. */
   convertFromPaid?: boolean;
+  /** True when restoring a cancelled ticket → waived/complimentary. */
+  restoreFromCancelled?: boolean;
   /** Snapshot fields forwarded on PATCH /ticketing */
   fullName?: string;
   email?: string;
@@ -98,16 +100,49 @@ export function parseWaiverFromTicket(ticket: {
   ).toLowerCase();
   const ref = String(ticket.transactionReference || extra?.waiverReference || "").trim();
 
-  if (modeRaw === "waived" || modeRaw === "complimentary") {
+  const modeIsComp =
+    modeRaw === "complimentary" ||
+    modeRaw === "complementary" ||
+    modeRaw === "comp";
+  const modeIsWaived = modeRaw === "waived";
+
+  if (modeIsComp || modeIsWaived) {
     const reason =
-      normalizeReason(reasonRaw) || (modeRaw === "complimentary" ? "sponsor_allocation" : "staff");
+      normalizeReason(reasonRaw) ||
+      (modeIsComp ? "sponsor_allocation" : "staff");
+    const isComp =
+      modeIsComp ||
+      reason === "sponsor_allocation" ||
+      reason === "facilitator";
+    const sponsorTicketID =
+      String(extra?.sponsorTicketID || extra?.sponsor_ticket_id || "").trim() || undefined;
     return {
-      paymentMode: modeRaw === "complimentary" ? "complimentary" : "waived",
+      paymentMode: isComp ? "complimentary" : "waived",
       waiverReason: reason,
       agencyName: String(extra?.agencyName || extra?.agency || "").trim() || undefined,
-      sponsorTicketID:
-        String(extra?.sponsorTicketID || extra?.sponsor_ticket_id || "").trim() || undefined,
-      transactionReference: ref || encodeWaiverReference({ reason }),
+      sponsorTicketID,
+      transactionReference:
+        ref || safeWaiverReference({ reason, sponsorTicketID, agencyName: String(extra?.agencyName || extra?.agency || "").trim() || undefined }),
+    };
+  }
+
+  // Reason alone (API may keep status=waived but still send waiverReason).
+  const reasonOnly = normalizeReason(reasonRaw);
+  if (reasonOnly === "sponsor_allocation" || reasonOnly === "facilitator") {
+    const sponsorTicketID =
+      String(extra?.sponsorTicketID || extra?.sponsor_ticket_id || "").trim() || undefined;
+    return {
+      paymentMode: "complimentary",
+      waiverReason: reasonOnly,
+      agencyName: String(extra?.agencyName || extra?.agency || "").trim() || undefined,
+      sponsorTicketID,
+      transactionReference:
+        ref ||
+        safeWaiverReference({
+          reason: reasonOnly,
+          sponsorTicketID,
+          agencyName: String(extra?.agencyName || extra?.agency || "").trim() || undefined,
+        }),
     };
   }
 
@@ -119,7 +154,7 @@ export function parseWaiverFromTicket(ticket: {
   }
   if (upper.startsWith(`${WAIVER_PREFIX}-FACILITATOR`)) {
     return {
-      paymentMode: "waived",
+      paymentMode: "complimentary",
       waiverReason: "facilitator",
       transactionReference: ref,
     };
@@ -133,8 +168,10 @@ export function parseWaiverFromTicket(ticket: {
       transactionReference: ref,
     };
   }
-  if (upper.startsWith(`${WAIVER_PREFIX}-SPONSOR:`)) {
-    const sponsorTicketID = ref.slice(ref.indexOf(":") + 1).trim();
+  if (upper.startsWith(`${WAIVER_PREFIX}-SPONSOR`)) {
+    const sponsorTicketID = upper.includes(":")
+      ? ref.slice(ref.indexOf(":") + 1).trim()
+      : "";
     return {
       paymentMode: "complimentary",
       waiverReason: "sponsor_allocation",
@@ -154,8 +191,31 @@ function normalizeReason(raw: string): WaiverReason | undefined {
   if (raw === "staff") return "staff";
   if (raw === "facilitator") return "facilitator";
   if (raw === "gov_speaker" || raw === "gov-speaker" || raw === "government_speaker") return "gov_speaker";
-  if (raw === "sponsor_allocation" || raw === "sponsor" || raw === "complimentary") return "sponsor_allocation";
+  if (
+    raw === "sponsor_allocation" ||
+    raw === "sponsor" ||
+    raw === "complimentary" ||
+    raw === "complementary"
+  ) {
+    return "sponsor_allocation";
+  }
   return undefined;
+}
+
+/** Encode without throwing when sponsor id is missing (list/parse path). */
+function safeWaiverReference(input: {
+  reason: WaiverReason;
+  agencyName?: string;
+  sponsorTicketID?: string;
+}): string {
+  try {
+    if (input.reason === "sponsor_allocation" && !input.sponsorTicketID?.trim()) {
+      return `${WAIVER_PREFIX}-SPONSOR`;
+    }
+    return encodeWaiverReference(input);
+  } catch {
+    return `${WAIVER_PREFIX}-${input.reason.toUpperCase()}`;
+  }
 }
 
 function pickTicket(result: Record<string, unknown>, fallbackId?: string): EngagementParticipantTicket {
@@ -187,8 +247,11 @@ export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<G
   const token = getValidAuthToken();
   if (!token) throw new Error("Sign in as admin to grant a waiver.");
 
+  // Sponsor seats + facilitators are complementary; staff / gov speakers are waived.
   const paymentMode: PaymentMode =
-    input.reason === "sponsor_allocation" ? "complimentary" : "waived";
+    input.reason === "sponsor_allocation" || input.reason === "facilitator"
+      ? "complimentary"
+      : "waived";
   const waiver: WaiverInfo = {
     paymentMode,
     waiverReason: input.reason,
@@ -214,7 +277,8 @@ export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<G
     currency: "KES",
     participationType: userType,
     transactionReference: waiver.transactionReference,
-    // Distinct from paid (issued) so reporting can separate waived vs paid.
+    // Prefer complimentary when applicable; some backends only accept waived —
+    // paymentMode / WAIVER-* ref still drive reporting.
     status: paymentMode === "complimentary" ? "complimentary" : "waived",
     extraData: {
       paymentMode: waiver.paymentMode,
@@ -224,6 +288,13 @@ export async function grantParticipantWaiver(input: GrantWaiverInput): Promise<G
         ? {
             convertedFrom: "paid",
             convertedAt: new Date().toISOString(),
+          }
+        : {}),
+      ...(input.restoreFromCancelled
+        ? {
+            restoredFrom: "cancelled",
+            restoredAs: paymentMode,
+            restoredAt: new Date().toISOString(),
           }
         : {}),
       ...(input.title?.trim() ? { title: input.title.trim() } : {}),

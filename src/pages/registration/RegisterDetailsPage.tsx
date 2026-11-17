@@ -157,15 +157,35 @@ export function RegisterDetailsPage() {
         reference,
       );
 
-      const ticket = invoice.ticket || {};
+      const ticket = (invoice.ticket || {}) as Record<string, unknown>;
+      const serverType = String(
+        ticket.participationType || ticket.userType || "",
+      )
+        .trim()
+        .toLowerCase();
+      const serverAmount = Number(ticket.ticketPrice);
       setInvoice({
         url: invoice.url,
         reference: invoice.reference,
-        amount: invoice.amount ?? amountKes,
+        // Use server amount when present — that is what the PDF / bank pay.
+        amount:
+          Number.isFinite(serverAmount) && serverAmount > 0
+            ? serverAmount
+            : amountKes > 0
+              ? amountKes
+              : invoice.amount,
         currency: invoice.currency || "KES",
         ticketID: invoice.ticketID,
         token: invoice.token,
         isBlobUrl: invoice.isBlobUrl,
+        serverType: serverType || undefined,
+        serverAmount:
+          Number.isFinite(serverAmount) && serverAmount > 0 ? serverAmount : undefined,
+        selection: {
+          participationType: isSponsor ? "sponsor" : participationType,
+          packageId: isSponsor ? selectedSponsorPackage?.id : undefined,
+          amountKes: amountKes,
+        },
       });
       setDetails({
         reference: invoice.reference,

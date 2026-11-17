@@ -118,35 +118,47 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clearSponsorPackage = useCallback(() => {
-    setSelectedSponsorPackage(null);
+    setSelectedSponsorPackage((prev) => {
+      if (prev) setInvoice(null);
+      return null;
+    });
     setSponsorEntrySource(null);
-  }, []);
+  }, [setInvoice]);
 
   const selectSponsorPackage = useCallback(
     (pkg: PublicSponsorPackage, source: "sponsorship" | "register" = "register") => {
       const amounts = parsePackageAmounts(pkg.price);
+      setSelectedSponsorPackage((prev) => {
+        // Package (or first selection) change invalidates any prior invoice.
+        if (!prev || prev.id !== pkg.id || prev.kes !== amounts.kes) {
+          setInvoice(null);
+        }
+        return {
+          id: pkg.id,
+          name: pkg.name,
+          price: pkg.price,
+          description: pkg.description,
+          benefits: pkg.benefits,
+          medal: pkg.medal,
+          kes: amounts.kes,
+          usd: amounts.usd,
+        };
+      });
       setParticipationTypeState("sponsor");
       setSponsorEntrySource(source);
-      setSelectedSponsorPackage({
-        id: pkg.id,
-        name: pkg.name,
-        price: pkg.price,
-        description: pkg.description,
-        benefits: pkg.benefits,
-        medal: pkg.medal,
-        kes: amounts.kes,
-        usd: amounts.usd,
-      });
     },
-    [],
+    [setInvoice],
   );
 
   const setParticipationType = useCallback(
     (t: ParticipationType) => {
-      setParticipationTypeState(t);
+      setParticipationTypeState((prev) => {
+        if (prev !== t) setInvoice(null);
+        return t;
+      });
       if (t !== "sponsor") clearSponsorPackage();
     },
-    [clearSponsorPackage],
+    [clearSponsorPackage, setInvoice],
   );
 
   const clearDetails = useCallback(() => {

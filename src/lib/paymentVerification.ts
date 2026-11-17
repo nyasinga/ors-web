@@ -61,8 +61,13 @@ export function resolveVerificationBucket(ticket: {
   if (status === "cancelled" || status === "canceled") return "cancelled";
 
   // Canonical waived / complimentary statuses (distinct from paid "issued").
-  if (status === "complimentary") return "complimentary";
-  if (status === "waived") return "waived";
+  if (status === "complimentary" || status === "complementary") return "complimentary";
+  if (status === "waived") {
+    // Some APIs only store status=waived; reason / WAIVER-SPONSOR still means complimentary.
+    const waiverForStatus = parseWaiverFromTicket(ticket);
+    if (waiverForStatus?.paymentMode === "complimentary") return "complimentary";
+    return "waived";
+  }
 
   const waiver = parseWaiverFromTicket(ticket);
   if (waiver?.paymentMode === "complimentary") return "complimentary";

@@ -10,6 +10,7 @@ import {
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
 import { useToast } from "../../components/ui/Toast";
 import { useRegistration } from "../../hooks/useRegistration";
+import { invoiceMatchesSelection } from "../../contexts/registrationShared";
 import { participationTypes } from "../../data/registration";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { formatMoney } from "../../i18n/format";
@@ -44,6 +45,7 @@ export function RegisterPaymentPage() {
     late,
     selectedSponsorPackage,
     invoice,
+    setInvoice,
     paymentPhase,
     setPaymentPhase,
     setPaymentProofFiles,
@@ -77,14 +79,25 @@ export function RegisterPaymentPage() {
     return { amount: selectedSponsorPackage?.kes ?? 0 };
   }, [isSponsor, feeKes, liveSponsorPackages, selectedSponsorPackage]);
 
+  const expectedKes = resolvedTicket.amount > 0 ? resolvedTicket.amount : feeKes;
+
+  // Show what the PDF / bank expects (server), then selection, then fee tier.
   const displayKes =
-    invoice?.amount && invoice.amount > 0
-      ? invoice.amount
-      : resolvedTicket.amount > 0
-        ? resolvedTicket.amount
-        : feeKes;
+    invoice?.serverAmount && invoice.serverAmount > 0
+      ? invoice.serverAmount
+      : invoice?.amount && invoice.amount > 0
+        ? invoice.amount
+        : expectedKes > 0
+          ? expectedKes
+          : feeKes;
 
   const invoiceRef = invoice?.reference || details.reference || reference;
+
+  const invoiceInSync = invoiceMatchesSelection(invoice, {
+    participationType,
+    selectedSponsorPackage,
+    expectedAmountKes: expectedKes,
+  });
 
   useEffect(() => {
     if (!registrationHydrated) return;
@@ -95,8 +108,26 @@ export function RegisterPaymentPage() {
     // Allow restore/re-fetch when we have ticketID but url not hydrated yet.
     if (!invoice?.url && !invoice?.ticketID) {
       navigate("/register/details", { replace: true });
+      return;
     }
-  }, [details.email, details.fullName, invoice, navigate, registrationHydrated]);
+    // Type/package changed after this invoice was created — force a fresh invoice.
+    if (invoice && !invoiceInSync) {
+      setInvoice(null);
+      toast.info(
+        "Your participation or package changed. Please create a new invoice to continue.",
+      );
+      navigate("/register/details", { replace: true });
+    }
+  }, [
+    details.email,
+    details.fullName,
+    invoice,
+    invoiceInSync,
+    navigate,
+    registrationHydrated,
+    setInvoice,
+    toast,
+  ]);
 
   const downloadInvoice = () => {
     if (!invoice?.url) return;
@@ -198,7 +229,14 @@ export function RegisterPaymentPage() {
                 </div>
 
                 <div className={r.actions}>
-                  <Link className={r.btn} to="/register/details">
+                  <Link
+                    className={r.btn}
+                    to="/register/details"
+                    onClick={() => {
+                      // Drop invoice so Details → Next always creates for the current selection.
+                      setInvoice(null);
+                    }}
+                  >
                     ← Back to Details
                   </Link>
                   <div className="flex flex-wrap gap-2">

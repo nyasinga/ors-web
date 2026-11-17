@@ -436,7 +436,7 @@ export async function createAdminParticipant(
       : toTicketingUserType(input.participationType);
 
   const paymentMode = waiver
-    ? waiver.reason === "sponsor_allocation"
+    ? waiver.reason === "sponsor_allocation" || waiver.reason === "facilitator"
       ? "complimentary"
       : "waived"
     : undefined;
@@ -548,6 +548,30 @@ export type TogglePaymentResult = {
 };
 
 /**
+ * Resend registration / invite email for a ticket.
+ * POST /ticketing/{ticketID}/send-invite (@authenticate('jwt')).
+ */
+export async function sendParticipantInvite(ticketID: string): Promise<{ message?: string }> {
+  const id = ticketID.trim();
+  if (!id) throw new Error("A ticket ID is required to resend the invite email.");
+
+  const token = getValidAuthToken();
+  if (!token) throw new Error("Sign in as admin to resend the invite email.");
+
+  const result = await apiRequest<Record<string, unknown>>(
+    `/ticketing/${encodeURIComponent(id)}/send-invite`,
+    { method: "POST", token },
+  );
+
+  const message =
+    typeof result.message === "string" && result.message.trim()
+      ? result.message.trim()
+      : undefined;
+
+  return { message };
+}
+
+/**
  * Confirm / toggle payment for an engagement ticket.
  * GET /ticketing/{ticketID}/confirm (@authenticate('jwt')).
  *
@@ -604,7 +628,7 @@ export async function toggleParticipantPayment(ticketID: string): Promise<Toggle
 export const confirmParticipantPayment = toggleParticipantPayment;
 
 /**
- * Cancel an engagement ticket (POST /ticketing with status=cancelled).
+ * Cancel an engagement ticket (PATCH /ticketing/{ticketID} status=cancelled).
  * No dedicated cancel route is published in OpenAPI.
  */
 export async function cancelParticipantTicket(
@@ -634,5 +658,47 @@ export async function cancelParticipantTicket(
     ...ticket,
     ticketID: pickString(ticket.ticketID) || id,
     status: pickString(ticket.status).toLowerCase() || "cancelled",
+  };
+}
+
+/**
+ * Restore a cancelled ticket as paid/confirmed (PATCH /ticketing/{ticketID}).
+ * Use grantParticipantWaiver to restore as waived / complimentary instead.
+ */
+export async function restoreCancelledAsPaid(
+  ticketID: string,
+  engagementID?: string,
+): Promise<EngagementParticipantTicket> {
+  const id = ticketID.trim();
+  if (!id) throw new Error("A ticket ID is required to restore.");
+
+  const token = getValidAuthToken();
+  if (!token) throw new Error("Sign in as admin to restore a ticket.");
+
+  const body: Record<string, unknown> = {
+    ticketID: id,
+    status: "issued",
+    extraData: {
+      paymentMode: "payable",
+      restoredFrom: "cancelled",
+      restoredAs: "paid",
+      restoredAt: new Date().toISOString(),
+      paymentVerified: true,
+      verifiedAt: new Date().toISOString(),
+    },
+  };
+  if (engagementID?.trim()) body.engagementID = engagementID.trim();
+
+  const result = await apiForm<Record<string, unknown>>(`/ticketing/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    token,
+    formData: toFormData(body),
+  });
+
+  const ticket = (result.ticket || result) as EngagementParticipantTicket;
+  return {
+    ...ticket,
+    ticketID: pickString(ticket.ticketID) || id,
+    status: pickString(ticket.status).toLowerCase() || "issued",
   };
 }

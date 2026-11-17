@@ -165,20 +165,35 @@ export function categorizePayment(p: AddedParticipant): PaymentCategoryKey {
   const bucket = String(p.verificationBucket || "").toLowerCase();
   const status = String(p.status || "").toLowerCase();
   const rawStatus = String(p.rawStatus || "").toLowerCase();
+  const reason = String(p.waiverReason || "").toLowerCase();
+  const txRef = String(p.transactionReference || "").toUpperCase();
 
-  if (
+  const looksComplimentary =
     mode === "complimentary" ||
+    mode === "complementary" ||
+    mode === "comp" ||
     bucket === "complimentary" ||
     status === "complimentary" ||
-    rawStatus === "complimentary"
-  ) {
-    return "complimentary";
-  }
+    status === "complementary" ||
+    rawStatus === "complimentary" ||
+    rawStatus === "complementary" ||
+    reason === "sponsor_allocation" ||
+    reason === "facilitator" ||
+    txRef.startsWith("WAIVER-SPONSOR") ||
+    txRef.startsWith("WAIVER-FACILITATOR");
+
+  if (looksComplimentary) return "complimentary";
+
   if (
     mode === "waived" ||
     bucket === "waived" ||
     status === "waived" ||
-    rawStatus === "waived"
+    rawStatus === "waived" ||
+    reason === "staff" ||
+    reason === "gov_speaker" ||
+    txRef.startsWith("WAIVER-STAFF") ||
+    txRef.startsWith("WAIVER-GOV-SPEAKER") ||
+    (txRef.startsWith("WAIVER-") && !looksComplimentary)
   ) {
     return "waived";
   }

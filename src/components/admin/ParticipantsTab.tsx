@@ -4,6 +4,7 @@ import {
   Download,
   FilePenLine,
   InfoIcon,
+  Mail,
   MoreVertical,
   Plus,
   Printer,
@@ -24,6 +25,8 @@ import {
   cancelParticipantTicket,
   createAdminParticipant,
   listEventParticipants,
+  restoreCancelledAsPaid,
+  sendParticipantInvite,
   toggleParticipantPayment,
 } from "../../lib/eventParticipants";
 import {
@@ -107,6 +110,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
   const [detailTarget, setDetailTarget] = useState<AddedParticipant | null>(null);
   const [proofTarget, setProofTarget] = useState<AddedParticipant | null>(null);
   const [cancelBusyId, setCancelBusyId] = useState<string | null>(null);
+  const [resendBusyId, setResendBusyId] = useState<string | null>(null);
   const [passPreview, setPassPreview] = useState<{
     url: string;
     passCode: string;
@@ -197,7 +201,13 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     p.paymentMode === "waived" ||
     p.paymentMode === "complimentary" ||
     p.status === "Waived" ||
-    p.status === "Complimentary";
+    p.status === "Complimentary" ||
+    p.verificationBucket === "waived" ||
+    p.verificationBucket === "complimentary" ||
+    p.waiverReason === "sponsor_allocation" ||
+    p.waiverReason === "facilitator" ||
+    p.waiverReason === "staff" ||
+    p.waiverReason === "gov_speaker";
 
   const isPaymentPaid = (p: AddedParticipant) => {
     if (isWaived(p)) return true;
@@ -250,7 +260,91 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
   const waiverActionLabel = (p: AddedParticipant) =>
     isPaidConfirmed(p) ? "Convert to waiver" : "Grant waiver";
 
+  const isCancelled = (p: AddedParticipant) =>
+    p.status === "Cancelled" ||
+    p.verificationBucket === "cancelled" ||
+    ["cancelled", "canceled"].includes(String(p.rawStatus || "").toLowerCase());
+
+  const canRestoreCancelled = (p: AddedParticipant) => {
+    if (!isCancelled(p)) return false;
+    const ticketID = p.ticketID || (p.id && !p.id.startsWith("p-") ? p.id : "");
+    return Boolean(ticketID);
+  };
+
+  const participantTicketId = (p: AddedParticipant) =>
+    p.ticketID || (p.id && !p.id.startsWith("p-") ? p.id : "");
+
+  /**
+   * Resend invite: confirmed paid, waived, or complimentary only
+   * (not pending / draft / cancelled).
+   */
+  const canResendInvite = (p: AddedParticipant) => {
+    if (isCancelled(p)) return false;
+    if (!p.email?.trim()) return false;
+    if (!participantTicketId(p)) return false;
+    // Paid confirmed
+    if (isPaidConfirmed(p)) return true;
+    // Waived / complimentary (sponsor, facilitator, staff, gov speaker)
+    if (isWaived(p)) return true;
+    const status = String(p.status || "").toLowerCase();
+    const raw = String(p.rawStatus || "").toLowerCase();
+    const bucket = String(p.verificationBucket || "").toLowerCase();
+    return (
+      status === "waived" ||
+      status === "complimentary" ||
+      status === "complementary" ||
+      raw === "waived" ||
+      raw === "complimentary" ||
+      raw === "complementary" ||
+      bucket === "waived" ||
+      bucket === "complimentary"
+    );
+  };
+
+  const handleResendInvite = async (p: AddedParticipant) => {
+    const ticketID = participantTicketId(p);
+    if (!ticketID) {
+      toast.error("This registration has no ticket ID — cannot resend email.");
+      return;
+    }
+    if (!p.email?.trim()) {
+      toast.error("This registration has no email address.");
+      return;
+    }
+    if (
+      !window.confirm(
+        `Resend registration / invite email to ${p.email} for ${p.name}?`,
+      )
+    ) {
+      return;
+    }
+
+    setResendBusyId(p.id);
+    try {
+      const { message } = await sendParticipantInvite(ticketID);
+      toast.success(message || `Invite email resent to ${p.email}.`);
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Unable to resend invite email.",
+      );
+    } finally {
+      setResendBusyId(null);
+    }
+  };
+
   const openWaiverFor = (p: AddedParticipant) => {
+    if (isCancelled(p)) {
+      const ok = window.confirm(
+        `${p.name} is cancelled.\n\nRestore this ticket as waived / complimentary? They regain participant access and count under Waived (not Paid).`,
+      );
+      if (!ok) return;
+      setWaiverTarget(p);
+      return;
+    }
     if (isPaidConfirmed(p)) {
       const ok = window.confirm(
         `${p.name} is marked paid / confirmed.\n\nConvert this ticket to waived? Reporting will move it from Paid to Waived (or Complimentary). Participant access stays open.`,
@@ -304,6 +398,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
     setWaiverBusy(true);
     try {
       const converting = isPaidConfirmed(p);
+      const restoring = isCancelled(p);
       const { ticket, waiver, message } = await grantParticipantWaiver({
         ticketID,
         engagementID: eventId,
@@ -311,6 +406,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
         agencyName: input.agencyName,
         sponsorTicketID: input.sponsorTicketID,
         convertFromPaid: converting,
+        restoreFromCancelled: restoring,
         fullName: p.name,
         email: p.email,
         phoneNo: p.phone,
@@ -322,7 +418,9 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
         title: p.title,
       });
       const mode: "waived" | "complimentary" =
-        input.reason === "sponsor_allocation" ? "complimentary" : "waived";
+        input.reason === "sponsor_allocation" || input.reason === "facilitator"
+          ? "complimentary"
+          : "waived";
       applyWaiverLocally(p, {
         paymentMode: mode,
         waiverReason: waiver.waiverReason || input.reason,
@@ -333,9 +431,11 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
       });
       toast.success(
         message ||
-          (converting
-            ? `${p.name} converted to ${waiverReasonLabel(input.reason)}.`
-            : `${waiverReasonLabel(input.reason)} granted for ${p.name}.`),
+          (restoring
+            ? `${p.name} restored as ${waiverReasonLabel(input.reason)}.`
+            : converting
+              ? `${p.name} converted to ${waiverReasonLabel(input.reason)}.`
+              : `${waiverReasonLabel(input.reason)} granted for ${p.name}.`),
       );
       setWaiverTarget(null);
       void reloadParticipants();
@@ -446,6 +546,49 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
           : err instanceof Error
             ? err.message
             : "Could not cancel ticket.",
+      );
+    } finally {
+      setCancelBusyId(null);
+    }
+  };
+
+  const handleRestoreAsPaid = async (p: AddedParticipant) => {
+    const ticketID = p.ticketID || (p.id && !p.id.startsWith("p-") ? p.id : "");
+    if (!ticketID) {
+      toast.error("No ticket ID on this registration — cannot restore.");
+      return;
+    }
+    if (!isCancelled(p)) {
+      toast.info("Only cancelled registrations can be restored as paid.");
+      return;
+    }
+    const ok = window.confirm(
+      `${p.name} is cancelled.\n\nRestore as paid / confirmed? They regain participant access and count under Paid.`,
+    );
+    if (!ok) return;
+
+    setCancelBusyId(p.id);
+    try {
+      const ticket = await restoreCancelledAsPaid(ticketID, eventId);
+      const patch = {
+        status: "Confirmed" as const,
+        rawStatus: String(ticket.status || "issued").toLowerCase(),
+        verificationBucket: "confirmed" as const,
+        paymentMode: "payable" as const,
+        passAllowed: true,
+      };
+      setApiRows((prev) => prev.map((row) => (row.id === p.id ? { ...row, ...patch } : row)));
+      setLocalRows((prev) => prev.map((row) => (row.id === p.id ? { ...row, ...patch } : row)));
+      setDetailTarget((prev) => (prev?.id === p.id ? { ...prev, ...patch } : prev));
+      toast.success(`${p.name} restored as paid / confirmed.`);
+      void reloadParticipants();
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Could not restore ticket.",
       );
     } finally {
       setCancelBusyId(null);
@@ -669,6 +812,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
         participants={source}
         busy={waiverBusy}
         convertFromPaid={Boolean(waiverTarget && isPaidConfirmed(waiverTarget))}
+        restoreFromCancelled={Boolean(waiverTarget && isCancelled(waiverTarget))}
         onClose={() => {
           if (!waiverBusy) setWaiverTarget(null);
         }}
@@ -682,6 +826,7 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
         participant={detailTarget}
         verifyBusy={confirmingId === detailTarget?.id}
         cancelBusy={cancelBusyId === detailTarget?.id}
+        resendBusy={resendBusyId === detailTarget?.id}
         onClose={() => setDetailTarget(null)}
         onVerify={(p) => {
           void handleTogglePayment(p);
@@ -702,8 +847,22 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
             : undefined
         }
         waiverLabel={
-          detailTarget && isPaidConfirmed(detailTarget) ? "Convert to waiver" : "Grant waiver"
+          detailTarget && isCancelled(detailTarget)
+            ? "Restore as waiver"
+            : detailTarget && isPaidConfirmed(detailTarget)
+              ? "Convert to waiver"
+              : "Grant waiver"
         }
+        onRestorePaid={
+          detailTarget && canRestoreCancelled(detailTarget)
+            ? (p) => {
+                void handleRestoreAsPaid(p);
+              }
+            : undefined
+        }
+        onResendInvite={(p) => {
+          void handleResendInvite(p);
+        }}
       />
 
       <PaymentProofReviewModal
@@ -1009,6 +1168,21 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                               {printingId === p.id ? "Loading pass…" : "View Event Pass"}
                             </button>
 
+                            {canResendInvite(p) ? (
+                              <button
+                                type="button"
+                                disabled={resendBusyId === p.id}
+                                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-indigo-700 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                onClick={(e) => {
+                                  e.currentTarget.closest("details")?.removeAttribute("open");
+                                  void handleResendInvite(p);
+                                }}
+                              >
+                                <Mail size={14} />
+                                {resendBusyId === p.id ? "Sending…" : "Resend email"}
+                              </button>
+                            ) : null}
+
                             {canReviewProof(p) && !isPaymentPaid(p) ? (
                               <button
                                 type="button"
@@ -1033,6 +1207,36 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                               >
                                 <Check size={14} /> {waiverActionLabel(p)}
                               </button>
+                            ) : null}
+
+                            {canRestoreCancelled(p) ? (
+                              <>
+                                <button
+                                  type="button"
+                                  disabled={cancelBusyId === p.id}
+                                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                  onClick={(e) => {
+                                    e.currentTarget.closest("details")?.removeAttribute("open");
+                                    void handleRestoreAsPaid(p);
+                                  }}
+                                >
+                                  <Check size={14} />
+                                  {cancelBusyId === p.id ? "Restoring…" : "Restore as paid"}
+                                </button>
+                                {WAIVER_ENABLED ? (
+                                  <button
+                                    type="button"
+                                    disabled={waiverBusy}
+                                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-sky-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                    onClick={(e) => {
+                                      e.currentTarget.closest("details")?.removeAttribute("open");
+                                      openWaiverFor(p);
+                                    }}
+                                  >
+                                    <Check size={14} /> Restore as waiver
+                                  </button>
+                                ) : null}
+                              </>
                             ) : null}
 
                             {p.status !== "Cancelled" ? (
@@ -1387,6 +1591,21 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                               {printingId === p.id ? "Loading pass…" : "View Event Pass"}
                             </button>
 
+                            {canResendInvite(p) ? (
+                              <button
+                                type="button"
+                                disabled={resendBusyId === p.id}
+                                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-indigo-700 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                onClick={(e) => {
+                                  e.currentTarget.closest("details")?.removeAttribute("open");
+                                  void handleResendInvite(p);
+                                }}
+                              >
+                                <Mail size={14} />
+                                {resendBusyId === p.id ? "Sending…" : "Resend email"}
+                              </button>
+                            ) : null}
+
                             {canReviewProof(p) && !isPaymentPaid(p) ? (
                               <button
                                 type="button"
@@ -1413,6 +1632,36 @@ export function ParticipantsTab({ eventId, fromApi, loading }: Props) {
                                 <Check size={14} />
                                 {waiverActionLabel(p)}
                               </button>
+                            ) : null}
+
+                            {canRestoreCancelled(p) ? (
+                              <>
+                                <button
+                                  type="button"
+                                  disabled={cancelBusyId === p.id}
+                                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-emerald-700 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                  onClick={(e) => {
+                                    e.currentTarget.closest("details")?.removeAttribute("open");
+                                    void handleRestoreAsPaid(p);
+                                  }}
+                                >
+                                  <Check size={14} />
+                                  {cancelBusyId === p.id ? "Restoring…" : "Restore as paid"}
+                                </button>
+                                {WAIVER_ENABLED ? (
+                                  <button
+                                    type="button"
+                                    disabled={waiverBusy}
+                                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[13px] font-medium text-sky-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                    onClick={(e) => {
+                                      e.currentTarget.closest("details")?.removeAttribute("open");
+                                      openWaiverFor(p);
+                                    }}
+                                  >
+                                    <Check size={14} /> Restore as waiver
+                                  </button>
+                                ) : null}
+                              </>
                             ) : null}
 
                             {p.status !== "Cancelled" ? (
