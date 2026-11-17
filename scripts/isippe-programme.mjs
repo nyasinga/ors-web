@@ -1,519 +1,399 @@
 /**
  * Official ISIPPE-3 programme.
  * Pre-events: 16–17 Nov 2026 (BCOCC, brand training, destruction).
- * Symposium: ACA/SYMPOSIUM/2026/INF/10 PROV. (18–19 Nov 2026).
+ * Symposium: ACA/SYMPOSIUM/2026/INF/10 PROV. Revised 17 Nov 2026 (18–19 Nov).
  */
 
-export const isippeProgramme = [
-  {
-    "id": "d1-bcocc",
-    "day": 1,
-    "title": "BCOCC Meeting",
-    "description": "Day 1 · Monday, 16 November 2026 · Border Control and Operations Coordination Committee (BCOCC). Status: Confirmed. Lead: Lindsay Kipkemoi.",
-    "time": "All day",
-    "venue": "Mombasa Continental Resort",
-    "place": "Mombasa Continental Resort",
-    "badge": "Pre-event",
-    "speakers": 1,
-    "speakerNames": [
-      "Lindsay Kipkemoi"
-    ]
-  },
-  {
-    "id": "d1-brand-training",
-    "day": 1,
-    "title": "Brand / Product Knowledge Training",
-    "description": "Day 1 · Monday, 16 November 2026 · Brand/Product Knowledge Training. Status: Confirmed. Lead: Yussuf Ahmed.",
-    "time": "All day",
-    "venue": "Mombasa Continental Resort",
-    "place": "Mombasa Continental Resort",
-    "badge": "Training",
-    "speakers": 1,
-    "speakerNames": [
-      "Yussuf Ahmed"
-    ]
-  },
-  {
-    "id": "d1-destruction",
-    "day": 1,
-    "title": "Destruction of Counterfeit Goods",
-    "description": "Day 1 · Monday, 16 November 2026 · Destruction exercise. Status: Confirmed. Lead: Henry O. Maina, OGW.",
-    "time": "All day",
-    "venue": "SAIMBOT",
-    "place": "SAIMBOT",
-    "badge": "Destruction",
-    "speakers": 1,
-    "speakerNames": [
-      "Henry O. Maina, OGW"
-    ]
-  },
-  {
-    "id": "d2-destruction",
-    "day": 2,
-    "title": "Destruction of Counterfeit Goods",
-    "description": "Day 2 · Tuesday, 17 November 2026 · Destruction exercise. Status: Confirmed. Lead: Henry O. Maina, OGW.",
-    "time": "All day",
-    "venue": "TBC",
-    "place": "TBC",
-    "badge": "Destruction",
-    "speakers": 1,
-    "speakerNames": [
-      "Henry O. Maina, OGW"
-    ]
-  },
-  {
-    "id": "d1-reg",
-    "day": 3,
-    "title": "Registration and Welcoming Reception",
-    "description": "Day 3 · Wednesday, 18 November 2026 · Registration and welcoming reception.",
-    "time": "07:30 – 09:00",
-    "startTime": "07:30",
-    "endTime": "09:00",
-    "venue": "Main Lobby",
-    "place": "Main Lobby",
-    "badge": "Registration",
-    "speakers": 0,
-    "speakerNames": []
-  },
-  {
-    "id": "d1-open",
-    "day": 3,
-    "title": "Opening Ceremony",
-    "description": "National Anthem / EAC Anthem.\nWelcome remarks — Dr. Robi M. King’a, PhD, Executive Director, Anti-Counterfeit Authority.\nHost institution’s remarks — Hon. Nelson Ributhi Gaichuhie, Chairperson, ACA Board.\nRemarks — Mr. Desire Loumou, Head, Intellectual Property Rights Division, AfCFTA Secretariat.\nRemarks — Ms. Regina Ombam, Principal Secretary, State Department for Trade.\nRemarks — Dr. Juma Mukhwana, PhD, CBS, Principal Secretary, State Department for Industry.\nAddress and invitation to the Chief Guest — Hon. Lee Kinyanjui, Cabinet Secretary, Ministry of Investments, Trade and Industry.",
-    "time": "09:00 – 09:30",
-    "startTime": "09:00",
-    "endTime": "09:30",
-    "venue": "Main Plenary",
-    "place": "Main Plenary",
-    "badge": "Ceremony",
-    "speakers": 6,
-    "speakerNames": [
+function s({
+  id,
+  day,
+  title,
+  description = "",
+  start,
+  end,
+  venue = "Mombasa Continental Resort",
+  badge = "Session",
+  speakers = [],
+  access = "open",
+}) {
+  const time =
+    start && end ? `${start} – ${end}` : start || end ? String(start || end) : "All day";
+  return {
+    id,
+    day,
+    title,
+    description,
+    time,
+    ...(start ? { startTime: start } : {}),
+    ...(end ? { endTime: end } : {}),
+    venue,
+    place: venue,
+    badge,
+    access,
+    speakers: speakers.length,
+    speakerNames: speakers,
+  };
+}
+
+/** Days 1–2 pre-events (unchanged by 17 Nov revision). */
+const preEvents = [
+  s({
+    id: "d1-bcocc",
+    day: 1,
+    title: "BCOCC Meeting",
+    description:
+      "Day 1 · Monday, 16 November 2026 · Border Control and Operations Coordination Committee (BCOCC). Status: Confirmed. Lead: Lindsay Kipkemoi.",
+    venue: "Mombasa Continental Resort",
+    badge: "Pre-event",
+    speakers: ["Lindsay Kipkemoi"],
+  }),
+  s({
+    id: "d1-brand-training",
+    day: 1,
+    title: "Brand / Product Knowledge Training",
+    description:
+      "Day 1 · Monday, 16 November 2026 · Brand/Product Knowledge Training. Status: Confirmed. Lead: Yussuf Ahmed.",
+    venue: "Mombasa Continental Resort",
+    badge: "Training",
+    speakers: ["Yussuf Ahmed"],
+  }),
+  s({
+    id: "d1-destruction",
+    day: 1,
+    title: "Destruction of Counterfeit Goods",
+    description:
+      "Day 1 · Monday, 16 November 2026 · Destruction exercise. Status: Confirmed. Lead: Henry O. Maina, OGW.",
+    venue: "SAIMBOT",
+    badge: "Destruction",
+    speakers: ["Henry O. Maina, OGW"],
+  }),
+  s({
+    id: "d2-destruction",
+    day: 2,
+    title: "Destruction of Counterfeit Goods",
+    description:
+      "Day 2 · Tuesday, 17 November 2026 · Destruction exercise. Status: Confirmed. Lead: Henry O. Maina, OGW.",
+    start: "09:00",
+    end: "10:00",
+    venue: "SAIMBOT",
+    badge: "Destruction",
+    speakers: ["Henry O. Maina, OGW"],
+  }),
+];
+
+/** Day 3 · Wednesday 18 Nov 2026 — revised programme. */
+const day3 = [
+  s({
+    id: "d3-reg",
+    day: 3,
+    title: "Registration and Welcoming Reception",
+    description:
+      "Day 1 of symposium · Wednesday, 18 November 2026 · Registration, welcoming reception and tour of exhibitions.\nMC: Norman Mudibo.",
+    start: "08:00",
+    end: "09:00",
+    venue: "Main Lobby",
+    badge: "Registration",
+    speakers: ["Norman Mudibo"],
+  }),
+  s({
+    id: "d3-open",
+    day: 3,
+    title: "Opening Ceremony",
+    description:
+      "Opening Prayer.\nNational Anthem (Kayamba Africa).\nEAC Anthem (Kayamba Africa).\nEntertainment (Kayamba Africa).\nRemarks — CEC Trade, Mombasa County.\nRemarks — Mr. Mohamed Noor Hassan, County Commissioner, Mombasa County.\nWelcome remarks — Dr. Robi M. King’a, PhD, Executive Director, Anti-Counterfeit Authority.\nHost institution’s remarks — Hon. Nelson Ributhi Gaichuhie, CBS, Board Chairperson, Anti-Counterfeit Authority.\nRemarks — Ms. Regina Ombam, Principal Secretary, State Department for Trade.\nRemarks — Dr. Juma Mukhwana, PhD, CBS, Principal Secretary, State Department for Industry.\nAddress by the Chief Guest — Hon. Lee Kinyanjui, Cabinet Secretary, Ministry of Investments, Trade and Industry.\nMC: Norman Mudibo.",
+    start: "09:00",
+    end: "09:40",
+    venue: "Main Plenary",
+    badge: "Ceremony",
+    speakers: [
+      "CEC Trade, Mombasa County",
+      "Mr. Mohamed Noor Hassan",
       "Dr. Robi M. King’a, PhD",
-      "Hon. Nelson Ributhi Gaichuhie",
-      "Mr. Desire Loumou",
+      "Hon. Nelson Ributhi Gaichuhie, CBS",
       "Ms. Regina Ombam",
       "Dr. Juma Mukhwana, PhD, CBS",
-      "Hon. Lee Kinyanjui"
-    ]
-  },
-  {
-    "id": "d1-keynote",
-    "day": 3,
-    "title": "Keynote Address and Official Opening",
-    "description": "Stepping up the Fight Against Counterfeiting to Safeguard Public Health and Public Safety.",
-    "time": "09:30 – 09:45",
-    "startTime": "09:30",
-    "endTime": "09:45",
-    "venue": "Main Plenary",
-    "place": "Main Plenary",
-    "badge": "Keynote",
-    "speakers": 1,
-    "speakerNames": []
-  },
-  {
-    "id": "d1-launch",
-    "day": 3,
-    "title": "Launch of National Assessment of Illicit Trade in Kenya: Trends, Effects and Strategic Responses Report",
-    "description": "Official launch of the National Assessment of Illicit Trade in Kenya report.",
-    "time": "09:45 – 10:00",
-    "startTime": "09:45",
-    "endTime": "10:00",
-    "venue": "Main Plenary",
-    "place": "Main Plenary",
-    "badge": "Launch",
-    "speakers": 0,
-    "speakerNames": []
-  },
-  {
-    "id": "d1-break1",
-    "day": 3,
-    "title": "Health Break",
-    "description": "Day 3 · Health break. High Level Policy and Legal Dialogue follows.",
-    "time": "10:00 – 10:30",
-    "startTime": "10:00",
-    "endTime": "10:30",
-    "venue": "Exhibition Area",
-    "place": "Exhibition Area",
-    "badge": "Break",
-    "speakers": 0,
-    "speakerNames": []
-  },
-  {
-    "id": "d1-plenary1",
-    "day": 3,
-    "title": "Plenary I — Closing the Enforcement Gap: From IP Rights to Effective Enforcement",
-    "description": "High Level Policy and Legal Dialogue. Moderator to be confirmed.",
-    "time": "10:30 – 11:15",
-    "startTime": "10:30",
-    "endTime": "11:15",
-    "venue": "Main Plenary",
-    "place": "Main Plenary",
-    "badge": "Plenary",
-    "speakers": 0,
-    "speakerNames": []
-  },
-  {
-    "id": "d1-panel1",
-    "day": 3,
-    "title": "Panel 1 — How Can Legacy and the Media Contribute to the Protection of Intellectual Property Rights (IPR)?",
-    "description": "How can legacy and the media contribute to the protection of Intellectual Property Rights (IPR), safeguarding public health and enhancing consumer safety in the fight against counterfeiting? Moderator to be confirmed.",
-    "time": "11:15 – 11:45",
-    "startTime": "11:15",
-    "endTime": "11:45",
-    "venue": "Main Plenary",
-    "place": "Main Plenary",
-    "badge": "Panel",
-    "speakers": 0,
-    "speakerNames": []
-  },
-  {
-    "id": "d1-panel2",
-    "day": 3,
-    "title": "Panel II — Why Do Counterfeiters Continue to Thrive?",
-    "description": "Identifying the Gaps in Law, Regulation, Investigation, Prosecution and Cross-Border Enforcement. Moderator: Dr. John Akoten.",
-    "time": "11:45 – 12:30",
-    "startTime": "11:45",
-    "endTime": "12:30",
-    "venue": "Main Plenary",
-    "place": "Main Plenary",
-    "badge": "Panel",
-    "speakers": 1,
-    "speakerNames": [
-      "Dr. John Akoten"
-    ]
-  },
-  {
-    "id": "d1-lunch",
-    "day": 3,
-    "title": "Lunch Break",
-    "description": "Day 3 · Lunch break. Afternoon sectoral deep dives: Automotive Spare Parts and Agriculture.",
-    "time": "12:30 – 14:00",
-    "startTime": "12:30",
-    "endTime": "14:00",
-    "venue": "Restaurant / Exhibition",
-    "place": "Restaurant / Exhibition",
-    "badge": "Break",
-    "speakers": 0,
-    "speakerNames": []
-  },
-  {
-    "id": "d1-b1.1",
-    "day": 3,
-    "title": "Breakout 1.1 — Counterfeit Automotive Spare Parts: Closing the Regulatory and Enforcement Gaps",
-    "description": "Sector: Automotive Spare Parts. Moderator: Mr. Henry Maina.",
-    "time": "14:00 – 15:30",
-    "startTime": "14:00",
-    "endTime": "15:30",
-    "venue": "Breakout — Automotive Spare Parts",
-    "place": "Breakout — Automotive Spare Parts",
-    "badge": "Breakout",
-    "speakers": 1,
-    "speakerNames": [
-      "Mr. Henry Maina"
-    ]
-  },
-  {
-    "id": "d1-b1.2",
-    "day": 3,
-    "title": "Breakout 1.2 — Authenticating Automotive Spare Parts Across the Supply Chain",
-    "description": "Sector: Automotive Spare Parts. Moderator: Mr. Yussuf Osman Ahmed.",
-    "time": "14:00 – 15:30",
-    "startTime": "14:00",
-    "endTime": "15:30",
-    "venue": "Breakout — Automotive Spare Parts",
-    "place": "Breakout — Automotive Spare Parts",
-    "badge": "Breakout",
-    "speakers": 1,
-    "speakerNames": [
-      "Mr. Yussuf Osman Ahmed"
-    ]
-  },
-  {
-    "id": "d1-b1.3",
-    "day": 3,
-    "title": "Breakout 1.3 — Following the Money: Financial Investigations in Counterfeit Automotive Parts",
-    "description": "Sector: Automotive Spare Parts. Moderator: Saitoti K. Maika.",
-    "time": "14:00 – 15:30",
-    "startTime": "14:00",
-    "endTime": "15:30",
-    "venue": "Breakout — Automotive Spare Parts",
-    "place": "Breakout — Automotive Spare Parts",
-    "badge": "Breakout",
-    "speakers": 1,
-    "speakerNames": [
-      "Saitoti K. Maika"
-    ]
-  },
-  {
-    "id": "d1-b2.1",
-    "day": 3,
-    "title": "Breakout 2.1 — Protecting Agricultural Inputs from Counterfeiting",
-    "description": "Sector: Agriculture. Moderator: Agnes Karingu.",
-    "time": "14:00 – 15:30",
-    "startTime": "14:00",
-    "endTime": "15:30",
-    "venue": "Breakout — Agriculture",
-    "place": "Breakout — Agriculture",
-    "badge": "Breakout",
-    "speakers": 1,
-    "speakerNames": [
-      "Agnes Karingu"
-    ]
-  },
-  {
-    "id": "d1-b2.2",
-    "day": 3,
-    "title": "Breakout 2.2 — Counterfeit Agricultural Products and Food-System Safety",
-    "description": "Sector: Agriculture. Moderator: Lindsey Kipkemoi.",
-    "time": "14:00 – 15:30",
-    "startTime": "14:00",
-    "endTime": "15:30",
-    "venue": "Breakout — Agriculture",
-    "place": "Breakout — Agriculture",
-    "badge": "Breakout",
-    "speakers": 1,
-    "speakerNames": [
-      "Lindsey Kipkemoi"
-    ]
-  },
-  {
-    "id": "d1-b2.3",
-    "day": 3,
-    "title": "Breakout 2.3 — Disrupting the Counterfeit Agricultural Supply Chain",
-    "description": "Sector: Agriculture. Moderator: Mr. Yussuf Osman Ahmed.",
-    "time": "14:00 – 15:30",
-    "startTime": "14:00",
-    "endTime": "15:30",
-    "venue": "Breakout — Agriculture",
-    "place": "Breakout — Agriculture",
-    "badge": "Breakout",
-    "speakers": 1,
-    "speakerNames": [
-      "Mr. Yussuf Osman Ahmed"
-    ]
-  },
-  {
-    "id": "d1-break2",
-    "day": 3,
-    "title": "Health Break / Exhibition",
-    "description": "Day 3 · Health break and exhibition viewing.",
-    "time": "15:30 – 16:30",
-    "startTime": "15:30",
-    "endTime": "16:30",
-    "venue": "Exhibition Area",
-    "place": "Exhibition Area",
-    "badge": "Break",
-    "speakers": 0,
-    "speakerNames": []
-  },
-  {
-    "id": "d2-recap",
-    "day": 4,
-    "title": "Recap of Day One",
-    "description": "Day 4 · Thursday, 19 November 2026 · Sectoral deep dives, finance, technology and action.",
-    "time": "08:30 – 09:00",
-    "startTime": "08:30",
-    "endTime": "09:00",
-    "venue": "Main Plenary",
-    "place": "Main Plenary",
-    "badge": "Session",
-    "speakers": 0,
-    "speakerNames": []
-  },
-  {
-    "id": "d2-plenary2",
-    "day": 4,
-    "title": "Plenary II — Combating Counterfeiting in Pharmaceuticals and Medical Equipment: What Strategies and Lessons",
-    "description": "Moderator to be confirmed.",
-    "time": "09:00 – 10:30",
-    "startTime": "09:00",
-    "endTime": "10:30",
-    "venue": "Main Plenary",
-    "place": "Main Plenary",
-    "badge": "Plenary",
-    "speakers": 0,
-    "speakerNames": []
-  },
-  {
-    "id": "d2-break1",
-    "day": 4,
-    "title": "Health Break",
-    "description": "Day 4 · Health break. Parallel sectoral breakouts follow (Energy/Electricals/Electronics; Pharmaceuticals and Medical Equipment; Alcohol and Tobacco).",
-    "time": "10:30 – 11:00",
-    "startTime": "10:30",
-    "endTime": "11:00",
-    "venue": "Exhibition Area",
-    "place": "Exhibition Area",
-    "badge": "Break",
-    "speakers": 0,
-    "speakerNames": []
-  },
-  {
-    "id": "d2-b3.1",
-    "day": 4,
-    "title": "Breakout 3.1 — Counterfeit Electrical and Electronic Products: Law, Standards and Public Safety",
-    "description": "Sector: Energy, Electricals and Electronics. Moderator: Dr. John Akoten.",
-    "time": "11:00 – 12:30",
-    "startTime": "11:00",
-    "endTime": "12:30",
-    "venue": "Breakout — Energy, Electricals and Electronics",
-    "place": "Breakout — Energy, Electricals and Electronics",
-    "badge": "Breakout",
-    "speakers": 1,
-    "speakerNames": [
-      "Dr. John Akoten"
-    ]
-  },
-  {
-    "id": "d2-b3.2",
-    "day": 4,
-    "title": "Breakout 3.2 — How Can Technology Assist Enforcement and Securing the Energy and Electronics Supply Chain",
-    "description": "Sector: Energy, Electricals and Electronics. Moderator: Caspar Oluoch.",
-    "time": "11:00 – 12:30",
-    "startTime": "11:00",
-    "endTime": "12:30",
-    "venue": "Breakout — Energy, Electricals and Electronics",
-    "place": "Breakout — Energy, Electricals and Electronics",
-    "badge": "Breakout",
-    "speakers": 1,
-    "speakerNames": [
-      "Caspar Oluoch"
-    ]
-  },
-  {
-    "id": "d2-b4.1",
-    "day": 4,
-    "title": "Breakout 4.1 — Strengthening the Legal and Enforcement Framework for Combating Counterfeit Pharma and Medical Devices",
-    "description": "Investigation, prosecution and regulatory accountability. Sector: Pharmaceuticals and Medical Equipment. Moderator: Jully Kamolo.",
-    "time": "11:00 – 12:30",
-    "startTime": "11:00",
-    "endTime": "12:30",
-    "venue": "Breakout — Pharmaceuticals and Medical Equipment",
-    "place": "Breakout — Pharmaceuticals and Medical Equipment",
-    "badge": "Breakout",
-    "speakers": 1,
-    "speakerNames": [
-      "Jully Kamolo"
-    ]
-  },
-  {
-    "id": "d2-b4.2",
-    "day": 4,
-    "title": "Breakout 4.2 — What Role Can Technology Play in Securing Pharmaceutical and Medical Equipment Supply Chains",
-    "description": "Sector: Pharmaceuticals and Medical Equipment. Moderator: Mary Mwinga.",
-    "time": "11:00 – 12:30",
-    "startTime": "11:00",
-    "endTime": "12:30",
-    "venue": "Breakout — Pharmaceuticals and Medical Equipment",
-    "place": "Breakout — Pharmaceuticals and Medical Equipment",
-    "badge": "Breakout",
-    "speakers": 1,
-    "speakerNames": [
-      "Mary Mwinga"
-    ]
-  },
-  {
-    "id": "d2-b5.1",
-    "day": 4,
-    "title": "Breakout 5.1 — From Fragmented Regulation to Coordinated Enforcement: Strengthening the Legal Architecture for Combating Counterfeit Alcoholic Beverages & Tobacco",
-    "description": "Sector: Alcohol and Tobacco. Moderator: Henry Maina.",
-    "time": "11:00 – 12:30",
-    "startTime": "11:00",
-    "endTime": "12:30",
-    "venue": "Breakout — Alcohol and Tobacco",
-    "place": "Breakout — Alcohol and Tobacco",
-    "badge": "Breakout",
-    "speakers": 1,
-    "speakerNames": [
-      "Henry Maina"
-    ]
-  },
-  {
-    "id": "d2-b5.2",
-    "day": 4,
-    "title": "Breakout 5.2 — From the Manufacturer to the Consumer: Building an Authenticated and Traceable Alcoholic-Beverages Supply Chain",
-    "description": "Sector: Alcohol and Tobacco. Moderator: Osman.",
-    "time": "11:00 – 12:30",
-    "startTime": "11:00",
-    "endTime": "12:30",
-    "venue": "Breakout — Alcohol and Tobacco",
-    "place": "Breakout — Alcohol and Tobacco",
-    "badge": "Breakout",
-    "speakers": 1,
-    "speakerNames": [
-      "Osman"
-    ]
-  },
-  {
-    "id": "d2-b5.3",
-    "day": 4,
-    "title": "Breakout 5.3 — Moving Beyond Seizures: Identifying the People, Businesses, Assets and Financial Networks Behind Counterfeit and Illicit Alcoholic Beverages",
-    "description": "Sector: Alcohol and Tobacco. Moderator: Jully Kamollo.",
-    "time": "11:00 – 12:30",
-    "startTime": "11:00",
-    "endTime": "12:30",
-    "venue": "Breakout — Alcohol and Tobacco",
-    "place": "Breakout — Alcohol and Tobacco",
-    "badge": "Breakout",
-    "speakers": 1,
-    "speakerNames": [
-      "Jully Kamollo"
-    ]
-  },
-  {
-    "id": "d2-lunch",
-    "day": 4,
-    "title": "Lunch Break / Exhibition",
-    "description": "Day 4 · Lunch break and exhibition viewing.",
-    "time": "12:30 – 14:00",
-    "startTime": "12:30",
-    "endTime": "14:00",
-    "venue": "Restaurant / Exhibition",
-    "place": "Restaurant / Exhibition",
-    "badge": "Break",
-    "speakers": 0,
-    "speakerNames": []
-  },
-  {
-    "id": "d2-recommendations",
-    "day": 4,
-    "title": "Presentation of Symposium Recommendations and Mombasa Action Points",
-    "description": "Presentation of symposium recommendations and Mombasa Action Points.",
-    "time": "14:00 – 16:00",
-    "startTime": "14:00",
-    "endTime": "16:00",
-    "venue": "Main Plenary",
-    "place": "Main Plenary",
-    "badge": "Session",
-    "speakers": 0,
-    "speakerNames": []
-  },
-  {
-    "id": "d2-closing",
-    "day": 4,
-    "title": "Closing Ceremony",
-    "description": "Official closing of ISIPPE-3.",
-    "time": "16:00 – 17:00",
-    "startTime": "16:00",
-    "endTime": "17:00",
-    "venue": "Main Plenary",
-    "place": "Main Plenary",
-    "badge": "Ceremony",
-    "speakers": 0,
-    "speakerNames": []
-  },
-  {
-    "id": "d2-networking",
-    "day": 4,
-    "title": "Networking and Departure",
-    "description": "Networking and departure.",
-    "time": "18:00 – 20:00",
-    "startTime": "18:00",
-    "endTime": "20:00",
-    "venue": "Main Lobby",
-    "place": "Main Lobby",
-    "badge": "Networking",
-    "speakers": 0,
-    "speakerNames": []
-  }
+      "Hon. Lee Kinyanjui",
+    ],
+  }),
+  s({
+    id: "d3-keynote",
+    day: 3,
+    title: "Keynote Address and Official Opening",
+    description:
+      "Keynote address and official opening by the Chief Guest.\nTheme: Stepping Up the Fight Against Counterfeiting to Safeguard Public Health and Safety.",
+    start: "09:40",
+    end: "09:55",
+    venue: "Main Plenary",
+    badge: "Keynote",
+    speakers: ["Hon. Lee Kinyanjui"],
+  }),
+  s({
+    id: "d3-launch",
+    day: 3,
+    title: "Launch of Report on National Assessment of Illicit Trade in Kenya",
+    description: "Official launch of the National Assessment of Illicit Trade in Kenya report.",
+    start: "09:55",
+    end: "10:10",
+    venue: "Main Plenary",
+    badge: "Launch",
+  }),
+  s({
+    id: "d3-break1",
+    day: 3,
+    title: "Health Break",
+    description: "Health break. High Level Policy and Legal Dialogue follows.",
+    start: "10:10",
+    end: "10:40",
+    venue: "Exhibition Area",
+    badge: "Break",
+  }),
+  s({
+    id: "d3-panel1",
+    day: 3,
+    title:
+      "Panel I — Closing the Enforcement Gap & Media’s Role in Protecting IPR",
+    description:
+      "High Level Policy and Legal Dialogue.\nTopics:\n• Closing the Enforcement Gap: From IP Rights to Effective Enforcement.\n• How can legacy and new media contribute to the protection of Intellectual Property Rights (IPR), safeguarding public health and enhancing consumer safety in the fight against counterfeiting?\nModerator: Mr. Tobias Alando / Mrs. Agnes Karingu.\nSpeakers: Mr. Todd Reeves, Director, WIPO; Dr. Saleem Alhabash, Michigan State University (online); Mr. David Omwoyo.\nPanel: Dr. Robi M. King’a, CEO, ACA, Kenya; Mr. Frank Mdimi, Head of …; Mr. Frank Chondo, FCC, Tanzania; Ms. Hazel Okoth, International Trademark Association (INTA); Mr. Allan Kakungulu, Uganda.",
+    start: "10:40",
+    end: "12:00",
+    venue: "Main Plenary",
+    badge: "Panel",
+    speakers: [
+      "Mr. Tobias Alando / Mrs. Agnes Karingu",
+      "Mr. Todd Reeves",
+      "Dr. Saleem Alhabash",
+      "Mr. David Omwoyo",
+      "Dr. Robi M. King’a",
+      "Mr. Frank Mdimi",
+      "Mr. Frank Chondo",
+      "Ms. Hazel Okoth",
+      "Mr. Allan Kakungulu",
+    ],
+  }),
+  s({
+    id: "d3-panel2",
+    day: 3,
+    title: "Panel II — Why Do Counterfeiters Continue to Thrive?",
+    description:
+      "Identifying the Gaps in Law, Regulation, Investigation, Prosecution and Cross-Border Enforcement.\nModerator: Dr. John Akoten.\nSpeakers: Mr. Kennedy Nyaiyo, MBS, Secretary General, BCOCC; Mr. Benjamin Koech Rotich, Data Management.\nPanel: Mr. Yussuf Osman, Director, Enforcement, ACA; Mr. Tobias Alando, CEO, KAM; Mr. Gregor Schneider, EU Regional Counsellor for IP in Africa, Ghana; Mr. Tito Oloo Wanga, Assistant Director, ODPP.",
+    start: "12:00",
+    end: "12:40",
+    venue: "Main Plenary",
+    badge: "Panel",
+    speakers: [
+      "Dr. John Akoten",
+      "Mr. Kennedy Nyaiyo, MBS",
+      "Mr. Benjamin Koech Rotich",
+      "Mr. Yussuf Osman",
+      "Mr. Tobias Alando",
+      "Mr. Gregor Schneider",
+      "Mr. Tito Oloo Wanga",
+    ],
+  }),
+  s({
+    id: "d3-questions",
+    day: 3,
+    title: "Questions",
+    description: "Audience questions following Panel II.",
+    start: "12:40",
+    end: "13:00",
+    venue: "Main Plenary",
+    badge: "Session",
+  }),
+  s({
+    id: "d3-lunch",
+    day: 3,
+    title: "Lunch Break",
+    description:
+      "Lunch break. Afternoon sectoral panels: Automotive Spare Parts and Agriculture.",
+    start: "13:00",
+    end: "14:00",
+    venue: "Restaurant / Exhibition",
+    badge: "Break",
+  }),
+  s({
+    id: "d3-panel3",
+    day: 3,
+    title: "Panel III — Counterfeit Automotive Spare Parts",
+    description:
+      "Sector: Automotive Spare Parts.\nTopic: Counterfeit Automotive Spare Parts — Regulatory, Enforcement and financial investigations.\nModerator: Mr. Henry Maina.\nSpeakers: Mr. Mark Ogonji, DG, Assets Recovery Authority; Mr. Yussuf Osman, Director Enforcement, ACA.\nPanel: Ms. Concilia Were, Ass. Manager Legal Services, KIPI; Dr. Bakari Mwanaktina, Chair School of Law, UoN (Mombasa Campus); Ms. Brenda Vilita, CFL Advocates.",
+    start: "14:00",
+    end: "15:00",
+    venue: "Main Plenary",
+    badge: "Panel",
+    speakers: [
+      "Mr. Henry Maina",
+      "Mr. Mark Ogonji",
+      "Mr. Yussuf Osman",
+      "Ms. Concilia Were",
+      "Dr. Bakari Mwanaktina",
+      "Ms. Brenda Vilita",
+    ],
+  }),
+  s({
+    id: "d3-panel4",
+    day: 3,
+    title: "Panel IV — Agriculture: Safeguarding Food-System Safety",
+    description:
+      "Sector: Agriculture.\nTopic: Safeguarding food-system safety by disrupting counterfeit supply chains in agricultural products.\nModerator: Mr. Caspar Oluoch.\nSpeaker: Mr. Lawrence Kalawa, PCPB.\nPanel: Mr. Gentrix Juma, KEPHIS; Ms. Happiness Sudi Sirengo, Legal Expert; Mr. Sam G. Ngige, Kenya Sugar Board; Mr. Peter Kaigwara, KEBS – Head of Market Surveillance; Mr. Peter Wanjala, Regional Manager, North Rift, ACA.",
+    start: "15:00",
+    end: "16:00",
+    venue: "Main Plenary",
+    badge: "Panel",
+    speakers: [
+      "Mr. Caspar Oluoch",
+      "Mr. Lawrence Kalawa",
+      "Mr. Gentrix Juma",
+      "Ms. Happiness Sudi Sirengo",
+      "Mr. Sam G. Ngige",
+      "Mr. Peter Kaigwara",
+      "Mr. Peter Wanjala",
+    ],
+  }),
+  s({
+    id: "d3-break2",
+    day: 3,
+    title: "Health Break / Exhibition",
+    description: "Health break and exhibition viewing.",
+    start: "16:00",
+    venue: "Exhibition Area",
+    badge: "Break",
+  }),
 ];
+
+/** Day 4 · Thursday 19 Nov 2026 — revised programme. */
+const day4 = [
+  s({
+    id: "d4-recap",
+    day: 4,
+    title: "Recap of Day One",
+    description:
+      "Day 2 of symposium · Thursday, 19 November 2026 · Sectoral deep dives, finance, technology and action.",
+    start: "08:30",
+    end: "09:00",
+    venue: "Main Plenary",
+    badge: "Session",
+  }),
+  s({
+    id: "d4-panel5",
+    day: 4,
+    title: "Panel V — Pharmaceuticals and Medical Equipment",
+    description:
+      "Sector: Pharmaceuticals and Medical Equipment.\nTopics:\n• Combating Counterfeiting in Pharmaceuticals and Medical Equipment: What Strategies and Lessons?\n• Strengthening the legal and enforcement framework for combating counterfeit pharma and medical devices: Use of technology for investigation, prosecution and regulatory accountability.\nModerator: Mr. Abdi Abikar.\nSpeakers: Dr. James Oigo Mokoro, Chair, KAPI; Mr. Frank Chondo, FCC, Tanzania.\nPanel: Dr. Anastacia Nyalita, CECM, Nairobi County; Mr. Tito Oloo Wanga, Assistant Director, ODPP; Mr. Kimeli Muge, Nandi County Government; Cowin Song, Future Strategy TF / TF Leader, NANOSILIKHAN Advanced Materials Co., Ltd.",
+    start: "09:00",
+    end: "10:00",
+    venue: "Main Plenary",
+    badge: "Panel",
+    speakers: [
+      "Mr. Abdi Abikar",
+      "Dr. James Oigo Mokoro",
+      "Mr. Frank Chondo",
+      "Dr. Anastacia Nyalita",
+      "Mr. Tito Oloo Wanga",
+      "Mr. Kimeli Muge",
+      "Cowin Song",
+    ],
+  }),
+  s({
+    id: "d4-panel6",
+    day: 4,
+    title: "Panel VI — Energy, Electricals and Electronics",
+    description:
+      "Sector: Energy, Electricals and Electronics.\nTopic: Counterfeit Electrical and Electronic Products — Application of Law, Standards and Technology to enhance Public Safety.\nModerator: Mr. Caspar Oluoch.\nSpeakers: Mr. Genesio Mugo, Chair — KAM Energy, Electrical and Electronics sector; Dr. Walter Juma Ongeti, CEO, KENAS.\nPanel: Ms. Brenda Vilita, CFL Advocates; Eng. Grace Onyango, Ag. CEO, EBK; Eng. Hassan Mwandoro, IEK; Mr. Peter Mutula, Samsung Electronics E. Africa.",
+    start: "10:00",
+    end: "11:00",
+    venue: "Main Plenary",
+    badge: "Panel",
+    speakers: [
+      "Mr. Caspar Oluoch",
+      "Mr. Genesio Mugo",
+      "Dr. Walter Juma Ongeti",
+      "Ms. Brenda Vilita",
+      "Eng. Grace Onyango",
+      "Eng. Hassan Mwandoro",
+      "Mr. Peter Mutula",
+    ],
+  }),
+  s({
+    id: "d4-break1",
+    day: 4,
+    title: "Health Break",
+    description: "Health break. Alcohol and Tobacco panel follows.",
+    start: "11:00",
+    end: "11:30",
+    venue: "Exhibition Area",
+    badge: "Break",
+  }),
+  s({
+    id: "d4-panel7",
+    day: 4,
+    title: "Panel VII — Alcohol and Tobacco",
+    description:
+      "Sector: Alcohol and Tobacco.\nTopic: From fragmented regulation to coordinated enforcement — strengthening the legal architecture for identifying and combating counterfeit alcoholic beverages & tobacco.\nModerator: Mr. Henry Maina.\nSpeaker: Dr. Anastacia Nyalita, CECM, Nairobi County.\nPanel: Mr. Kui Kinyanjui, Chair, ABAK; Billy Tsuma, BAT — Chair, KAM-AIT subcommittee; Mr. Michael Kiragu Muthami, Chair, PERAK; Mr. Eric Kwena, Research Analyst, National Crime Research Centre.",
+    start: "11:30",
+    end: "12:30",
+    venue: "Main Plenary",
+    badge: "Panel",
+    speakers: [
+      "Mr. Henry Maina",
+      "Dr. Anastacia Nyalita",
+      "Mr. Kui Kinyanjui",
+      "Billy Tsuma",
+      "Mr. Michael Kiragu Muthami",
+      "Mr. Eric Kwena",
+    ],
+  }),
+  s({
+    id: "d4-entertainment",
+    day: 4,
+    title: "Entertainment",
+    description: "Entertainment interlude.",
+    start: "12:30",
+    end: "12:45",
+    venue: "Main Plenary",
+    badge: "Session",
+  }),
+  s({
+    id: "d4-recommendations",
+    day: 4,
+    title: "Presentation of Symposium Recommendations and Mombasa Action Points",
+    description: "Presentation of symposium recommendations and Mombasa Action Points.",
+    start: "12:45",
+    end: "13:15",
+    venue: "Main Plenary",
+    badge: "Session",
+  }),
+  s({
+    id: "d4-vote",
+    day: 4,
+    title: "Vote of Thanks",
+    description: "Vote of thanks.",
+    start: "13:15",
+    end: "13:20",
+    venue: "Main Plenary",
+    badge: "Ceremony",
+  }),
+  s({
+    id: "d4-lunch",
+    day: 4,
+    title: "Lunch Break / Exhibition",
+    description: "Lunch break and exhibition viewing.",
+    start: "13:20",
+    end: "14:20",
+    venue: "Restaurant / Exhibition",
+    badge: "Break",
+  }),
+  s({
+    id: "d4-networking",
+    day: 4,
+    title: "Networking and Departure",
+    description: "Networking and departure.",
+    start: "14:20",
+    venue: "Main Lobby",
+    badge: "Networking",
+  }),
+];
+
+export const isippeProgramme = [...preEvents, ...day3, ...day4];
+export const isippeProgrammeSymposium = [...day3, ...day4];
+export const isippeProgrammePreEvents = preEvents;
