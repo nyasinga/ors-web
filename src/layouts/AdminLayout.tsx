@@ -160,7 +160,7 @@ export function AdminLayout() {
   );
 
   return (
-    <div className="min-h-dvh bg-white font-sans text-[#07164d] antialiased">
+    <div className="min-h-dvh bg-white font-sans text-[#07164d] antialiased" dir="ltr">
       <div className="grid min-h-dvh grid-cols-1 bg-white md:grid-cols-[220px_1fr]">
         <aside className="relative z-[2] hidden flex-col overflow-hidden border-r border-[#e2ecf5] bg-gradient-to-b from-[#f8fcff] via-[#f3f8fd] to-[#edf5fb] px-3 pb-[18px] pt-3 shadow-[inset_-1px_0_0_rgba(220,232,245,.9)] md:flex">
           <div

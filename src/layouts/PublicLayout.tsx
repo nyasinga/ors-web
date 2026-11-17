@@ -54,7 +54,7 @@ function PublicLayoutShell() {
   }, [open]);
 
   return (
-    <div className="flex min-h-dvh w-full flex-col text-[#0b1016]">
+    <div className="flex min-h-dvh w-full flex-col text-[#0b1016]" dir="ltr">
       <header className="sticky top-0 z-50 h-[94px] border-b border-[#e5e9ee] bg-white max-[960px]:h-[76px] max-[640px]:h-16">
         <div className={cn(pageContainer, "flex h-full min-w-0 items-center gap-3")}>
           <Link

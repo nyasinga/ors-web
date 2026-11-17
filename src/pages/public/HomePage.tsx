@@ -168,7 +168,7 @@ function HomeSponsorsSection({
         aria-hidden
       />
 
-      <div className={cn(container, "relative min-w-0")}>
+      <div dir="ltr" className={cn(container, "relative min-w-0")}>
         {/* Section heading */}
         <div className="mb-10 flex flex-col gap-5 sm:mb-12 sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-2xl">
@@ -311,6 +311,7 @@ export function HomePage() {
         />
 
         <div
+          dir="ltr"
           className={cn(
             container,
             "relative z-[2] box-border",
@@ -571,6 +572,7 @@ export function HomePage() {
 
       <section className="border-b border-[#edf1f4] bg-white max-[640px]:border-t">
         <div
+          dir="ltr"
           className={cn(
             container,
             "grid min-h-[111px] grid-cols-5 items-center",
@@ -619,6 +621,7 @@ export function HomePage() {
         id="about"
       >
         <div
+          dir="ltr"
           className={cn(
             container,
             "grid grid-cols-[33%_36%_31%] items-stretch",
@@ -729,7 +732,7 @@ export function HomePage() {
         aria-labelledby="event-info-cta-title"
         className="border-t border-[#e6ebf1] bg-white py-10 sm:py-14"
       >
-        <div className={cn(container, "min-w-0")}>
+        <div className={cn(container, "min-w-0")} dir="ltr">
           <div
             className={cn(
               "relative grid grid-cols-1 items-center gap-8 overflow-hidden rounded-2xl",

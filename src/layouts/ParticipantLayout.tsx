@@ -118,7 +118,7 @@ export function ParticipantLayout() {
   }
 
   return (
-    <div className="box-border min-h-dvh overflow-x-hidden bg-white p-0 text-[#07164d] antialiased [font-family:Inter,Arial,sans-serif]">
+    <div className="box-border min-h-dvh overflow-x-hidden bg-white p-0 text-[#07164d] antialiased [font-family:Inter,Arial,sans-serif]" dir="ltr">
       <div className="min-h-dvh w-full overflow-hidden bg-white">
         <header className="relative z-20 h-[93px] border-b border-[#e3ebf4] bg-white max-[850px]:h-[75px]">
           <div className="mx-auto box-border flex h-full w-[min(calc(100%_-_38px),1480px)] max-w-full items-center max-[600px]:w-[calc(100%_-_24px)]">
