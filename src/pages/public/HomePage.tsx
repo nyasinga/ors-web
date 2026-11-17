@@ -272,7 +272,6 @@ export function HomePage() {
     let cancelled = false;
     void (async () => {
       const rows = await fetchHomeSponsors(engagement);
-      console.log(rows);
       if (!cancelled) setSponsors(rows);
     })();
     return () => {
