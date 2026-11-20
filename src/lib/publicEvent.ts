@@ -17,6 +17,7 @@ import {
   EVENT_AUDIENCE_OPTIONS,
   formatModeLabel,
 } from "./engagements";
+import { isOnMainVenue } from "./programmeVenues";
 import { resourcePublicUrl } from "./resources";
 import type {
   EngagementFaqCategory,
@@ -1043,7 +1044,7 @@ export function engagementToPublicProgramme(engagement: Engagement | null): {
   const venueCity = engagement?.city?.trim() || "";
   const venueCountry = countryLabel(engagement?.country) || "";
   const venueLine = [venueTitle, venueCity, venueCountry].filter(Boolean).join(", ");
-  const venueSub = engagement?.city?.trim() || venueTitle.split(/\s+/)[0] || "Venue";
+  const venueSubDefault = engagement?.city?.trim() || venueTitle.split(/\s+/)[0] || "Venue";
 
   const source = asProgramme(engagement?.programme);
   const sessions: ProgrammeSession[] = source.map((session, index) => {
@@ -1051,6 +1052,9 @@ export function engagementToPublicProgramme(engagement: Engagement | null): {
     const type = session.badge?.trim() || "Session";
     const access = normalizeSessionAccess(session.access);
     const { speakers, speakerLines } = speakersLabel(session);
+      const venue = session.venue || session.place || venueTitle;
+    // Don't append the main-event city under an off-site venue (looks like two places).
+    const onMain = isOnMainVenue(venue, venueLine || venueTitle);
     return {
       id: session.id || `session-${index + 1}`,
       day,
@@ -1062,8 +1066,8 @@ export function engagementToPublicProgramme(engagement: Engagement | null): {
       accessLabel: accessLabel(access),
       speakers,
       speakerLines,
-      venue: session.venue || session.place || venueTitle,
-      venueSub,
+      venue,
+      venueSub: onMain ? venueSubDefault : "",
       venueImage: venueImageFor(session.venue || session.place, type),
     };
   });

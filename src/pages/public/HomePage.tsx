@@ -14,15 +14,17 @@ import {
   Users,
 } from "lucide-react";
 import { EventCountdown } from "../../components/EventCountdown";
+import { EventEndedHero } from "../../components/public/EventEndedHero";
 import { PublicEventGate } from "../../components/public/PublicEventGate";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { cn } from "../../lib/cn";
+import { isEventEndedActive, isRegistrationOpen } from "../../lib/eventLifecycle";
 import {
   engagementToHomeContent,
   fetchHomeSponsors,
   type PublicHomeSponsor,
 } from "../../lib/publicEvent";
-import { engagementBannerUrl } from "../../lib/resources";
+import { engagementBannerUrl, eventEndedBannerUrl } from "../../lib/resources";
 
 const featureIcons = [Globe2, Users, Handshake, ChartColumnIncreasing, Cog] as const;
 const featureTones = ["blue", "green", "blue", "blue", "blue"] as const;
@@ -266,6 +268,8 @@ export function HomePage() {
   const { t } = useTranslation(["home", "common"]);
   const { engagement } = usePublicEngagement();
   const home = useMemo(() => engagementToHomeContent(engagement), [engagement]);
+  const eventEnded = isEventEndedActive(engagement);
+  const registrationOpen = isRegistrationOpen(engagement);
   const [sponsors, setSponsors] = useState<PublicHomeSponsor[]>([]);
 
   useEffect(() => {
@@ -294,6 +298,14 @@ export function HomePage() {
   return (
     <PublicEventGate variant="home">
     <div className="text-[#0b1016]">
+      {eventEnded ? (
+        <EventEndedHero
+          bannerUrl={eventEndedBannerUrl(engagement)}
+          message={engagement?.eventEndedMessage}
+        />
+      ) : null}
+
+      {!eventEnded ? (
       <section
         className={cn(
           "relative isolate min-h-[516px] overflow-hidden bg-white",
@@ -394,7 +406,7 @@ export function HomePage() {
                 "max-[640px]:mb-4 max-[640px]:mt-3.5 max-[640px]:line-clamp-8 max-[640px]:text-[12px] max-[640px]:leading-[1.45]",
               )}
             >
-                {home.intro}
+              {home.intro}
             </p>
             <div
               className={cn(
@@ -403,19 +415,21 @@ export function HomePage() {
                 "max-[640px]:grid max-[640px]:grid-cols-1 max-[640px]:gap-2.5",
               )}
             >
-              <Link
-                className={cn(
-                  "inline-flex min-h-[50px] flex-1 items-center justify-center gap-2.5 rounded-[7px] bg-[#075fd8] px-5 text-[14px] font-bold text-white",
-                  "max-[960px]:min-w-0 max-[960px]:flex-[1_1_160px]",
-                  "max-[640px]:min-h-12 max-[640px]:w-full max-[640px]:flex-none max-[640px]:px-[18px]",
-                )}
-                to="/register"
-              >
-                {t("common:actions.registerNow")}
-                <span className="text-[22px] leading-none" aria-hidden>
-                  →
-                </span>
-              </Link>
+              {registrationOpen ? (
+                <Link
+                  className={cn(
+                    "inline-flex min-h-[50px] flex-1 items-center justify-center gap-2.5 rounded-[7px] bg-[#075fd8] px-5 text-[14px] font-bold text-white",
+                    "max-[960px]:min-w-0 max-[960px]:flex-[1_1_160px]",
+                    "max-[640px]:min-h-12 max-[640px]:w-full max-[640px]:flex-none max-[640px]:px-[18px]",
+                  )}
+                  to="/register"
+                >
+                  {t("common:actions.registerNow")}
+                  <span className="text-[22px] leading-none" aria-hidden>
+                    →
+                  </span>
+                </Link>
+              ) : null}
 
               <Link
                 className={cn(
@@ -557,18 +571,29 @@ export function HomePage() {
                   ))}
                 </div>
 
-                <Link
-                  to="/register"
-                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[#ed1c24] px-4 py-2.5 text-[11px] font-extrabold text-white transition-colors hover:bg-[#c91820]"
-                >
-                  Register Early & Save
-                  <span>→</span>
-                </Link>
+                {registrationOpen ? (
+                  <Link
+                    to="/register"
+                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[#ed1c24] px-4 py-2.5 text-[11px] font-extrabold text-white transition-colors hover:bg-[#c91820]"
+                  >
+                    Register Early & Save
+                    <span>→</span>
+                  </Link>
+                ) : (
+                  <Link
+                    to="/programme"
+                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[#075fd8] px-4 py-2.5 text-[11px] font-extrabold text-white transition-colors hover:brightness-[0.96]"
+                  >
+                    {t("common:actions.viewProgramme")}
+                    <span>→</span>
+                  </Link>
+                )}
               </div>
             </div>
           </aside>
         </div>
       </section>
+      ) : null}
 
       <section className="border-b border-[#edf1f4] bg-white max-[640px]:border-t">
         <div

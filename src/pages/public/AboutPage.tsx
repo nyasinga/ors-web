@@ -13,6 +13,7 @@ import { PageHero } from "../../components/public/PageHero";
 import { PublicEventGate } from "../../components/public/PublicEventGate";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { cn } from "../../lib/cn";
+import { isRegistrationOpen } from "../../lib/eventLifecycle";
 import { engagementToAboutContent } from "../../lib/publicEvent";
 import { engagementBannerUrl } from "../../lib/resources";
 
@@ -89,6 +90,7 @@ export function AboutPage() {
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]["id"]>("overview");
   const { engagement } = usePublicEngagement();
   const about = useMemo(() => engagementToAboutContent(engagement), [engagement]);
+  const registrationOpen = isRegistrationOpen(engagement);
 
   const goToTab = (tab: (typeof tabs)[number]) => {
     setActiveTab(tab.id);
@@ -373,9 +375,9 @@ export function AboutPage() {
               </div>
               <Link
                 className="mt-2 inline-flex h-[41px] w-full items-center justify-center gap-2.5 rounded-[5px] bg-[#075fd8] text-sm font-bold text-white no-underline"
-                to="/register"
+                to={registrationOpen ? "/register" : "/programme"}
               >
-                Register Now{" "}
+                {registrationOpen ? "Register Now" : "View Programme"}{" "}
                 <span className="text-[23px] font-normal leading-none" aria-hidden>
                   →
                 </span>

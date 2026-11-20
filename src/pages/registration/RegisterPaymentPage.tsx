@@ -8,6 +8,7 @@ import {
   type ProofOfPaymentSubmit,
 } from "../../components/registration/ProofOfPaymentModal";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
+import { RegistrationClosedGate } from "../../components/public/RegistrationClosedGate";
 import { useToast } from "../../components/ui/Toast";
 import { useRegistration } from "../../hooks/useRegistration";
 import { invoiceMatchesSelection } from "../../contexts/registrationShared";
@@ -183,8 +184,11 @@ export function RegisterPaymentPage() {
     }
   };
 
+  const hasInvoice = Boolean(invoice?.ticketID || invoice?.url);
+
   if (!invoice?.url) {
     return (
+      <RegistrationClosedGate allowContinue={hasInvoice}>
       <div className={r.registerPage}>
         <RegisterHero current={3} />
         <main className={r.main}>
@@ -193,10 +197,12 @@ export function RegisterPaymentPage() {
           </div>
         </main>
       </div>
+      </RegistrationClosedGate>
     );
   }
 
   return (
+    <RegistrationClosedGate allowContinue={hasInvoice}>
     <div className={r.registerPage}>
       <RegisterHero current={3} />
       <main className={r.main}>
@@ -437,5 +443,6 @@ export function RegisterPaymentPage() {
         invoiceReference={invoiceRef}
       />
     </div>
+    </RegistrationClosedGate>
   );
 }

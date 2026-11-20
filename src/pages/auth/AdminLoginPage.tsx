@@ -14,9 +14,11 @@ import {
 } from "lucide-react";
 import { useEventCopy } from "../../i18n/useEventCopy";
 import { useTranslation } from "react-i18next";
+import { usePublicEngagement } from "../../hooks/usePublicEngagement";
 import { ApiError } from "../../lib/api";
 import { login, saveAuthSession } from "../../lib/auth";
 import { cn } from "../../lib/cn";
+import { isRegistrationOpen } from "../../lib/eventLifecycle";
 import { pageContainer } from "../../lib/pageContainer";
 
 const features = [
@@ -63,6 +65,8 @@ const fieldLabel = cn(
 export function AdminLoginPage() {
   const { t } = useTranslation("common");
   const event = useEventCopy();
+  const { engagement } = usePublicEngagement();
+  const registrationOpen = isRegistrationOpen(engagement);
   const navigate = useNavigate();
   const location = useLocation();
   const returnTo =
@@ -214,9 +218,9 @@ export function AdminLoginPage() {
                   "hover:bg-[#0550c9]",
                   "max-[600px]:min-w-0 max-[600px]:w-full",
                 )}
-                to="/register"
+                to={registrationOpen ? "/register" : "/programme"}
               >
-                {t("actions.registerNow")}
+                {registrationOpen ? t("actions.registerNow") : t("actions.viewProgramme")}
                 <span className="text-[20px] font-normal leading-none" aria-hidden>
                   →
                 </span>

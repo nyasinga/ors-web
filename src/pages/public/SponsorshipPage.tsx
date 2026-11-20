@@ -9,7 +9,9 @@ import {
   type PublicSponsorPackage,
 } from "../../lib/publicEvent";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
+import { isRegistrationOpen } from "../../lib/eventLifecycle";
 import { engagementBannerUrl } from "../../lib/resources";
+import { useToast } from "../../components/ui/Toast";
 
 
 type Cell = "tick" | "dash" | string;
@@ -56,8 +58,10 @@ const arrow = "text-[23px] font-normal leading-none";
 /** Sponsorship — packages from the public engagement API. */
 export function SponsorshipPage() {
   const navigate = useNavigate();
+  const toast = useToast();
   const { selectSponsorPackage, clearDetails } = useRegistration();
   const { engagement } = usePublicEngagement();
+  const registrationOpen = isRegistrationOpen(engagement);
   const packages = useMemo(() => engagementToPublicSponsors(engagement), [engagement]);
   const [selected, setSelected] = useState(packages[0]?.id || "");
 
@@ -72,6 +76,10 @@ export function SponsorshipPage() {
   const eventName = engagement?.engagementName?.trim() || "Event";
 
   const continueWithPackage = (item: PublicSponsorPackage) => {
+    if (!registrationOpen) {
+      toast.info("Registration is closed — this event has ended.");
+      return;
+    }
     clearDetails();
     selectSponsorPackage(item, "sponsorship");
     navigate("/register/details");
@@ -308,13 +316,26 @@ export function SponsorshipPage() {
               </ul>
               <button
                 type="button"
-                className="mt-4 inline-flex min-h-[51px] w-full cursor-pointer items-center justify-center gap-3 rounded-md border-0 bg-[#075fd8] text-sm font-extrabold text-white max-[640px]:min-h-[46px] max-[640px]:text-xs"
-                onClick={() => continueWithPackage(pkg)}
+                className={cn(
+                  "mt-4 inline-flex min-h-[51px] w-full cursor-pointer items-center justify-center gap-3 rounded-md border-0 text-sm font-extrabold text-white max-[640px]:min-h-[46px] max-[640px]:text-xs",
+                  registrationOpen ? "bg-[#075fd8]" : "bg-[#7d899e]",
+                )}
+                onClick={() =>
+                  registrationOpen
+                    ? continueWithPackage(pkg)
+                    : navigate("/programme")
+                }
               >
-                {pkg.button}{" "}
-                <span className={arrow} aria-hidden>
-                  →
-                </span>
+                {registrationOpen ? (
+                  <>
+                    {pkg.button}{" "}
+                    <span className={arrow} aria-hidden>
+                      →
+                    </span>
+                  </>
+                ) : (
+                  "Registration closed — View Programme"
+                )}
               </button>
             </aside>
           </div>

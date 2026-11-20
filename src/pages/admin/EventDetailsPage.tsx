@@ -51,6 +51,7 @@ import { Input } from "../../components/ui/Input";
 import { Modal } from "../../components/ui/Modal";
 import { ScrollableNav } from "../../components/ui/ScrollableNav";
 import { Select } from "../../components/ui/Select";
+import { Toggle } from "../../components/ui/Toggle";
 import { useToast } from "../../components/ui/Toast";
 import { eventDetailTabs } from "../../data/adminEvents";
 import { engagementSpeakerToCard } from "../../components/speakers/SpeakerCard";
@@ -81,9 +82,12 @@ import { clearPublicEngagementCache } from "../../lib/publicEvent";
 import { printParticipantTicket } from "../../lib/printParticipantTicket";
 import { listEventParticipants } from "../../lib/eventParticipants";
 import { categorizePayment } from "../../lib/registrationStats";
+import { isEngagementEnded } from "../../lib/eventLifecycle";
 import {
   DEFAULT_EVENT_BANNER,
+  DEFAULT_EVENT_ENDED_BANNER,
   engagementBannerUrl,
+  eventEndedBannerUrl,
   resourcePublicUrl,
   uploadResource,
 } from "../../lib/resources";
@@ -302,6 +306,10 @@ type DetailView = {
   registration: string;
   payment: string;
   isFeatured: boolean;
+  eventEndedActive: boolean;
+  eventEndedBannerImage: string;
+  eventEndedMessage: string;
+  endDatePassed: boolean;
   website: string;
   facebook: string;
   twitter: string;
@@ -347,6 +355,10 @@ function toDetailView(engagement: Engagement | null): DetailView {
       registration: "—",
       payment: "—",
       isFeatured: false,
+      eventEndedActive: false,
+      eventEndedBannerImage: "",
+      eventEndedMessage: "",
+      endDatePassed: false,
       website: "",
       facebook: "",
       twitter: "",
@@ -408,6 +420,10 @@ function toDetailView(engagement: Engagement | null): DetailView {
     registration: engagement.registrationEnabled ? "Open" : "Closed",
     payment: engagement.paymentEnabled ? "Enabled" : "Disabled",
     isFeatured: Boolean(engagement.isFeatured),
+    eventEndedActive: Boolean(engagement.eventEndedActive),
+    eventEndedBannerImage: engagement.eventEndedBannerImage?.trim() || "",
+    eventEndedMessage: engagement.eventEndedMessage?.trim() || "",
+    endDatePassed: isEngagementEnded(engagement),
     website: engagement.websiteUrl || "",
     facebook: engagement.facebookUrl || "",
     twitter: engagement.twitterUrl || "",
@@ -1153,7 +1169,30 @@ function EventClassificationSettings({
   const [open, setOpen] = useState(false);
   const [featureBusy, setFeatureBusy] = useState(false);
   const [featureError, setFeatureError] = useState<string | null>(null);
+  const [endedBusy, setEndedBusy] = useState(false);
+  const [endedError, setEndedError] = useState<string | null>(null);
+  const [endedMessage, setEndedMessage] = useState(detail.eventEndedMessage);
+  const [endedBannerPreview, setEndedBannerPreview] = useState(() =>
+    eventEndedBannerUrl({
+      eventEndedBannerImage: detail.eventEndedBannerImage || undefined,
+    }),
+  );
+  const [endedBannerFile, setEndedBannerFile] = useState<File | null>(null);
+  const [endedBannerCleared, setEndedBannerCleared] = useState(false);
+  const [endedSaveBusy, setEndedSaveBusy] = useState(false);
   const { push } = useToast();
+  const toast = useToast();
+
+  useEffect(() => {
+    setEndedMessage(detail.eventEndedMessage);
+    setEndedBannerFile(null);
+    setEndedBannerCleared(false);
+    setEndedBannerPreview(
+      eventEndedBannerUrl({
+        eventEndedBannerImage: detail.eventEndedBannerImage || undefined,
+      }),
+    );
+  }, [detail.eventEndedMessage, detail.eventEndedBannerImage, detail.eventEndedActive]);
 
   const toggleFeatured = async () => {
     if (!fromApi || featureBusy) return;
@@ -1181,6 +1220,80 @@ function EventClassificationSettings({
     }
   };
 
+  const toggleEventEnded = async (next: boolean) => {
+    if (!fromApi || endedBusy) return;
+    setEndedBusy(true);
+    setEndedError(null);
+    try {
+      await updateEngagement(eventId, {
+        eventEndedActive: next,
+        ...(next ? { registrationEnabled: false } : {}),
+      });
+      clearPublicEngagementCache();
+      await onChanged();
+      push({
+        tone: "success",
+        message: next
+          ? "Event Ended banner is now active on the public homepage."
+          : "Event Ended banner deactivated — live homepage hero restored.",
+      });
+    } catch (err) {
+      setEndedError(
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Could not update Event Ended banner",
+      );
+    } finally {
+      setEndedBusy(false);
+    }
+  };
+
+  const saveEventEndedContent = async () => {
+    if (!fromApi || endedSaveBusy) return;
+    setEndedSaveBusy(true);
+    setEndedError(null);
+    try {
+      let imageValue: string | undefined = detail.eventEndedBannerImage || undefined;
+      if (endedBannerCleared) {
+        imageValue = "";
+      } else if (endedBannerFile) {
+        const uploaded = await uploadResource(endedBannerFile, {
+          resourceName: `event-ended-banner-${Date.now()}`,
+        });
+        imageValue =
+          uploaded.resourceID ||
+          resourcePublicUrl(uploaded) ||
+          uploaded.url ||
+          "";
+        if (!imageValue) {
+          throw new Error("Upload succeeded but no banner URL was returned.");
+        }
+      }
+
+      await updateEngagement(eventId, {
+        eventEndedMessage: endedMessage.trim(),
+        eventEndedBannerImage: imageValue ?? "",
+      });
+      clearPublicEngagementCache();
+      setEndedBannerFile(null);
+      setEndedBannerCleared(false);
+      await onChanged();
+      toast.success("Event Ended banner content saved.");
+    } catch (err) {
+      setEndedError(
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Could not save Event Ended banner content",
+      );
+    } finally {
+      setEndedSaveBusy(false);
+    }
+  };
+
   return (
     <Card>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -1198,6 +1311,7 @@ function EventClassificationSettings({
           ["Registration", detail.registration],
           ["Payment", detail.payment],
           ["Active event", detail.isFeatured ? "Active" : "Inactive"],
+          ["Event Ended banner", detail.eventEndedActive ? "Active" : "Off"],
           ["Mode", detail.mode],
           ["Category", detail.category],
           ["Target Audience", detail.audience],
@@ -1243,6 +1357,111 @@ function EventClassificationSettings({
           ) : null}
         </div>
       ) : null}
+
+      {fromApi ? (
+        <div className="mt-4 rounded-lg border border-[#c6e86b]/60 bg-[#f4faf6] px-3 py-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-ink">Event Ended banner</p>
+              <p className="mt-0.5 text-[15px] leading-snug text-mute">
+                When active, the homepage hero is replaced with the Event Ended artwork
+                and public registration is closed. Archive pages stay available.
+              </p>
+              {detail.endDatePassed && !detail.eventEndedActive ? (
+                <p className="mt-2 text-[13px] font-medium text-[#08713f]">
+                  Event end date has passed — turn this on to show the banner.
+                </p>
+              ) : null}
+            </div>
+            <Toggle
+              checked={detail.eventEndedActive}
+              onChange={(next) => void toggleEventEnded(next)}
+              label={detail.eventEndedActive ? "Banner on" : "Banner off"}
+              disabled={endedBusy}
+              className="shrink-0"
+            />
+          </div>
+
+          <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_220px]">
+            <div className="grid gap-3">
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-ink">
+                  Thank-you message (optional)
+                </span>
+                <textarea
+                  value={endedMessage}
+                  onChange={(e) => setEndedMessage(e.target.value)}
+                  rows={4}
+                  placeholder="Leave blank to use the message already in the artwork."
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-blue"
+                />
+              </label>
+              <div>
+                <p className="mb-1.5 text-sm font-medium text-ink">Banner image</p>
+                <p className="mb-2 text-xs text-mute">
+                  Defaults to the packaged Event Ended design. Upload a replacement if needed.
+                </p>
+                <ImagePicker
+                  imageKey="event-ended-banner.jpg"
+                  value={endedBannerPreview}
+                  cropShape="rect"
+                  aspect={16 / 10}
+                  onChange={(file) => {
+                    if (!file) {
+                      setEndedBannerFile(null);
+                      setEndedBannerCleared(true);
+                      setEndedBannerPreview(DEFAULT_EVENT_ENDED_BANNER);
+                      return;
+                    }
+                    setEndedBannerCleared(false);
+                    setEndedBannerFile(file);
+                    setEndedBannerPreview(URL.createObjectURL(file));
+                  }}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  disabled={endedSaveBusy}
+                  onClick={() => void saveEventEndedContent()}
+                >
+                  {endedSaveBusy ? "Saving…" : "Save banner content"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={endedSaveBusy}
+                  onClick={() => {
+                    setEndedBannerFile(null);
+                    setEndedBannerCleared(true);
+                    setEndedBannerPreview(DEFAULT_EVENT_ENDED_BANNER);
+                    setEndedMessage("");
+                  }}
+                >
+                  Reset to default art
+                </Button>
+              </div>
+            </div>
+            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+              <img
+                src={endedBannerPreview || DEFAULT_EVENT_ENDED_BANNER}
+                alt="Event Ended banner preview"
+                className="block h-auto w-full object-contain"
+              />
+              <p className="border-t border-slate-100 px-2 py-1.5 text-center text-[11px] text-mute">
+                Homepage preview
+              </p>
+            </div>
+          </div>
+
+          {endedError ? (
+            <p className="mt-2 text-[15px] text-rose-600" role="alert">
+              {endedError}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <Link to={`/admin/events/${eventId}/edit`} className="mt-4 inline-block">
         <Button variant="outline" size="sm">
           Edit Event <ArrowRight size={14} />

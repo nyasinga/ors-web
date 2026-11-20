@@ -21,6 +21,7 @@ import { PublicEventGate } from "../../components/public/PublicEventGate";
 import { cn } from "../../lib/cn";
 import { engagementBannerUrl } from "../../lib/resources";
 import { usePublicEngagement } from "../../hooks/usePublicEngagement";
+import { isRegistrationOpen } from "../../lib/eventLifecycle";
 
 const tabs = [
   { id: "venue", label: "Venue", target: "venue" },
@@ -152,6 +153,7 @@ function SectionHeading({
 
 function InfoPage() {
   const { engagement } = usePublicEngagement();
+  const registrationOpen = isRegistrationOpen(engagement);
 
   // Read public event details directly from the LoopBack Engagement model.
   const eventName = engagement?.engagementName || "ISIPPE-3";
@@ -563,10 +565,18 @@ function InfoPage() {
                       Available until 31 October 2026
                     </div>
                     <a
-                      href="/register"
+                      href={registrationOpen ? "/register" : "/programme"}
                       className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[5px] bg-[#ed1c24] px-4 text-[11px] font-extrabold text-white no-underline transition-colors hover:bg-[#c91820]"
                     >
-                      Register for ISIPPE-3 <ArrowUpRight size={15} />
+                      {registrationOpen ? (
+                        <>
+                          Register for ISIPPE-3 <ArrowUpRight size={15} />
+                        </>
+                      ) : (
+                        <>
+                          View Programme <ArrowUpRight size={15} />
+                        </>
+                      )}
                     </a>
                   </div>
                   <div className={card}>
@@ -789,10 +799,10 @@ function InfoPage() {
                   <Phone size={14} /> +254 20 2280000
                 </p>
                 <a
-                  href="/register"
+                  href={registrationOpen ? "/register" : "/programme"}
                   className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-[5px] bg-[#ed1c24] text-[11px] font-extrabold text-white no-underline hover:bg-[#c91820]"
                 >
-                  Go to Registration
+                  {registrationOpen ? "Go to Registration" : "View Programme"}
                 </a>
               </div>
             </aside>

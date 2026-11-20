@@ -5,6 +5,10 @@
       "enforcement": "Stronger Enforcement",
       "collaboration": "Regional Collaboration",
       "innovation": "Innovation for Inclusive Growth"
+    },
+    "ended": {
+      "badge": "Event Ended",
+      "body": "The {{eventName}} held on {{dates}} in {{place}}, has now concluded.\n\nWe sincerely thank all delegates, speakers, sponsors, exhibitors and partners for their valuable participation and support in making the symposium a success."
     }
   },
   "features": {

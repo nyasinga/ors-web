@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
+import { RegistrationClosedGate } from "../../components/public/RegistrationClosedGate";
 import { IMAGE_KEY, IMAGE_PERSIST_KEY } from "../../contexts/registrationShared";
 import { useRegistration } from "../../hooks/useRegistration";
 import { SearchableSelect } from "../../components/ui/SearchableSelect";
@@ -209,6 +210,7 @@ export function RegisterDetailsPage() {
   };
 
   return (
+    <RegistrationClosedGate>
     <div className={r.registerPage}>
       <RegisterHero current={2} />
 
@@ -558,5 +560,6 @@ export function RegisterDetailsPage() {
 
       <PrivacyBar />
     </div>
+    </RegistrationClosedGate>
   );
 }

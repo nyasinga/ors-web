@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { MapPin, Search } from "lucide-react";
 import type { ProgrammeSession } from "../../data/publicContent";
 import { cn } from "../../lib/cn";
+import { dayHeaderLocation } from "../../lib/programmeVenues";
 
 export type ProgrammeDayFilter = {
   id: string;
@@ -177,6 +178,11 @@ export function ProgrammeSchedule({
         {byDay.map(({ day, sessions }) => {
           const open = openDays[day] ?? day === dayNumbers[0];
           const meta = programme.dayMeta[day] || { date: `Day ${day}`, weekday: "" };
+          // Prefer exact session venue when this day is not at the main event site.
+          const dayLocation = dayHeaderLocation(
+            sessions.map((s) => s.venue),
+            programme.venueLine,
+          );
           return (
             <section
               key={day}
@@ -210,7 +216,7 @@ export function ProgrammeSchedule({
                 </div>
                 <div className="ml-auto flex items-center gap-2 text-[11px] text-[#101827] max-[700px]:hidden [&_svg]:h-[19px] [&_svg]:w-[19px] [&_svg]:shrink-0 [&_svg]:text-[#0964df]">
                   <MapPin size={19} strokeWidth={2} />
-                  {programme.venueLine}
+                  {dayLocation}
                 </div>
                 <span
                   className="ml-[18px] text-[22px] leading-none text-[#0964df] max-[700px]:ml-auto"

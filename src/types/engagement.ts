@@ -200,6 +200,15 @@ export type Engagement = {
   registrationEnabled?: boolean;
   registrationStartDate?: string;
   registrationEndDate?: string;
+  /**
+   * When true, the public homepage shows the Event Ended hero banner
+   * and public registration is closed. Managed in admin Event Settings.
+   */
+  eventEndedActive?: boolean;
+  /** Optional custom Event Ended banner image (resource id or URL). */
+  eventEndedBannerImage?: string;
+  /** Optional thank-you / conclusion message override under the banner. */
+  eventEndedMessage?: string;
   approvalRequired?: boolean;
   waitlistEnabled?: boolean;
   registrationLimit?: number;

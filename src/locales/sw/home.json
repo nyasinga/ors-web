@@ -5,6 +5,10 @@
       "enforcement": "Utekelezaji Imara",
       "collaboration": "Ushirikiano wa Kikanda",
       "innovation": "Ubunifu kwa Ukuaji Jumuishi"
+    },
+    "ended": {
+      "badge": "Tukio Limekwisha",
+      "body": "{{eventName}} lililofanyika {{dates}} huko {{place}}, sasa limehitimishwa.\n\nTunawashukuru kwa dhati wajumbe, wazungumzaji, wafadhili, waonyeshaji na washirika wote kwa ushiriki na usaidizi wao muhimu katika kufanikisha kongamano."
     }
   },
   "features": {

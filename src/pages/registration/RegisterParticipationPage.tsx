@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Handshake, Mic2, Monitor, Users } from "lucide-react";
 import { PrivacyBar, RegisterHero } from "../../components/registration/RegisterChrome";
+import { RegistrationClosedGate } from "../../components/public/RegistrationClosedGate";
 import { useRegistration } from "../../hooks/useRegistration";
 import { participationTypes, type ParticipationType } from "../../data/registration";
 import { useEventCopy } from "../../i18n/useEventCopy";
@@ -36,6 +37,7 @@ export function RegisterParticipationPage() {
   const SelectedIcon = icons[selected.id];
 
   return (
+    <RegistrationClosedGate>
     <div className={r.registerPage}>
       <RegisterHero current={1} />
 
@@ -195,5 +197,6 @@ export function RegisterParticipationPage() {
 
       <PrivacyBar />
     </div>
+    </RegistrationClosedGate>
   );
 }

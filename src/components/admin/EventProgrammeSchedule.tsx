@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, MapPin } from "lucide-react";
+import { dayHeaderLocation } from "../../lib/programmeVenues";
 import type { EngagementProgrammeSession } from "../../types/engagement";
 import { cn } from "../../lib/cn";
 
@@ -189,7 +190,11 @@ function buildDays(args: {
       id: `day-${d}`,
       label: `Day ${d}`,
       dateLabel: formatDayDate(startDate, d),
-      location,
+      // Exact venue when this day is not at the main event site (e.g. SAIMBOT).
+      location: dayHeaderLocation(
+        sessions.map((s) => s.venue || s.place),
+        location,
+      ),
       rows: toRows(sessions),
     });
   }

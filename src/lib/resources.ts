@@ -52,12 +52,25 @@ function pickResource(payload: unknown): UploadedResource {
 
 export const DEFAULT_EVENT_BANNER = "/assets/about-hero.png";
 
+/** Packaged Event Ended hero artwork (client design). */
+export const DEFAULT_EVENT_ENDED_BANNER = "/assets/event-ended-banner.jpg";
+
 /** Event page banner: API banner/logo when set, otherwise static default. */
 export function engagementBannerUrl(
   engagement: { bannerImage?: string | null; logo?: string | null } | null | undefined,
   fallback: string = DEFAULT_EVENT_BANNER,
 ): string {
   const raw = engagement?.bannerImage?.trim() || engagement?.logo?.trim() || "";
+  if (!raw) return fallback;
+  return resourcePublicUrl(raw) || fallback;
+}
+
+/** Event Ended hero: custom upload when set, otherwise packaged artwork. */
+export function eventEndedBannerUrl(
+  engagement: { eventEndedBannerImage?: string | null } | null | undefined,
+  fallback: string = DEFAULT_EVENT_ENDED_BANNER,
+): string {
+  const raw = engagement?.eventEndedBannerImage?.trim() || "";
   if (!raw) return fallback;
   return resourcePublicUrl(raw) || fallback;
 }

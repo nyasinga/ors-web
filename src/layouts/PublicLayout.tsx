@@ -4,8 +4,10 @@ import { useTranslation } from "react-i18next";
 import { Menu, X } from "lucide-react";
 import { navLinks } from "../data/event";
 import { PublicEngagementProvider } from "../contexts/PublicEngagementContext";
+import { usePublicEngagement } from "../hooks/usePublicEngagement";
 import { useEventCopy } from "../i18n/useEventCopy";
 import { cn } from "../lib/cn";
+import { isRegistrationOpen } from "../lib/eventLifecycle";
 import { pageContainer } from "../lib/pageContainer";
 import LanguageButton from "../components/i18n/LanguageButton";
 
@@ -22,8 +24,11 @@ function PublicLayoutShell() {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation("common");
   const event = useEventCopy();
+  const { engagement } = usePublicEngagement();
+  const registrationOpen = isRegistrationOpen(engagement);
   const { pathname } = useLocation();
   const onRegister = pathname.startsWith("/register");
+  const showRegisterCta = !onRegister && registrationOpen;
 
   useEffect(() => {
     setOpen(false);
@@ -102,7 +107,7 @@ function PublicLayoutShell() {
             ))}
           </nav>
 
-          {!onRegister ? (
+          {showRegisterCta ? (
             <Link
               to="/register"
               className="ml-7 hidden h-[47px] min-w-[160px] shrink-0 items-center justify-center gap-[13px] rounded-[7px] bg-[#075fd8] text-[15px] font-bold text-white hover:brightness-[0.96] max-[1400px]:ml-3.5 max-[1400px]:h-11 max-[1400px]:min-w-[148px] max-[1400px]:text-[14px] min-[961px]:inline-flex"
@@ -111,6 +116,13 @@ function PublicLayoutShell() {
               <span className="text-[23px] leading-none" aria-hidden>
                 →
               </span>
+            </Link>
+          ) : !onRegister ? (
+            <Link
+              to="/programme"
+              className="ml-7 hidden h-[47px] min-w-[160px] shrink-0 items-center justify-center gap-[13px] rounded-[7px] border border-[#08713f] bg-white text-[15px] font-bold text-[#08713f] hover:bg-[#f3faf6] max-[1400px]:ml-3.5 max-[1400px]:h-11 max-[1400px]:min-w-[148px] max-[1400px]:text-[14px] min-[961px]:inline-flex"
+            >
+              {t("actions.viewProgramme")}
             </Link>
           ) : null}
 
@@ -171,7 +183,7 @@ function PublicLayoutShell() {
                 {t(item.labelKey)}
               </NavLink>
             ))}
-            {!onRegister ? (
+            {showRegisterCta ? (
               <Link
                 to="/register"
                 className="mt-3.5 flex min-h-12 items-center justify-center gap-2.5 rounded-lg bg-[#075fd8] px-[18px] text-[15px] font-bold text-white hover:brightness-[0.96]"
@@ -181,6 +193,14 @@ function PublicLayoutShell() {
                 <span className="text-[23px] leading-none" aria-hidden>
                   →
                 </span>
+              </Link>
+            ) : !onRegister ? (
+              <Link
+                to="/programme"
+                className="mt-3.5 flex min-h-12 items-center justify-center gap-2.5 rounded-lg border border-[#08713f] bg-white px-[18px] text-[15px] font-bold text-[#08713f]"
+                onClick={() => setOpen(false)}
+              >
+                {t("actions.viewProgramme")}
               </Link>
             ) : null}
           </div>

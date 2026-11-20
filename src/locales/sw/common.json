@@ -25,7 +25,9 @@
     "viewProgramme": "Angalia Ratiba",
     "learnMore": "Jifunze Zaidi",
     "openMenu": "Fungua menyu",
-    "closeMenu": "Funga menyu"
+    "closeMenu": "Funga menyu",
+    "eventEnded": "Tukio Limekwisha",
+    "registrationClosed": "Usajili umefungwa"
   },
   "event": {
     "fullName": "Kongamano la Kimataifa la Ulinzi na Utekelezaji wa Haki Miliki",

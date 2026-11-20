@@ -25,7 +25,9 @@
     "viewProgramme": "View Programme",
     "learnMore": "Learn More",
     "openMenu": "Open menu",
-    "closeMenu": "Close menu"
+    "closeMenu": "Close menu",
+    "eventEnded": "Event Ended",
+    "registrationClosed": "Registration closed"
   },
   "event": {
     "fullName": "{{number}} International Symposium on Intellectual Property Protection and Enforcement",
